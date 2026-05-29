@@ -5,8 +5,8 @@ namespace EverythingFastAlias.Models
     public enum SearchScope
     {
         All,
-        FileOnly,
-        FolderOnly
+        File,
+        Path
     }
 
     public enum SizeUnit
@@ -33,8 +33,8 @@ namespace EverythingFastAlias.Models
         // 휴지통 포함 여부
         public bool IncludeRecycleBin { get; set; } = false;
 
-        // 탐색 대상 범위 (전체 / 파일만 / 폴더만)
-        public SearchScope Scope { get; set; } = SearchScope.FileOnly;
+        // 탐색 대상 범위 (전체 / 파일 / 경로)
+        public SearchScope Scope { get; set; } = SearchScope.File;
 
         // 프리셋 미디어 필터 (영상, 음악, 사진, 문서, 코드, 실행, 압축 등 다중 선택)
         public HashSet<string> MediaPresets { get; set; } = new();

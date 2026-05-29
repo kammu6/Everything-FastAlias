@@ -28,18 +28,26 @@ namespace EverythingFastAlias.Services
                 processedQuery = rawQuery ?? "";
             }
 
-            sb.Append(processedQuery);
+            processedQuery = processedQuery.Trim();
 
-            // 2. 탐색 대상 범위 (세그먼트) 적용 (파일만 / 폴더만)
-            if (options.Scope == SearchScope.FileOnly)
+            // 2. 탐색 대상 범위 (전체 / 파일 / 경로) 쿼리 조립
+            if (!string.IsNullOrEmpty(processedQuery))
             {
-                AppendSeparator(sb);
-                sb.Append("file:");
-            }
-            else if (options.Scope == SearchScope.FolderOnly)
-            {
-                AppendSeparator(sb);
-                sb.Append("folder:");
+                if (options.Scope == SearchScope.Path)
+                {
+                    // 경로명에 hojo가 들어간 대상 -> path:<검색어>
+                    sb.Append($@"path:<{processedQuery}>");
+                }
+                else if (options.Scope == SearchScope.All)
+                {
+                    // 경로 또는 파일명에 hojo가 들어간 대상 -> 검색어 | path:<검색어>
+                    sb.Append($@"<{processedQuery}> | path:<{processedQuery}>");
+                }
+                else
+                {
+                    // 파일명에 hojo가 들어간 대상 -> 검색어 그대로
+                    sb.Append(processedQuery);
+                }
             }
 
             // 3. 폴더 제약 조건 및 재귀 탐색 제어
@@ -97,6 +105,8 @@ namespace EverythingFastAlias.Services
 
             // 5. 미디어 프리셋 필터 적용 (다중 선택 가능)
             var mediaQueries = new List<string>();
+            bool isFolderPreset = options.MediaPresets != null && options.MediaPresets.Contains("폴더");
+
             if (options.MediaPresets != null && options.MediaPresets.Count > 0 && !options.MediaPresets.Contains("전체"))
             {
                 foreach (var preset in options.MediaPresets)
@@ -124,6 +134,7 @@ namespace EverythingFastAlias.Services
                         case "코드":
                             mediaQueries.Add("ext:ts;tsx;js;jsx;json;java;py;pyw;cpp;c;h;cs;html;css;go;rs;sh;md;yml;yaml");
                             break;
+                        // "폴더"는 아래에서 별도 처리하므로 여기서 제외
                     }
                 }
             }
@@ -139,6 +150,13 @@ namespace EverythingFastAlias.Services
                 {
                     sb.Append($"<{string.Join(" | ", mediaQueries)}>");
                 }
+            }
+
+            // 5-1. 폴더 프리셋: folder: 쿼리 추가 (전체+폴더 동시 선택 시에도 동작)
+            if (isFolderPreset)
+            {
+                AppendSeparator(sb);
+                sb.Append("folder:");
             }
 
             // 6. 커스텀 확장자 필터 적용

@@ -23,6 +23,7 @@ namespace EverythingFastAlias.Views
         private Point _startPoint;
         private bool _isDragging;
         private SearchResultItem? _editingItem;
+        private ListViewItem? _clickedItem;
 
         public ResultGridView()
         {
@@ -35,6 +36,39 @@ namespace EverythingFastAlias.Views
         {
             // 드래그를 시작할 마우스 좌표 기록
             _startPoint = e.GetPosition(null);
+            _clickedItem = null;
+
+            if (sender is ListViewItem item)
+            {
+                // 클릭한 아이템이 이미 선택되어 있다면
+                // 드래그가 이루어질 수 있도록 즉시 선택이 해제되는 것을 방지합니다.
+                if (item.IsSelected)
+                {
+                    _clickedItem = item;
+                    e.Handled = true;
+                }
+            }
+        }
+
+        private void ListViewItem_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (_clickedItem != null)
+            {
+                // 드래그 동작을 안 한 상태에서 마우스를 뗀 경우 수동 선택 처리
+                if ((Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Shift)) == 0)
+                {
+                    ResultsListView.SelectedItem = _clickedItem.DataContext;
+                }
+                else
+                {
+                    if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+                    {
+                        _clickedItem.IsSelected = !_clickedItem.IsSelected;
+                    }
+                }
+                _clickedItem.Focus();
+                _clickedItem = null;
+            }
         }
 
         private void ListViewItem_MouseMove(object sender, MouseEventArgs e)
@@ -55,6 +89,7 @@ namespace EverythingFastAlias.Views
         private void StartDrag(MouseEventArgs e)
         {
             _isDragging = true;
+            _clickedItem = null;
             try
             {
                 var selectedItems = ResultsListView.SelectedItems.Cast<SearchResultItem>().ToList();

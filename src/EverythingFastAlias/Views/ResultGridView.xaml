@@ -29,6 +29,7 @@
                     <Setter Property="VerticalContentAlignment" Value="Center"/>
                     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                     <EventSetter Event="PreviewMouseLeftButtonDown" Handler="ListViewItem_PreviewMouseLeftButtonDown"/>
+                    <EventSetter Event="PreviewMouseLeftButtonUp" Handler="ListViewItem_PreviewMouseLeftButtonUp"/>
                     <EventSetter Event="MouseMove" Handler="ListViewItem_MouseMove"/>
                 </Style>
             </ListView.ItemContainerStyle>

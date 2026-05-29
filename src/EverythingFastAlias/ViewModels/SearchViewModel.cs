@@ -147,26 +147,26 @@ namespace EverythingFastAlias.ViewModels
 
         public bool ScopeFile
         {
-            get => Options.Scope == SearchScope.FileOnly;
+            get => Options.Scope == SearchScope.File;
             set
             {
                 if (value)
                 {
-                    Options.Scope = SearchScope.FileOnly;
+                    Options.Scope = SearchScope.File;
                     TriggerSearch();
                     NotifyScopeProperties();
                 }
             }
         }
 
-        public bool ScopeFolder
+        public bool ScopePath
         {
-            get => Options.Scope == SearchScope.FolderOnly;
+            get => Options.Scope == SearchScope.Path;
             set
             {
                 if (value)
                 {
-                    Options.Scope = SearchScope.FolderOnly;
+                    Options.Scope = SearchScope.Path;
                     TriggerSearch();
                     NotifyScopeProperties();
                 }
@@ -177,7 +177,7 @@ namespace EverythingFastAlias.ViewModels
         {
             OnPropertyChanged(nameof(ScopeAll));
             OnPropertyChanged(nameof(ScopeFile));
-            OnPropertyChanged(nameof(ScopeFolder));
+            OnPropertyChanged(nameof(ScopePath));
         }
 
         // 2. 파일 크기 텍스트 래퍼
@@ -258,7 +258,7 @@ namespace EverythingFastAlias.ViewModels
             OnPropertyChanged(nameof(SizeGB));
         }
 
-        // 4. 미디어 프리셋 토글 래퍼 (영상, 음악, 사진, 문서, 코드, 실행, 압축)
+        // 4. 미디어 프리셋 토글 래퍼 (영상, 음악, 사진, 문서, 코드, 실행, 압축, 폴더)
         public bool MediaAll
         {
             get => Options.MediaPresets.Count == 0 || Options.MediaPresets.Contains("전체");
@@ -266,11 +266,37 @@ namespace EverythingFastAlias.ViewModels
             {
                 if (value)
                 {
+                    // 폴더 선택 상태 보존 후 나머지 초기화
+                    bool folderWasActive = Options.MediaPresets.Contains("폴더");
                     Options.MediaPresets.Clear();
                     Options.MediaPresets.Add("전체");
+                    if (folderWasActive) Options.MediaPresets.Add("폴더");
                     TriggerSearch();
                     NotifyMediaProperties();
                 }
+            }
+        }
+
+        // 폴더 토글: 전체와 동시 선택 가능, 확장자 필터와는 상호배타
+        public bool MediaFolder
+        {
+            get => Options.MediaPresets.Contains("폴더");
+            set
+            {
+                if (value)
+                {
+                    // 폴더 ON: 확장자 필터는 모두 해제, 전체 상태는 유지
+                    bool allWasActive = Options.MediaPresets.Contains("전체") || Options.MediaPresets.Count == 0;
+                    Options.MediaPresets.Clear();
+                    if (allWasActive) Options.MediaPresets.Add("전체");
+                    Options.MediaPresets.Add("폴더");
+                }
+                else
+                {
+                    Options.MediaPresets.Remove("폴더");
+                }
+                TriggerSearch();
+                NotifyMediaProperties();
             }
         }
 
@@ -320,7 +346,9 @@ namespace EverythingFastAlias.ViewModels
         {
             if (isChecked)
             {
+                // 확장자 필터 ON: 폴더·전체 해제, 해당 필터만 추가
                 Options.MediaPresets.Remove("전체");
+                Options.MediaPresets.Remove("폴더");
                 Options.MediaPresets.Add(preset);
             }
             else
@@ -334,6 +362,7 @@ namespace EverythingFastAlias.ViewModels
         private void NotifyMediaProperties()
         {
             OnPropertyChanged(nameof(MediaAll));
+            OnPropertyChanged(nameof(MediaFolder));
             OnPropertyChanged(nameof(MediaVideo));
             OnPropertyChanged(nameof(MediaAudio));
             OnPropertyChanged(nameof(MediaPic));
@@ -581,7 +610,7 @@ namespace EverythingFastAlias.ViewModels
             Options.MatchWholeWord = false;
             Options.UseRegex = false;
             Options.IncludeRecycleBin = false;
-            Options.Scope = SearchScope.All;
+            Options.Scope = SearchScope.File;
             Options.MediaPresets.Clear();
             Options.RecursiveSearch = true;
 
