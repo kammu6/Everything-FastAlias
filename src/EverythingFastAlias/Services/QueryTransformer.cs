@@ -192,6 +192,21 @@ namespace EverythingFastAlias.Services
                 sb.Append("!$Recycle.Bin");
             }
 
+            // 9. 검색 대상 로컬 드라이브 필터 적용
+            if (options.TargetDrives != null && options.TargetDrives.Count > 0)
+            {
+                var driveQueries = new List<string>();
+                foreach (var drive in options.TargetDrives)
+                {
+                    driveQueries.Add(drive.TrimEnd('\\')); // "C:" 형식 유지
+                }
+                if (driveQueries.Count > 0)
+                {
+                    AppendSeparator(sb);
+                    sb.Append($"<{string.Join(" | ", driveQueries)}>");
+                }
+            }
+
             return sb.ToString().Trim();
         }
 

@@ -3,8 +3,10 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:modern="http://schemas.modernwpf.com/2019"
         xmlns:vm="clr-namespace:EverythingFastAlias.ViewModels"
+        xmlns:converters="clr-namespace:EverythingFastAlias.Converters"
         Title="스마트 매핑 사전 관리자 (Alias Manager)" 
-        Height="650" Width="800"
+        Height="680" Width="980"
+        MinWidth="920" MinHeight="500"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource SystemControlPageBackgroundChromeLowBrush}"
         modern:ThemeManager.RequestedTheme="Light">
@@ -12,6 +14,11 @@
     <Window.DataContext>
         <vm:AliasManagerViewModel/>
     </Window.DataContext>
+
+    <Window.InputBindings>
+        <KeyBinding Key="F3" Command="{Binding FindNextCommand}"/>
+        <KeyBinding Key="F3" Modifiers="Shift" Command="{Binding FindPrevCommand}"/>
+    </Window.InputBindings>
 
     <Grid Margin="15">
         <Grid.RowDefinitions>
@@ -26,7 +33,8 @@
                 Padding="10" CornerRadius="4" Margin="0,0,0,15"
                 BorderBrush="{DynamicResource SystemControlElevationBorderBrush}" BorderThickness="1">
             <Grid>
-                <modern:SimpleStackPanel Orientation="Horizontal" Spacing="10">
+                <!-- 왼쪽 영역: 가져오기 / 내보내기 / 양식 -->
+                <modern:SimpleStackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Left">
                     <Button Content="엑셀 가져오기 (.xlsx / .csv)" 
                             Command="{Binding ImportExcelCommand}" 
                             Style="{StaticResource AccentButtonStyle}"/>
@@ -36,47 +44,68 @@
                             Command="{Binding ExportTemplateCommand}"/>
                 </modern:SimpleStackPanel>
                 
-                <TextBlock Text="※ 동의어는 세미콜론(;) 또는 쉼표(,)로 구분해 적어주세요." 
-                           VerticalAlignment="Center" HorizontalAlignment="Right"
-                           Foreground="Gray" FontSize="11"/>
+                <!-- 오른쪽 영역: VSCode 스타일 사전 내 검색바 (숫자 표시를 TextBox 밖으로 꺼내 겹침 방지) -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <TextBox x:Name="SearchBox" Width="180" Padding="6,4,6,4" 
+                             modern:ControlHelper.PlaceholderText="사전 내 검색..."
+                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Enter" Command="{Binding FindNextCommand}"/>
+                        </TextBox.InputBindings>
+                    </TextBox>
+                    
+                    <TextBlock Text="{Binding SearchStatusText}" 
+                               Foreground="DimGray" FontSize="11" FontWeight="SemiBold"
+                               VerticalAlignment="Center" Margin="8,0,8,0" MinWidth="45" TextAlignment="Center"/>
+                               
+                    <Button Content="▲" Command="{Binding FindPrevCommand}" Width="28" Height="28" Padding="0" Margin="1" ToolTip="이전 일치 항목 (Shift+F3)"/>
+                    <Button Content="▼" Command="{Binding FindNextCommand}" Width="28" Height="28" Padding="0" Margin="1" ToolTip="다음 일치 항목 (F3)"/>
+                </StackPanel>
             </Grid>
         </Border>
 
         <!-- 메인 테이블 편집기 -->
-        <DataGrid Grid.Row="1" ItemsSource="{Binding Mappings}" 
+        <DataGrid x:Name="MappingDataGrid" Grid.Row="1" ItemsSource="{Binding Mappings}" 
                   SelectedItem="{Binding SelectedMapping}"
                   AutoGenerateColumns="False" CanUserAddRows="False"
                   SelectionMode="Single" HeadersVisibility="Column"
                   GridLinesVisibility="Horizontal"
+                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                  ScrollViewer.VerticalScrollBarVisibility="Auto"
                   BorderBrush="{DynamicResource SystemControlElevationBorderBrush}" BorderThickness="1"
                   Background="{DynamicResource SystemControlBackgroundAltHighBrush}">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="원본 키워드 (Keyword)" Binding="{Binding Keyword, UpdateSourceTrigger=PropertyChanged}" Width="200">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Margin" Value="5,2,5,2"/>
-                            <Setter Property="VerticalAlignment" Value="Center"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                    <DataGridTextColumn.EditingElementStyle>
-                        <Style TargetType="TextBox">
-                            <Setter Property="Padding" Value="2"/>
-                        </Style>
-                    </DataGridTextColumn.EditingElementStyle>
-                </DataGridTextColumn>
-                <DataGridTextColumn Header="변환 단어 목록 (Words - 세미콜론/쉼표 구분)" Binding="{Binding Words, UpdateSourceTrigger=PropertyChanged}" Width="*">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Margin" Value="5,2,5,2"/>
-                            <Setter Property="VerticalAlignment" Value="Center"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                    <DataGridTextColumn.EditingElementStyle>
-                        <Style TargetType="TextBox">
-                            <Setter Property="Padding" Value="2"/>
-                        </Style>
-                    </DataGridTextColumn.EditingElementStyle>
-                </DataGridTextColumn>
+                <!-- 원본 키워드 컬럼 -->
+                <DataGridTemplateColumn Header="원본 키워드 (Keyword)" Width="200">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock converters:HighlightBehavior.OriginalText="{Binding Keyword}"
+                                       converters:HighlightBehavior.SearchText="{Binding DataContext.SearchText, RelativeSource={RelativeSource AncestorType=Window}}"
+                                       VerticalAlignment="Center" Margin="5,2,5,2" TextTrimming="CharacterEllipsis"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                    <DataGridTemplateColumn.CellEditingTemplate>
+                        <DataTemplate>
+                            <TextBox Text="{Binding Keyword, UpdateSourceTrigger=PropertyChanged}" Padding="2" VerticalAlignment="Center"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellEditingTemplate>
+                </DataGridTemplateColumn>
+
+                <!-- 변환 단어 목록 컬럼 -->
+                <DataGridTemplateColumn Header="변환 단어 목록 (Words - 세미콜론/쉼표 구분)" Width="*" MinWidth="450">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock converters:HighlightBehavior.OriginalText="{Binding Words}"
+                                       converters:HighlightBehavior.SearchText="{Binding DataContext.SearchText, RelativeSource={RelativeSource AncestorType=Window}}"
+                                       VerticalAlignment="Center" Margin="5,2,5,2" TextWrapping="Wrap"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                    <DataGridTemplateColumn.CellEditingTemplate>
+                        <DataTemplate>
+                            <TextBox Text="{Binding Words, UpdateSourceTrigger=PropertyChanged}" Padding="2" VerticalAlignment="Center"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellEditingTemplate>
+                </DataGridTemplateColumn>
             </DataGrid.Columns>
         </DataGrid>
 
@@ -85,6 +114,9 @@
             <Button Content="행 추가 (+)" Command="{Binding AddCommand}"/>
             <Button Content="선택행 삭제 (✕)" Command="{Binding DeleteCommand}"/>
             <Button Content="수정사항 적용 (저장)" Command="{Binding SaveCommand}" Style="{StaticResource AccentButtonStyle}"/>
+            <Button Content="전체 초기화 (🗑)" Command="{Binding ClearAllCommand}"/>
+            <TextBlock Text="※ 동의어는 세미콜론(;) 또는 쉼표(,)로 구분해 적어주세요." 
+                       VerticalAlignment="Center" Foreground="Gray" FontSize="11" Margin="20,0,0,0"/>
         </modern:SimpleStackPanel>
 
         <!-- 하단 상태 표시바 -->

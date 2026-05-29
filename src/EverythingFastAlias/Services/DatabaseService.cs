@@ -41,6 +41,15 @@ namespace EverythingFastAlias.Services
 
             using var command = new SqliteCommand(createTableQuery, connection);
             command.ExecuteNonQuery();
+
+            var createSettingsTableQuery = @"
+                CREATE TABLE IF NOT EXISTS AppSettings (
+                    SettingKey TEXT PRIMARY KEY,
+                    SettingValue TEXT
+                );";
+
+            using var commandSettings = new SqliteCommand(createSettingsTableQuery, connection);
+            commandSettings.ExecuteNonQuery();
         }
 
         public void LoadMappingsToCache()
@@ -233,6 +242,18 @@ namespace EverythingFastAlias.Services
             LoadMappingsToCache();
         }
 
+        public void ClearAllMappings()
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+
+            var deleteQuery = "DELETE FROM AliasMappings";
+            using var command = new SqliteCommand(deleteQuery, connection);
+            command.ExecuteNonQuery();
+
+            LoadMappingsToCache();
+        }
+
         public static List<string> ParseWords(string wordsStr)
         {
             var list = new List<string>();
@@ -250,6 +271,48 @@ namespace EverythingFastAlias.Services
                 }
             }
             return list;
+        }
+
+        public string GetSetting(string key, string defaultValue = "")
+        {
+            try
+            {
+                using var connection = new SqliteConnection(_connectionString);
+                connection.Open();
+
+                var selectQuery = "SELECT SettingValue FROM AppSettings WHERE SettingKey = $key";
+                using var command = new SqliteCommand(selectQuery, connection);
+                command.Parameters.AddWithValue("$key", key);
+                var val = command.ExecuteScalar();
+                return val != null ? val.ToString() ?? defaultValue : defaultValue;
+            }
+            catch
+            {
+                return defaultValue;
+            }
+        }
+
+        public void SaveSetting(string key, string value)
+        {
+            try
+            {
+                using var connection = new SqliteConnection(_connectionString);
+                connection.Open();
+
+                var insertQuery = @"
+                    INSERT INTO AppSettings (SettingKey, SettingValue) 
+                    VALUES ($key, $value)
+                    ON CONFLICT(SettingKey) DO UPDATE SET SettingValue = excluded.SettingValue;";
+
+                using var command = new SqliteCommand(insertQuery, connection);
+                command.Parameters.AddWithValue("$key", key);
+                command.Parameters.AddWithValue("$value", value);
+                command.ExecuteNonQuery();
+            }
+            catch
+            {
+                // 설정 저장 중 예외는 조용히 무시하여 크래시 방지
+            }
         }
     }
 }

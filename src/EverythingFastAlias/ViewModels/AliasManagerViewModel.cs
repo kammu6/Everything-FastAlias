@@ -34,6 +34,51 @@ namespace EverythingFastAlias.ViewModels
             set => SetProperty(ref _statusMessage, value);
         }
 
+        private string _searchText = string.Empty;
+        public string SearchText
+        {
+            get => _searchText;
+            set
+            {
+                if (SetProperty(ref _searchText, value))
+                {
+                    PerformSearch();
+                }
+            }
+        }
+
+        private int _currentSearchMatchIndex = -1;
+        public int CurrentSearchMatchIndex
+        {
+            get => _currentSearchMatchIndex;
+            set
+            {
+                if (SetProperty(ref _currentSearchMatchIndex, value))
+                {
+                    UpdateSearchStatus();
+                    NavigateToMatch();
+                }
+            }
+        }
+
+        private int _totalSearchMatches = 0;
+        public int TotalSearchMatches
+        {
+            get => _totalSearchMatches;
+            set => SetProperty(ref _totalSearchMatches, value);
+        }
+
+        private string _searchStatusText = string.Empty;
+        public string SearchStatusText
+        {
+            get => _searchStatusText;
+            set => SetProperty(ref _searchStatusText, value);
+        }
+
+        private readonly System.Collections.Generic.List<AliasMapping> _matchedItems = new();
+
+        public event Action<AliasMapping>? RequestScrollIntoView;
+
         public ICommand LoadCommand { get; }
         public ICommand AddCommand { get; }
         public ICommand DeleteCommand { get; }
@@ -41,6 +86,9 @@ namespace EverythingFastAlias.ViewModels
         public ICommand ImportExcelCommand { get; }
         public ICommand ExportTemplateCommand { get; }
         public ICommand ExportExcelCommand { get; }
+        public ICommand ClearAllCommand { get; }
+        public ICommand FindNextCommand { get; }
+        public ICommand FindPrevCommand { get; }
 
         public AliasManagerViewModel()
         {
@@ -51,10 +99,13 @@ namespace EverythingFastAlias.ViewModels
             ImportExcelCommand = new RelayCommand(ImportExcel);
             ExportTemplateCommand = new RelayCommand(ExportTemplate);
             ExportExcelCommand = new RelayCommand(ExportExcel);
+            ClearAllCommand = new RelayCommand(ClearAllMappings);
+            FindNextCommand = new RelayCommand(FindNext);
+            FindPrevCommand = new RelayCommand(FindPrev);
 
             LoadMappings();
         }
-
+ 
         public void LoadMappings()
         {
             try
@@ -72,7 +123,7 @@ namespace EverythingFastAlias.ViewModels
                 StatusMessage = $"로드 실패: {ex.Message}";
             }
         }
-
+ 
         private void AddMapping()
         {
             var newMapping = new AliasMapping("새키워드", "동의어1;동의어2");
@@ -80,7 +131,35 @@ namespace EverythingFastAlias.ViewModels
             SelectedMapping = newMapping;
             StatusMessage = "새 행을 추가했습니다. 저장 버튼을 눌러 확정하세요.";
         }
-
+ 
+        private void ClearAllMappings()
+        {
+            try
+            {
+                var result = MessageBox.Show(
+                    "스마트 매핑 사전을 정말로 초기화하시겠습니까?\n이 작업은 모든 매핑 데이터를 영구적으로 삭제하며 되돌릴 수 없습니다.",
+                    "전체 초기화 경고",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning,
+                    MessageBoxResult.No
+                );
+ 
+                if (result == MessageBoxResult.Yes)
+                {
+                    DatabaseService.Instance.ClearAllMappings();
+                    LoadMappings();
+                    SelectedMapping = null;
+                    StatusMessage = "모든 매핑 규칙이 초기화되었습니다.";
+                    MessageBox.Show("초기화가 성공적으로 완료되었습니다.", "알림", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"초기화 실패: {ex.Message}";
+                MessageBox.Show($"초기화 실패: {ex.Message}", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+ 
         private void DeleteMapping()
         {
             if (SelectedMapping == null)
@@ -224,6 +303,76 @@ namespace EverythingFastAlias.ViewModels
                     MessageBox.Show($"내보내기 실패: {ex.Message}", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
                     StatusMessage = $"내보내기 실패: {ex.Message}";
                 }
+            }
+        }
+
+        private void PerformSearch()
+        {
+            _matchedItems.Clear();
+            if (string.IsNullOrWhiteSpace(SearchText))
+            {
+                TotalSearchMatches = 0;
+                CurrentSearchMatchIndex = -1;
+                UpdateSearchStatus();
+                return;
+            }
+
+            foreach (var mapping in Mappings)
+            {
+                bool isMatch = (mapping.Keyword != null && mapping.Keyword.Contains(SearchText, StringComparison.OrdinalIgnoreCase)) ||
+                               (mapping.Words != null && mapping.Words.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
+                if (isMatch)
+                {
+                    _matchedItems.Add(mapping);
+                }
+            }
+
+            TotalSearchMatches = _matchedItems.Count;
+            if (TotalSearchMatches > 0)
+            {
+                CurrentSearchMatchIndex = 0;
+            }
+            else
+            {
+                CurrentSearchMatchIndex = -1;
+            }
+        }
+
+        private void FindNext()
+        {
+            if (TotalSearchMatches <= 0) return;
+            CurrentSearchMatchIndex = (CurrentSearchMatchIndex + 1) % TotalSearchMatches;
+        }
+
+        private void FindPrev()
+        {
+            if (TotalSearchMatches <= 0) return;
+            CurrentSearchMatchIndex = (CurrentSearchMatchIndex - 1 + TotalSearchMatches) % TotalSearchMatches;
+        }
+
+        private void UpdateSearchStatus()
+        {
+            if (string.IsNullOrWhiteSpace(SearchText))
+            {
+                SearchStatusText = string.Empty;
+            }
+            else if (TotalSearchMatches == 0)
+            {
+                SearchStatusText = "결과 없음";
+            }
+            else
+            {
+                SearchStatusText = $"{CurrentSearchMatchIndex + 1} / {TotalSearchMatches}";
+            }
+        }
+
+        private void NavigateToMatch()
+        {
+            if (CurrentSearchMatchIndex >= 0 && CurrentSearchMatchIndex < _matchedItems.Count)
+            {
+                var target = _matchedItems[CurrentSearchMatchIndex];
+                SelectedMapping = target;
+                RequestScrollIntoView?.Invoke(target);
             }
         }
     }

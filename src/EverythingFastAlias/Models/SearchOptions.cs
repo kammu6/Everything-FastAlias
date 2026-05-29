@@ -57,5 +57,8 @@ namespace EverythingFastAlias.Models
 
         public long? MaxSize { get; set; }
         public SizeUnit MaxSizeUnit { get; set; } = SizeUnit.MB;
+
+        // 검색 대상 로컬 드라이브 필터 (예: C:, D: 등)
+        public HashSet<string> TargetDrives { get; set; } = new();
     }
 }

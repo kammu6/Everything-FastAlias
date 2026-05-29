@@ -11,6 +11,26 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <modern:SimpleStackPanel Margin="15" Spacing="20">
             
+            <!-- SECTION A-Drive: 검색 대상 드라이브 -->
+            <modern:SimpleStackPanel Spacing="8">
+                <TextBlock Text="검색 대상 드라이브" FontWeight="SemiBold" FontSize="13" 
+                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                <ItemsControl ItemsSource="{Binding Drives}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <ToggleButton Content="{Binding Name}" 
+                                          IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                          Margin="2" Height="28" Width="55" FontSize="11" Padding="4,2,4,2"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </modern:SimpleStackPanel>
+
             <!-- SECTION B: 대상 탐색 범위 -->
             <modern:SimpleStackPanel Spacing="8">
                 <TextBlock Text="탐색 대상 범위" FontWeight="SemiBold" FontSize="13" 

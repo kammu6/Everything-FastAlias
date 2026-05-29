@@ -28,6 +28,10 @@ namespace EverythingFastAlias.Views
 
                 // 2. 엔진 미감지 경고 이벤트 구독
                 VM.SearchVM.EngineNotRunningDetected += HandleEngineNotRunning;
+
+                // 3. 옵션패널 표시 여부 복원
+                var showSidebar = EverythingFastAlias.Services.DatabaseService.Instance.GetSetting("ShowOptionPanel", "true") == "true";
+                SidebarToggleSwitch.IsOn = showSidebar;
             }
         }
 
@@ -103,6 +107,11 @@ namespace EverythingFastAlias.Views
 
         private void FastAliasSwitch_Toggled(object sender, RoutedEventArgs e)
         {
+            // 설정 저장
+            if (VM != null)
+            {
+                EverythingFastAlias.Services.DatabaseService.Instance.SaveSetting("UseFastAlias", VM.SearchVM.Options.UseFastAlias ? "true" : "false");
+            }
             // 스위치가 토글될 때 실시간 재조회 트리거
             VM?.SearchVM.ExecuteSearch();
         }
@@ -112,7 +121,8 @@ namespace EverythingFastAlias.Views
             if (SidebarToggleSwitch == null || SidebarColumn == null || SidebarSplitter == null || SidebarView == null)
                 return;
 
-            if (SidebarToggleSwitch.IsOn)
+            bool isOn = SidebarToggleSwitch.IsOn;
+            if (isOn)
             {
                 SidebarColumn.Width = new GridLength(320);
                 SidebarColumn.MinWidth = 320;
@@ -126,6 +136,9 @@ namespace EverythingFastAlias.Views
                 SidebarSplitter.Visibility = Visibility.Collapsed;
                 SidebarView.Visibility = Visibility.Collapsed;
             }
+
+            // 설정 저장
+            EverythingFastAlias.Services.DatabaseService.Instance.SaveSetting("ShowOptionPanel", isOn ? "true" : "false");
         }
 
         private void MenuExit_Click(object sender, RoutedEventArgs e)
