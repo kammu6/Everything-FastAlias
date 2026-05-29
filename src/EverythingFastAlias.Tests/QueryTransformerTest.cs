@@ -98,5 +98,22 @@ namespace EverythingFastAlias.Tests
             Assert.IsTrue(resultNonRecursive.Contains(@"<parent:""C:\Project1"" | parent:""D:\Project2"">"));
         }
 
+        [TestMethod]
+        public void Test_FastAlias_Bidirectional_Replacement()
+        {
+            var options = new SearchOptions
+            {
+                UseFastAlias = true,
+                IncludeRecycleBin = true
+            };
+
+            // 1. 역방향 치환 (동의어 값인 'apple'로 검색 시)
+            var result1 = QueryTransformer.Transform("apple", options, _testMappings);
+            Assert.AreEqual("<apple|사과|🍎>", result1);
+
+            // 2. 다른 동의어인 '🍎'로 검색 시
+            var result2 = QueryTransformer.Transform("🍎", options, _testMappings);
+            Assert.AreEqual("<🍎|사과|apple>", result2);
+        }
     }
 }

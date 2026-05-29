@@ -32,3 +32,11 @@
     - [x] Views/ResultGridView.xaml & cs 헤더 정렬 바인딩 및 선택 감지 이벤트 연동
     - [x] 전체 빌드 및 동작 수동/자동 검증 완료
     - [x] walkthrough.md 갱신 및 AGENTS.md 업데이트
+- [x] Phase 7: UX 최적화, 양방향 별칭 검색 및 상단바 리디자인 구현
+    - [x] `RangeObservableCollection.cs` 추가 및 대량 바인딩 최적화
+    - [x] `SearchViewModel.cs` 디바운싱 및 비동기 `Task.Run` 검색 이식
+    - [x] `QueryTransformer.cs` 동의어 양방향/다대다 매핑 맵 빌더 적용
+    - [x] `MainWindow.xaml` 전역 스타일 리소스 지정 및 상단바 3단 세로 대칭 레이아웃 개편
+    - [x] 양방향 동의어 치환에 대한 단위 테스트 보완 (`QueryTransformerTest.cs`) 및 통과 검증
+    - [x] `dotnet build` 및 `dotnet test`로 컴파일/동작 신뢰성 확보
+    - [x] `task.md` 갱신, `walkthrough.md` 업데이트 및 `AGENTS.md` 지식 자산화

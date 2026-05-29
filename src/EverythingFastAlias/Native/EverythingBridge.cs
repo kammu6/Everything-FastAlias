@@ -143,8 +143,27 @@ namespace EverythingFastAlias.Native
                 var name = EverythingSdk.GetResultFileName(i);
                 var path = EverythingSdk.GetResultPath(i);
                 
-                EverythingSdk.Everything_GetResultSize(i, out long size);
-                EverythingSdk.Everything_GetResultDateModified(i, out long fileTime);
+                bool hasSize = EverythingSdk.Everything_GetResultSize(i, out long size);
+                if (!hasSize) size = 0;
+
+                bool hasDate = EverythingSdk.Everything_GetResultDateModified(i, out long fileTime);
+                DateTime modifiedDate;
+                if (hasDate && fileTime >= 0)
+                {
+                    try
+                    {
+                        modifiedDate = DateTime.FromFileTime(fileTime);
+                    }
+                    catch (ArgumentOutOfRangeException)
+                    {
+                        modifiedDate = new DateTime(1601, 1, 1);
+                    }
+                }
+                else
+                {
+                    modifiedDate = new DateTime(1601, 1, 1);
+                }
+
                 bool isFolder = EverythingSdk.Everything_IsFolderResult(i);
 
                 var ext = isFolder ? string.Empty : Path.GetExtension(name).TrimStart('.');
@@ -154,7 +173,7 @@ namespace EverythingFastAlias.Native
                     Name = name,
                     Path = path,
                     Size = size,
-                    ModifiedDate = DateTime.FromFileTime(fileTime),
+                    ModifiedDate = modifiedDate,
                     Extension = ext,
                     IsFolder = isFolder
                 });

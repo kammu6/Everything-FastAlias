@@ -174,6 +174,53 @@ namespace EverythingFastAlias.Services
 
         private static string ReplaceAliases(string query, Dictionary<string, List<string>> mappings)
         {
+            // 1. 역방향 및 그룹 확장을 위한 전역 동의어 확장 맵 빌드
+            var aliasGroups = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var kvp in mappings)
+            {
+                var keyword = kvp.Key.Trim();
+                if (string.IsNullOrEmpty(keyword)) continue;
+
+                // 단어와 매핑된 동의어들을 하나의 그룹으로 취합
+                var group = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { keyword };
+                if (kvp.Value != null)
+                {
+                    foreach (var syn in kvp.Value)
+                    {
+                        var trimmedSyn = syn.Trim().TrimEnd(';'); // 세미콜론 등 불필요 후행 문자 제거
+                        if (!string.IsNullOrEmpty(trimmedSyn))
+                        {
+                            group.Add(trimmedSyn);
+                        }
+                    }
+                }
+
+                // 그룹 내 모든 원소에 대하여, 기존에 존재하는 그룹들과 상호 병합
+                foreach (var member in group)
+                {
+                    if (aliasGroups.TryGetValue(member, out var existingGroup))
+                    {
+                        foreach (var m in group)
+                        {
+                            existingGroup.Add(m);
+                        }
+                        group = existingGroup;
+                    }
+                    else
+                    {
+                        aliasGroups[member] = group;
+                    }
+                }
+
+                // 참조 그룹이 최신 셋으로 업데이트되었으므로 각 멤버들의 가리키는 셋 참조를 일치화
+                foreach (var member in group)
+                {
+                    aliasGroups[member] = group;
+                }
+            }
+
+            // 2. 검색 쿼리 토큰 단위 치환
             var matches = TokenRegex.Matches(query);
             var result = new StringBuilder();
 
@@ -181,17 +228,15 @@ namespace EverythingFastAlias.Services
             {
                 var token = match.Value;
 
-                // 연산자나 큰따옴표 묶음이 아닌 일반 단어 토큰인 경우 동의어 치환 시도
                 if (IsWordToken(token))
                 {
-                    if (mappings.TryGetValue(token, out var synonyms) && synonyms != null && synonyms.Count > 0)
+                    if (aliasGroups.TryGetValue(token, out var synonyms) && synonyms != null && synonyms.Count > 1)
                     {
-                        // 동의어 목록 조합: <원래단어|동의어1|동의어2...>
-                        var list = new List<string> { token };
-                        foreach (var syn in synonyms)
-                        {
-                            if (!list.Contains(syn)) list.Add(syn);
-                        }
+                        // 동의어 목록 조합: <원래단어|동의어1|동의어2...> (원래 입력 단어가 맨 처음에 오도록 정렬)
+                        var list = new List<string>(synonyms);
+                        list.Remove(token);
+                        list.Insert(0, token);
+
                         result.Append($"<{string.Join("|", list)}>");
                     }
                     else
@@ -204,7 +249,6 @@ namespace EverythingFastAlias.Services
                     result.Append(token);
                 }
 
-                // 토큰 사이에 공백 보존용 (원문 공백 복원 헬퍼 대신 간단한 토큰 띄우기)
                 result.Append(" ");
             }
 

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -9,11 +10,15 @@ using CommunityToolkit.Mvvm.Input;
 using EverythingFastAlias.Models;
 using EverythingFastAlias.Native;
 using EverythingFastAlias.Services;
+using EverythingFastAlias.Config;
 
 namespace EverythingFastAlias.ViewModels
 {
     public class SearchViewModel : ObservableObject
     {
+        private readonly System.Windows.Threading.DispatcherTimer _debounceTimer;
+        private bool _isSearching = false;
+
         private string _searchQuery = string.Empty;
         public string SearchQuery
         {
@@ -22,7 +27,7 @@ namespace EverythingFastAlias.ViewModels
             {
                 if (SetProperty(ref _searchQuery, value))
                 {
-                    ExecuteSearch();
+                    TriggerSearch();
                 }
             }
         }
@@ -36,7 +41,7 @@ namespace EverythingFastAlias.ViewModels
                 if (SetProperty(ref _excludedWords, value))
                 {
                     Options.ExcludedWords = value;
-                    ExecuteSearch();
+                    TriggerSearch();
                 }
             }
         }
@@ -50,7 +55,7 @@ namespace EverythingFastAlias.ViewModels
                 if (SetProperty(ref _folderPaths, value))
                 {
                     Options.FolderPaths = value;
-                    ExecuteSearch();
+                    TriggerSearch();
                 }
             }
         }
@@ -64,7 +69,7 @@ namespace EverythingFastAlias.ViewModels
                 if (SetProperty(ref _customExtensions, value))
                 {
                     Options.CustomExtensions = value;
-                    ExecuteSearch();
+                    TriggerSearch();
                 }
             }
         }
@@ -78,7 +83,7 @@ namespace EverythingFastAlias.ViewModels
                 if (SetProperty(ref _minSize, value))
                 {
                     Options.MinSize = value;
-                    ExecuteSearch();
+                    TriggerSearch();
                     OnPropertyChanged(nameof(MinSizeText));
                 }
             }
@@ -93,7 +98,7 @@ namespace EverythingFastAlias.ViewModels
                 if (SetProperty(ref _maxSize, value))
                 {
                     Options.MaxSize = value;
-                    ExecuteSearch();
+                    TriggerSearch();
                     OnPropertyChanged(nameof(MaxSizeText));
                 }
             }
@@ -114,7 +119,7 @@ namespace EverythingFastAlias.ViewModels
         }
 
         public SearchOptions Options { get; } = new();
-        public ObservableCollection<SearchResultItem> Results { get; } = new();
+        public RangeObservableCollection<SearchResultItem> Results { get; } = new();
 
         public ICommand SearchCommand { get; }
         public ICommand ResetCommand { get; }
@@ -132,7 +137,7 @@ namespace EverythingFastAlias.ViewModels
                 if (value)
                 {
                     Options.Scope = SearchScope.All;
-                    ExecuteSearch();
+                    TriggerSearch();
                     NotifyScopeProperties();
                 }
             }
@@ -146,7 +151,7 @@ namespace EverythingFastAlias.ViewModels
                 if (value)
                 {
                     Options.Scope = SearchScope.FileOnly;
-                    ExecuteSearch();
+                    TriggerSearch();
                     NotifyScopeProperties();
                 }
             }
@@ -160,7 +165,7 @@ namespace EverythingFastAlias.ViewModels
                 if (value)
                 {
                     Options.Scope = SearchScope.FolderOnly;
-                    ExecuteSearch();
+                    TriggerSearch();
                     NotifyScopeProperties();
                 }
             }
@@ -208,7 +213,7 @@ namespace EverythingFastAlias.ViewModels
                 {
                     Options.MinSizeUnit = SizeUnit.KB;
                     Options.MaxSizeUnit = SizeUnit.KB;
-                    ExecuteSearch();
+                    TriggerSearch();
                     NotifySizeUnitProperties();
                 }
             }
@@ -223,7 +228,7 @@ namespace EverythingFastAlias.ViewModels
                 {
                     Options.MinSizeUnit = SizeUnit.MB;
                     Options.MaxSizeUnit = SizeUnit.MB;
-                    ExecuteSearch();
+                    TriggerSearch();
                     NotifySizeUnitProperties();
                 }
             }
@@ -238,7 +243,7 @@ namespace EverythingFastAlias.ViewModels
                 {
                     Options.MinSizeUnit = SizeUnit.GB;
                     Options.MaxSizeUnit = SizeUnit.GB;
-                    ExecuteSearch();
+                    TriggerSearch();
                     NotifySizeUnitProperties();
                 }
             }
@@ -261,7 +266,7 @@ namespace EverythingFastAlias.ViewModels
                 {
                     Options.MediaPresets.Clear();
                     Options.MediaPresets.Add("전체");
-                    ExecuteSearch();
+                    TriggerSearch();
                     NotifyMediaProperties();
                 }
             }
@@ -320,7 +325,7 @@ namespace EverythingFastAlias.ViewModels
             {
                 Options.MediaPresets.Remove(preset);
             }
-            ExecuteSearch();
+            TriggerSearch();
             NotifyMediaProperties();
         }
 
@@ -343,11 +348,10 @@ namespace EverythingFastAlias.ViewModels
             SearchCommand = new RelayCommand(ExecuteSearch);
             ResetCommand = new RelayCommand(ExecuteReset);
             
-            // 옵션의 체크박스 값이 바뀔 때 실시간 검색이 트리거되도록 이벤트를 물려야 하지만,
-            // XAML 상에서 체크박스 IsChecked가 바인딩되는 Options 객체의 속성에 이벤트를 다는 대신,
-            // 간단하게 해당 속성이 바뀔 때 ExecuteSearch가 실행되도록 View 비하인드나 
-            // 커맨드 형태로 연결할 수도 있으나, CheckBox의 Command나 Click 이벤트를 활용해 ExecuteSearch를 바인딩하면 깔끔함.
-            // (혹은 XAML 바인딩 상에서 Options.MatchCase 체크박스 변경 시 UI 이벤트를 뷰모델에 전파)
+            // 디바운스 타이머 설정 (150ms 대기)
+            _debounceTimer = new System.Windows.Threading.DispatcherTimer();
+            _debounceTimer.Interval = TimeSpan.FromMilliseconds(150);
+            _debounceTimer.Tick += DebounceTimer_Tick;
             
             CheckEngineStatus();
         }
@@ -465,8 +469,30 @@ namespace EverythingFastAlias.ViewModels
             }
         }
 
+        private void TriggerSearch()
+        {
+            _debounceTimer.Stop();
+            _debounceTimer.Start();
+        }
+
+        private void DebounceTimer_Tick(object? sender, EventArgs e)
+        {
+            _debounceTimer.Stop();
+            ExecuteSearchAsync();
+        }
+
         public void ExecuteSearch()
         {
+            // 즉각 검색을 위해 타이머를 중단하고 비동기 검색을 수행
+            _debounceTimer.Stop();
+            ExecuteSearchAsync();
+        }
+
+        public async void ExecuteSearchAsync()
+        {
+            if (_isSearching) return;
+            _isSearching = true;
+
             try
             {
                 if (!EverythingBridge.IsEverythingRunning())
@@ -475,16 +501,40 @@ namespace EverythingFastAlias.ViewModels
                     return;
                 }
 
-                var mappings = DatabaseService.Instance.GetCacheSnapshot();
-                string transformedQuery = QueryTransformer.Transform(SearchQuery, Options, mappings);
+                StatusMessage = "검색 중...";
 
-                var searchItems = EverythingBridge.Search(transformedQuery, Options);
-
-                Results.Clear();
-                foreach (var item in searchItems)
+                // 스레드 안정성을 위해 로컬 변수로 검색어 획득 및 쿼리 파라미터 복사
+                var query = SearchQuery;
+                var optionsCopy = new SearchOptions
                 {
-                    Results.Add(item);
-                }
+                    UseFastAlias = Options.UseFastAlias,
+                    MatchCase = Options.MatchCase,
+                    MatchWholeWord = Options.MatchWholeWord,
+                    UseRegex = Options.UseRegex,
+                    IncludeRecycleBin = Options.IncludeRecycleBin,
+                    Scope = Options.Scope,
+                    FolderPaths = Options.FolderPaths,
+                    ExcludedWords = Options.ExcludedWords,
+                    CustomExtensions = Options.CustomExtensions,
+                    MinSize = Options.MinSize,
+                    MaxSize = Options.MaxSize,
+                    MinSizeUnit = Options.MinSizeUnit,
+                    MaxSizeUnit = Options.MaxSizeUnit,
+                    RecursiveSearch = Options.RecursiveSearch
+                };
+                optionsCopy.MediaPresets.UnionWith(Options.MediaPresets);
+
+                var mappings = DatabaseService.Instance.GetCacheSnapshot();
+
+                // FFI 통신 및 동의어 치환 가공은 백그라운드 스레드에서 전담하여 UI 스레드 블로킹 제거
+                var searchItems = await Task.Run(() =>
+                {
+                    string transformed = QueryTransformer.Transform(query, optionsCopy, mappings);
+                    return EverythingBridge.Search(transformed, optionsCopy);
+                });
+
+                // RangeObservableCollection의 ReplaceRange를 사용하여 단 한 번의 UI 갱신으로 대량 바인딩
+                Results.ReplaceRange(searchItems);
 
                 ApplySorting();
 
@@ -495,6 +545,10 @@ namespace EverythingFastAlias.ViewModels
             catch (Exception ex)
             {
                 StatusMessage = $"검색 중 오류 발생: {ex.Message}";
+            }
+            finally
+            {
+                _isSearching = false;
             }
         }
 

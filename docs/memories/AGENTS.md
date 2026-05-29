@@ -40,6 +40,15 @@
 - **Everything SDK BOOL 리턴값 마샬링 실패**: C++ `BOOL`은 4바이트 정수이지만 C# `bool`은 1바이트이므로, P/Invoke 호출 시 `[return: MarshalAs(UnmanagedType.Bool)]` 어트리뷰트가 누락되면 참/거짓 판단이 항상 `true`로 깨질 수 있음. 이로 인해 모든 파일 결과가 폴더(`IsFolder = true`)로 잘못 식별되어 크기가 `<DIR>`로 고정되고, 날짜 조회 함수들이 실패(0 반환 ➔ 1601년 변환)하는 문제가 발생함.
 - **WPF StatusBar 짤림 및 여백 처리**: 가로 폭이 제한되거나 패딩 설정이 어긋날 때 우측 끝 텍스트("개" 등)가 잘릴 수 있음. StatusBar 내에 `Width` 강제 바인딩을 피하고, `ItemsPanelTemplate`을 `Grid`로 구성하여 고정 칼럼 분할 정렬을 적용하고 우측 끝 마진 여백을 부여하여 안전하게 레이아웃을 처리함.
 
+### 5. 성능 및 동의어 아키텍처 고도화 지식
+- **WPF ObservableCollection 대량 데이터 렉 차단**: ObservableCollection에 루프를 돌며 아이템을 다량 `Add`하면 매 건마다 `CollectionChanged` 이벤트가 유발되어 엄청난 렌더링 병목이 발생함. 알림을 억제하고 최종 처리에 단 한 번의 `Reset` 통지만 전파하는 `RangeObservableCollection` 클래스를 도입해 렉을 방지함.
+- **디바운스 & 비동기 쿼리 병행**: 타이핑 시 매 입력마다 검색이 실행되는 렉을 해결하기 위해 `DispatcherTimer` (150ms) 기반 디바운스와 `Task.Run` 기반 백그라운드 스레드 검색을 결합하여 UI 스레드 오버헤드를 제로화함.
+- **양방향 동의어(Alias) 연관어 그룹화**: 동의어 검색은 Key ➔ Value의 단방향이 아니라, 그룹 내 어떤 단어를 쳐도 전체 동의어 그룹이 조회되어야 함. 키와 값의 전체 단어 관계를 하나의 동의어 동치 클래스(Equivalence Class) 그룹으로 매핑 맵에 사전 빌드해두어 양방향 검색을 완벽히 보장함.
 
+### 6. UI 대칭성 및 전역 스타일 리소스 중앙화 지식
+- **WPF 암시적 스타일(Implicit Style)**: 주먹구구식 폰트 정의를 배제하기 위해, 리소스 사전에 TargetType만 명시한 암시적 스타일(예: `Style TargetType="TextBox"`)을 설정하면 컨트롤에 스타일을 일일이 매핑하지 않아도 일관되게 12px 폰트와 지정 글꼴이 상속 적용됨.
+- **수직 3단 대칭 정렬 레이아웃**: 상단 검색창에서 컨트롤 스위치(FastAlias, 옵션패널) 영역을 세로 구분선 Border로 명확히 격리하고, 우측에 메인 검색어, 제외 단어, 직계 경로 3개의 TextBox를 세로 SimpleStackPanel로 균등 배치(Symmetric 3-Row Layout)함으로써 심미적인 대칭 비주얼과 사용성을 보장함.
 
-
+### 7. Everything SDK 파일시간(FileTime) 마샬링 예외 방어
+- **Win32 FileTime 유효 범위 오류 (ArgumentOutOfRangeException)**: Everything SDK의 `Everything_GetResultDateModified`를 통해 파일 수정일 정보를 가져올 때, 해당 파일의 속성 조회 실패나 유효하지 않은 OS 시스템 시간 값 등이 유입될 경우 C# `DateTime.FromFileTime`이 예외를 발생시키며 비동기 검색 스레드가 충돌함.
+- **해결 방안**: API의 반환 여부(`bool`)를 안전하게 검사하고, 유입된 `fileTime` 값이 `0` 미만인 음수값이거나 예외 범위를 넘을 수 있으므로 `try-catch` 블록으로 `ArgumentOutOfRangeException`을 감싸 실패 시 `new DateTime(1601, 1, 1)`(기본 Win32 에폭 시작점)로 폴백하도록 보완함.
