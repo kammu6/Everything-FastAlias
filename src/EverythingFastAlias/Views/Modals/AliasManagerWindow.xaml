@@ -30,6 +30,8 @@
                     <Button Content="엑셀 가져오기 (.xlsx / .csv)" 
                             Command="{Binding ImportExcelCommand}" 
                             Style="{StaticResource AccentButtonStyle}"/>
+                    <Button Content="내보내기 (.csv)" 
+                            Command="{Binding ExportExcelCommand}"/>
                     <Button Content="가져오기 양식 다운로드" 
                             Command="{Binding ExportTemplateCommand}"/>
                 </modern:SimpleStackPanel>

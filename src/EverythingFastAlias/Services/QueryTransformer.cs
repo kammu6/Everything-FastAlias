@@ -199,59 +199,26 @@ namespace EverythingFastAlias.Services
         {
             if (string.IsNullOrWhiteSpace(query)) return query;
 
-            // 1. 역방향 및 그룹 확장을 위한 전역 동의어 확장 맵 빌드
-            var aliasGroups = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+            // 1. DatabaseService에 보관된 캐시된 동의어 정보 재사용 (매 쿼리별 사전 빌드 O(N^2) 병목 제거)
+            var cache = DatabaseService.Instance.GetAliasGroupsCache();
+            var aliasGroups = cache.Groups;
+            var sortedKeys = cache.SortedKeys;
 
-            foreach (var kvp in mappings)
+            if (aliasGroups == null || sortedKeys == null || sortedKeys.Count == 0)
             {
-                var keyword = kvp.Key.Trim();
-                if (string.IsNullOrEmpty(keyword)) continue;
-
-                var group = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { keyword };
-                if (kvp.Value != null)
-                {
-                    foreach (var syn in kvp.Value)
-                    {
-                        var trimmedSyn = syn.Trim().TrimEnd(';');
-                        if (!string.IsNullOrEmpty(trimmedSyn))
-                        {
-                            group.Add(trimmedSyn);
-                        }
-                    }
-                }
-
-                foreach (var member in group)
-                {
-                    if (aliasGroups.TryGetValue(member, out var existingGroup))
-                    {
-                        foreach (var m in group)
-                        {
-                            existingGroup.Add(m);
-                        }
-                        group = existingGroup;
-                    }
-                    else
-                    {
-                        aliasGroups[member] = group;
-                    }
-                }
-
-                foreach (var member in group)
-                {
-                    aliasGroups[member] = group;
-                }
+                return query;
             }
 
-            // 2. 동의어 키 목록을 글자 수가 긴 순으로 정렬 (Longest Match First)
-            var sortedKeys = new List<string>(aliasGroups.Keys);
-            sortedKeys.Sort((a, b) => b.Length.CompareTo(a.Length));
-
-            // 3. 쿼리 내에서 각 키워드 직접 치환
+            // 2. 쿼리 내에서 각 키워드 직접 치환
             string processed = query;
             var tempReplacements = new List<string>();
 
             foreach (var key in sortedKeys)
             {
+                // [핵심 성능 최적화] 입력 쿼리에 이 키 단어가 아예 존재하지 않는다면 정규식 실행 전 즉시 스킵
+                if (processed.IndexOf(key, StringComparison.OrdinalIgnoreCase) < 0)
+                    continue;
+
                 if (!aliasGroups.TryGetValue(key, out var synonyms) || synonyms == null || synonyms.Count <= 1)
                     continue;
 
@@ -283,7 +250,7 @@ namespace EverythingFastAlias.Services
                 }, RegexOptions.IgnoreCase);
             }
 
-            // 4. 최종적으로 플레이스홀더를 실제 치환값으로 복원
+            // 3. 최종적으로 플레이스홀더를 실제 치환값으로 복원
             for (int i = 0; i < tempReplacements.Count; i++)
             {
                 processed = processed.Replace($"__ALIAS_PLACEHOLDER_{i}__", tempReplacements[i]);

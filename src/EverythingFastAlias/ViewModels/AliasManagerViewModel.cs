@@ -40,6 +40,7 @@ namespace EverythingFastAlias.ViewModels
         public ICommand SaveCommand { get; }
         public ICommand ImportExcelCommand { get; }
         public ICommand ExportTemplateCommand { get; }
+        public ICommand ExportExcelCommand { get; }
 
         public AliasManagerViewModel()
         {
@@ -49,6 +50,7 @@ namespace EverythingFastAlias.ViewModels
             SaveCommand = new RelayCommand(SaveSelectedMapping);
             ImportExcelCommand = new RelayCommand(ImportExcel);
             ExportTemplateCommand = new RelayCommand(ExportTemplate);
+            ExportExcelCommand = new RelayCommand(ExportExcel);
 
             LoadMappings();
         }
@@ -194,6 +196,33 @@ namespace EverythingFastAlias.ViewModels
                 catch (Exception ex)
                 {
                     StatusMessage = $"템플릿 내보내기 실패: {ex.Message}";
+                }
+            }
+        }
+
+        private void ExportExcel()
+        {
+            var saveFileDialog = new SaveFileDialog
+            {
+                Filter = "CSV 파일 (*.csv)|*.csv",
+                FileName = "FastAlias_Export.csv",
+                Title = "매핑 사전 내보내기"
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                try
+                {
+                    StatusMessage = "내보내는 중...";
+                    var data = Mappings.Select(m => (m.Keyword, m.Words)).ToList();
+                    ExcelService.ExportToCsv(saveFileDialog.FileName, data);
+                    MessageBox.Show("매핑 사전을 성공적으로 내보냈습니다.", "성공", MessageBoxButton.OK, MessageBoxImage.Information);
+                    StatusMessage = $"총 {data.Count}개 내보내기 완료";
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"내보내기 실패: {ex.Message}", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
+                    StatusMessage = $"내보내기 실패: {ex.Message}";
                 }
             }
         }

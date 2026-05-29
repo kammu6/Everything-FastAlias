@@ -72,5 +72,31 @@ namespace EverythingFastAlias.Services
             
             File.WriteAllText(filePath, sb.ToString(), Encoding.UTF8);
         }
+
+        public static void ExportToCsv(string filePath, List<(string Keyword, string Words)> data)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("Keyword,Words");
+            foreach (var item in data)
+            {
+                string cleanKeyword = EscapeCsv(item.Keyword);
+                string cleanWords = EscapeCsv(item.Words);
+                sb.AppendLine($"{cleanKeyword},{cleanWords}");
+            }
+            File.WriteAllText(filePath, sb.ToString(), Encoding.UTF8);
+        }
+
+        private static string EscapeCsv(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return string.Empty;
+
+            bool mustQuote = value.Contains(",") || value.Contains("\"") || value.Contains("\r") || value.Contains("\n");
+            if (mustQuote)
+            {
+                value = value.Replace("\"", "\"\"");
+                return $"\"{value}\"";
+            }
+            return value;
+        }
     }
 }

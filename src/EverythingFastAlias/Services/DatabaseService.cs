@@ -15,6 +15,10 @@ namespace EverythingFastAlias.Services
         private readonly Dictionary<string, List<string>> _cache = new(StringComparer.OrdinalIgnoreCase);
         private readonly object _cacheLock = new();
 
+        private Dictionary<string, HashSet<string>> _aliasGroups = new(StringComparer.OrdinalIgnoreCase);
+        private List<string> _sortedAliasKeys = new();
+        private readonly object _aliasLock = new();
+
         private DatabaseService()
         {
             var baseDir = AppDomain.CurrentDomain.BaseDirectory;
@@ -58,6 +62,72 @@ namespace EverythingFastAlias.Services
                     var words = ParseWords(wordsStr);
                     _cache[keyword] = words;
                 }
+            }
+
+            // 동의어 대그룹 확장 맵 캐시 빌드 (1회 수행으로 속도 극대화)
+            BuildAliasGroupsCache();
+        }
+
+        public (Dictionary<string, HashSet<string>> Groups, List<string> SortedKeys) GetAliasGroupsCache()
+        {
+            lock (_aliasLock)
+            {
+                return (_aliasGroups, _sortedAliasKeys);
+            }
+        }
+
+        private void BuildAliasGroupsCache()
+        {
+            lock (_aliasLock)
+            {
+                var newGroups = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+
+                // _cache 복사본 획득
+                Dictionary<string, List<string>> tempCache;
+                lock (_cacheLock)
+                {
+                    tempCache = new Dictionary<string, List<string>>(_cache, StringComparer.OrdinalIgnoreCase);
+                }
+
+                foreach (var kvp in tempCache)
+                {
+                    var keyword = kvp.Key.Trim();
+                    if (string.IsNullOrEmpty(keyword)) continue;
+
+                    var rowElements = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { keyword };
+                    if (kvp.Value != null)
+                    {
+                        foreach (var syn in kvp.Value)
+                        {
+                            var trimmedSyn = syn.Trim().TrimEnd(';');
+                            if (!string.IsNullOrEmpty(trimmedSyn))
+                            {
+                                rowElements.Add(trimmedSyn);
+                            }
+                        }
+                    }
+
+                    foreach (var member in rowElements)
+                    {
+                        if (!newGroups.TryGetValue(member, out var existingGroup))
+                        {
+                            existingGroup = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                            newGroups[member] = existingGroup;
+                        }
+
+                        foreach (var m in rowElements)
+                        {
+                            existingGroup.Add(m);
+                        }
+                    }
+                }
+
+                _aliasGroups = newGroups;
+
+                // 고유 키들을 글자 수 역순으로 정렬
+                var keys = new List<string>(_aliasGroups.Keys);
+                keys.Sort((a, b) => b.Length.CompareTo(a.Length));
+                _sortedAliasKeys = keys;
             }
         }
 
