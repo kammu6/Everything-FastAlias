@@ -55,6 +55,7 @@ desktop.ini
 ## Project Specifics
 .history/
 output_*.md
+/*.bat
 
 # SQLite Local DB
 fastalias.db

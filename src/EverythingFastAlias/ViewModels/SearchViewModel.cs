@@ -28,7 +28,21 @@ namespace EverythingFastAlias.ViewModels
             {
                 if (SetProperty(ref _searchQuery, value))
                 {
-                    TriggerSearch();
+                    if (string.IsNullOrWhiteSpace(value))
+                    {
+                        Results.Clear();
+                        _selectedCount = 0;
+                        UpdateResultCountMessage();
+                        if (EverythingBridge.IsEverythingRunning())
+                        {
+                            var ruleCount = DatabaseService.Instance.GetAllMappings().Count;
+                            StatusMessage = $"Everything 서비스 활성화 완료 | 매핑 테이블 규칙: {ruleCount}개 로드됨";
+                        }
+                        else
+                        {
+                            StatusMessage = "Everything 서비스 비활성화됨";
+                        }
+                    }
                 }
             }
         }
@@ -522,6 +536,24 @@ namespace EverythingFastAlias.ViewModels
 
         public async void ExecuteSearchAsync()
         {
+            if (string.IsNullOrWhiteSpace(SearchQuery))
+            {
+                Results.Clear();
+                _selectedCount = 0;
+                UpdateResultCountMessage();
+                if (EverythingBridge.IsEverythingRunning())
+                {
+                    var ruleCount = DatabaseService.Instance.GetAllMappings().Count;
+                    StatusMessage = $"Everything 서비스 활성화 완료 | 매핑 테이블 규칙: {ruleCount}개 로드됨";
+                }
+                else
+                {
+                    StatusMessage = "Everything 서비스 비활성화됨";
+                }
+                _pendingQuery = null;
+                return;
+            }
+
             if (_isSearching)
             {
                 _pendingQuery = SearchQuery;
