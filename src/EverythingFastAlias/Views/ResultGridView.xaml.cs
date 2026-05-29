@@ -99,6 +99,33 @@ namespace EverythingFastAlias.Views
             }
         }
 
+        private void ResultsListView_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            var selectedItems = ResultsListView.SelectedItems.Cast<SearchResultItem>().ToList();
+            if (selectedItems.Count == 0) return;
+
+            foreach (var item in selectedItems)
+            {
+                var path = item.FullPath;
+                if (File.Exists(path) || Directory.Exists(path))
+                {
+                    try
+                    {
+                        var startInfo = new ProcessStartInfo
+                        {
+                            FileName = path,
+                            UseShellExecute = true // 기본 연결프로그램으로 실행 보장
+                        };
+                        Process.Start(startInfo);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"파일 실행 실패: {ex.Message}", "에러", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
+            }
+        }
+
         #endregion
 
         #region 단축키 (클립보드 Copy/Cut 및 Enter 파일 실행) 구현

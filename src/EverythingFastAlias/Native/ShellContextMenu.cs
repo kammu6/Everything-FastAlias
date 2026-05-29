@@ -147,16 +147,30 @@ namespace EverythingFastAlias.Native
                 var parentDirPath = Path.GetDirectoryName(firstPath);
                 if (string.IsNullOrEmpty(parentDirPath)) return;
 
-                // 1. 부모 폴더 IShellFolder 획득
+                // 1. 데스크톱 폴더 IShellFolder 획득
+                int hr = SHGetDesktopFolder(out IShellFolder desktopFolder);
+                if (hr != 0 || desktopFolder == null) return;
+
+                // 2. 부모 폴더에 대한 PIDL 解析
+                uint eaten0 = 0;
+                uint attrib0 = 0;
+                hr = desktopFolder.ParseDisplayName(IntPtr.Zero, IntPtr.Zero, parentDirPath, ref eaten0, out IntPtr parentPidl, ref attrib0);
+                if (hr != 0 || parentPidl == IntPtr.Zero)
+                {
+                    Marshal.ReleaseComObject(desktopFolder);
+                    return;
+                }
+
+                // 3. 부모 폴더를 가리키는 IShellFolder 획득
                 Guid guidShellFolder = typeof(IShellFolder).GUID;
-                SHParseDisplayName(parentDirPath, IntPtr.Zero, out IntPtr parentPidl, 0, out _);
-                if (parentPidl == IntPtr.Zero) return;
-
-                int hr = SHBindToParent(parentPidl, ref guidShellFolder, out parentFolder, out IntPtr relativePidlLast);
+                hr = desktopFolder.BindToObject(parentPidl, IntPtr.Zero, ref guidShellFolder, out IntPtr parentFolderPtr);
                 Marshal.FreeCoTaskMem(parentPidl);
-                if (hr != 0 || parentFolder == null) return;
+                Marshal.ReleaseComObject(desktopFolder);
 
-                // 2. 각 파일의 상대 PIDL 목록 구축
+                if (hr != 0 || parentFolderPtr == IntPtr.Zero) return;
+                parentFolder = (IShellFolder)Marshal.GetTypedObjectForIUnknown(parentFolderPtr, typeof(IShellFolder));
+
+                // 4. 각 파일의 상대 PIDL 목록 구축
                 relativePidls = new IntPtr[filePaths.Count];
                 for (int i = 0; i < filePaths.Count; i++)
                 {
@@ -173,7 +187,7 @@ namespace EverythingFastAlias.Native
 
                 if (pidlList.Count == 0) return;
 
-                // 3. IContextMenu 인터페이스 포인터 획득
+                // 5. IContextMenu 인터페이스 포인터 획득
                 Guid guidContextMenu = typeof(IContextMenu).GUID;
                 uint reserved = 0;
                 hr = parentFolder.GetUIObjectOf(
@@ -187,7 +201,7 @@ namespace EverythingFastAlias.Native
 
                 if (hr != 0 || contextMenuPtr == IntPtr.Zero) return;
 
-                // 4. 포인터에서 인터페이스 객체로 마샬링
+                // 6. 포인터에서 인터페이스 객체로 마샬링
                 IContextMenu contextMenu = (IContextMenu)Marshal.GetTypedObjectForIUnknown(contextMenuPtr, typeof(IContextMenu));
 
                 // 5. 팝업 메뉴 생성 및 아이템 쿼리

@@ -75,55 +75,89 @@
         </Menu>
 
         <!-- 2. 검색 입력 및 스위치 영역 -->
-        <Border Grid.Row="1" Background="{DynamicResource SystemControlBackgroundAltHighBrush}" 
-                Padding="15,10,15,10" BorderBrush="{DynamicResource SystemControlElevationBorderBrush}" BorderThickness="0,0,0,1">
+        <Border Grid.Row="1" Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                Padding="12,8,12,8" BorderBrush="{DynamicResource SystemControlElevationBorderBrush}" BorderThickness="0,0,0,1">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/> <!-- 1. 토글 컨트롤 영역 -->
+                    <ColumnDefinition Width="Auto"/> <!-- 1. 토글+새로고침 영역 -->
                     <ColumnDefinition Width="Auto"/> <!-- 2. 세로 구분선 -->
-                    <ColumnDefinition Width="*"/>    <!-- 3. 검색 입력 영역 -->
+                    <ColumnDefinition Width="*"/>    <!-- 3. 라벨+검색 입력 영역 -->
                 </Grid.ColumnDefinitions>
 
-                <!-- Column 0: 토글 영역 -->
-                <modern:SimpleStackPanel Grid.Column="0" Spacing="6" VerticalAlignment="Center" Margin="0,0,10,0">
-                    <!-- FastAlias 토글 -->
-                    <Grid Width="160">
+                <!-- Column 0: 3행 토글+새로고침 영역 -->
+                <Grid Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="6"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="6"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Row 0: FastAlias 토글 -->
+                    <Grid Grid.Row="0" MinWidth="175">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="FastAlias 별칭" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="12"/>
-                        <modern:ToggleSwitch Grid.Column="1" IsOn="{Binding SearchVM.Options.UseFastAlias}" 
-                                             OnContent="ON" OffContent="OFF" 
+                        <TextBlock Grid.Column="0" Text="FastAlias 별칭" VerticalAlignment="Center"
+                                   FontWeight="SemiBold" FontSize="12" Margin="0,0,6,0"/>
+                        <modern:ToggleSwitch Grid.Column="1" IsOn="{Binding SearchVM.Options.UseFastAlias}"
+                                             OnContent="ON" OffContent="OFF"
                                              Toggled="FastAliasSwitch_Toggled"/>
                     </Grid>
-                    <!-- 옵션패널 토글 -->
-                    <Grid Width="160">
+
+                    <!-- Row 2: 옵션패널 토글 -->
+                    <Grid Grid.Row="2" MinWidth="175">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="옵션패널 접기" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="12"/>
-                        <modern:ToggleSwitch Grid.Column="1" x:Name="SidebarToggleSwitch" IsOn="True" 
-                                             OnContent="ON" OffContent="OFF" 
+                        <TextBlock Grid.Column="0" Text="옵션패널 표시" VerticalAlignment="Center"
+                                   FontWeight="SemiBold" FontSize="12" Margin="0,0,6,0"/>
+                        <modern:ToggleSwitch Grid.Column="1" x:Name="SidebarToggleSwitch" IsOn="True"
+                                             OnContent="ON" OffContent="OFF"
                                              Toggled="SidebarToggleSwitch_Toggled"/>
                     </Grid>
-                </modern:SimpleStackPanel>
+
+                    <!-- Row 4: 새로고침 버튼 -->
+                    <Button Grid.Row="4"
+                            Content="🔄  새로고침"
+                            Command="{Binding SearchVM.RefreshCommand}"
+                            HorizontalAlignment="Stretch"
+                            Height="30"
+                            FontSize="12"/>
+                </Grid>
 
                 <!-- Column 1: 세로 구분선 -->
-                <Border Grid.Column="1" Width="1" Background="{DynamicResource SystemControlElevationBorderBrush}" Margin="10,0,15,0" VerticalAlignment="Stretch"/>
+                <Border Grid.Column="1" Width="1"
+                        Background="{DynamicResource SystemControlElevationBorderBrush}"
+                        Margin="12,0,14,0" VerticalAlignment="Stretch"/>
 
-                <!-- Column 2: 세로 3층 대칭 검색란 배열 -->
-                <modern:SimpleStackPanel Grid.Column="2" Spacing="6" VerticalAlignment="Center">
-                    <!-- 1층: 메인 검색란 -->
-                    <Grid>
-                        <TextBox FontSize="12" Padding="8,6,65,6" 
-                                 modern:ControlHelper.PlaceholderText="검색할 파일 또는 폴더명을 입력하세요... (예: 사과 | banana)" 
+                <!-- Column 2: 라벨 + 3행 대칭 검색 입력 영역 -->
+                <Grid Grid.Column="2" VerticalAlignment="Center">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="6"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="6"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="56"/> <!-- 라벨 고정 폭 -->
+                        <ColumnDefinition Width="*"/> <!-- 입력란 -->
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Row 0: 검색단어 -->
+                    <TextBlock Grid.Row="0" Grid.Column="0"
+                               Text="검색단어" FontWeight="SemiBold" FontSize="11"
+                               VerticalAlignment="Center" Foreground="DimGray" Margin="0,0,6,0"/>
+                    <Grid Grid.Row="0" Grid.Column="1">
+                        <TextBox FontSize="12" Padding="8,5,65,5"
+                                 modern:ControlHelper.PlaceholderText="파일/폴더명 (예: 사과 | apple)"
                                  Text="{Binding SearchVM.SearchQuery, UpdateSourceTrigger=PropertyChanged}"/>
-                        
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,8,0">
-                            <!-- FastAlias 상태 인디케이터 아이콘 -->
-                            <TextBlock Text="💡" FontSize="14" VerticalAlignment="Center" Margin="0,0,6,0" Cursor="Help">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0">
+                            <TextBlock Text="💡" FontSize="13" VerticalAlignment="Center" Margin="0,0,4,0" Cursor="Help">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Style.Triggers>
@@ -139,23 +173,27 @@
                                     </Style>
                                 </TextBlock.Style>
                             </TextBlock>
-                            
-                            <!-- 전체 지우기 [X] 버튼 -->
-                            <Button Content="✕" Width="20" Height="20" Click="ClearSearch_Click" 
+                            <Button Content="✕" Width="18" Height="18" Click="ClearSearch_Click"
                                     Background="Transparent" BorderThickness="0" Foreground="Gray" FontSize="11" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Grid>
 
-                    <!-- 2층: 제외단어 -->
-                    <TextBox FontSize="12" Padding="8,6,10,6"
-                             modern:ControlHelper.PlaceholderText="최종 쿼리에서 제외할 단어 입력... (예: tmp;temp)" 
+                    <!-- Row 2: 제외단어 -->
+                    <TextBlock Grid.Row="2" Grid.Column="0"
+                               Text="제외단어" FontWeight="SemiBold" FontSize="11"
+                               VerticalAlignment="Center" Foreground="DimGray" Margin="0,0,6,0"/>
+                    <TextBox Grid.Row="2" Grid.Column="1" FontSize="12" Padding="8,5,8,5"
+                             modern:ControlHelper.PlaceholderText="제외할 단어 (예: tmp;temp)"
                              Text="{Binding SearchVM.ExcludedWords, UpdateSourceTrigger=PropertyChanged}"/>
 
-                    <!-- 3층: 직계경로 -->
-                    <TextBox FontSize="12" Padding="8,6,10,6"
-                             modern:ControlHelper.PlaceholderText="검색할 직계 경로 지정... (예: C:\Folder1;D:\Folder2)" 
+                    <!-- Row 4: 지정경로 -->
+                    <TextBlock Grid.Row="4" Grid.Column="0"
+                               Text="지정경로" FontWeight="SemiBold" FontSize="11"
+                               VerticalAlignment="Center" Foreground="DimGray" Margin="0,0,6,0"/>
+                    <TextBox Grid.Row="4" Grid.Column="1" FontSize="12" Padding="8,5,8,5"
+                             modern:ControlHelper.PlaceholderText="검색 경로 지정 (예: C:\Folder1;D:\Folder2)"
                              Text="{Binding SearchVM.FolderPaths, UpdateSourceTrigger=PropertyChanged}"/>
-                </modern:SimpleStackPanel>
+                </Grid>
             </Grid>
         </Border>
 

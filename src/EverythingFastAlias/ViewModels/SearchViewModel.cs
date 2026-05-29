@@ -123,6 +123,7 @@ namespace EverythingFastAlias.ViewModels
 
         public ICommand SearchCommand { get; }
         public ICommand ResetCommand { get; }
+        public ICommand RefreshCommand { get; }
 
         public event Action? EngineNotRunningDetected;
 
@@ -347,6 +348,7 @@ namespace EverythingFastAlias.ViewModels
         {
             SearchCommand = new RelayCommand(ExecuteSearch);
             ResetCommand = new RelayCommand(ExecuteReset);
+            RefreshCommand = new RelayCommand(ExecuteSearch);
             
             // 디바운스 타이머 설정 (150ms 대기)
             _debounceTimer = new System.Windows.Threading.DispatcherTimer();
