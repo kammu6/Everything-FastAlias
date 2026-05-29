@@ -34,17 +34,43 @@ namespace EverythingFastAlias.Views
 
         private void ListViewItem_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            if (e.ClickCount == 2)
+            {
+                if (sender is ListViewItem item && item.DataContext is SearchResultItem searchItem)
+                {
+                    var path = searchItem.FullPath;
+                    if (File.Exists(path) || Directory.Exists(path))
+                    {
+                        try
+                        {
+                            var startInfo = new ProcessStartInfo
+                            {
+                                FileName = path,
+                                UseShellExecute = true
+                            };
+                            Process.Start(startInfo);
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show($"파일 실행 실패: {ex.Message}", "에러", MessageBoxButton.OK, MessageBoxImage.Error);
+                        }
+                    }
+                    e.Handled = true;
+                    return;
+                }
+            }
+
             // 드래그를 시작할 마우스 좌표 기록
             _startPoint = e.GetPosition(null);
             _clickedItem = null;
 
-            if (sender is ListViewItem item)
+            if (sender is ListViewItem item2)
             {
                 // 클릭한 아이템이 이미 선택되어 있다면
                 // 드래그가 이루어질 수 있도록 즉시 선택이 해제되는 것을 방지합니다.
-                if (item.IsSelected)
+                if (item2.IsSelected)
                 {
-                    _clickedItem = item;
+                    _clickedItem = item2;
                     e.Handled = true;
                 }
             }
