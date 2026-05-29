@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using EverythingFastAlias.Models;
 using EverythingFastAlias.Services;
+using EverythingFastAlias.Native;
 
 namespace EverythingFastAlias.Tests
 {
@@ -96,5 +97,6 @@ namespace EverythingFastAlias.Tests
             var resultNonRecursive = QueryTransformer.Transform("banana", options, _testMappings);
             Assert.IsTrue(resultNonRecursive.Contains(@"<parent:""C:\Project1"" | parent:""D:\Project2"">"));
         }
+
     }
 }

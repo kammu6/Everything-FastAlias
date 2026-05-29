@@ -369,6 +369,102 @@ namespace EverythingFastAlias.ViewModels
             }
         }
 
+        private int _selectedCount = 0;
+        public int SelectedCount
+        {
+            get => _selectedCount;
+            set
+            {
+                if (SetProperty(ref _selectedCount, value))
+                {
+                    UpdateResultCountMessage();
+                }
+            }
+        }
+
+        public void UpdateResultCountMessage()
+        {
+            ResultCountMessage = $"선택 항목: {SelectedCount:n0} / 검색 결과: {Results.Count:n0}개 항목";
+        }
+
+        private string _sortColumn = string.Empty;
+        public string SortColumn
+        {
+            get => _sortColumn;
+            set => SetProperty(ref _sortColumn, value);
+        }
+
+        private System.ComponentModel.ListSortDirection _sortDirection = System.ComponentModel.ListSortDirection.Ascending;
+        public System.ComponentModel.ListSortDirection SortDirection
+        {
+            get => _sortDirection;
+            set => SetProperty(ref _sortDirection, value);
+        }
+
+        public void SortResults(string columnName)
+        {
+            if (string.IsNullOrEmpty(columnName)) return;
+
+            if (SortColumn == columnName)
+            {
+                SortDirection = SortDirection == System.ComponentModel.ListSortDirection.Ascending 
+                    ? System.ComponentModel.ListSortDirection.Descending 
+                    : System.ComponentModel.ListSortDirection.Ascending;
+            }
+            else
+            {
+                SortColumn = columnName;
+                SortDirection = System.ComponentModel.ListSortDirection.Ascending;
+            }
+
+            ApplySorting();
+        }
+
+        private void ApplySorting()
+        {
+            if (Results.Count == 0 || string.IsNullOrEmpty(SortColumn)) return;
+
+            List<SearchResultItem> sorted;
+            bool asc = SortDirection == System.ComponentModel.ListSortDirection.Ascending;
+
+            switch (SortColumn)
+            {
+                case "이름":
+                case "Name":
+                    sorted = asc ? Results.OrderBy(r => r.Name).ToList() : Results.OrderByDescending(r => r.Name).ToList();
+                    break;
+                case "경로":
+                case "Path":
+                    sorted = asc ? Results.OrderBy(r => r.Path).ToList() : Results.OrderByDescending(r => r.Path).ToList();
+                    break;
+                case "수정한 날짜":
+                case "DisplayModifiedDate":
+                case "ModifiedDate":
+                    sorted = asc ? Results.OrderBy(r => r.ModifiedDate).ToList() : Results.OrderByDescending(r => r.ModifiedDate).ToList();
+                    break;
+                case "크기":
+                case "DisplaySize":
+                case "Size":
+                    sorted = asc ? Results.OrderBy(r => r.Size).ToList() : Results.OrderByDescending(r => r.Size).ToList();
+                    break;
+                case "확장자":
+                case "Extension":
+                    sorted = asc ? Results.OrderBy(r => r.Extension).ToList() : Results.OrderByDescending(r => r.Extension).ToList();
+                    break;
+                default:
+                    return;
+            }
+
+            for (int i = 0; i < sorted.Count; i++)
+            {
+                int oldIndex = Results.IndexOf(sorted[i]);
+                if (oldIndex != i && oldIndex != -1)
+                {
+                    Results.Move(oldIndex, i);
+                }
+            }
+        }
+
         public void ExecuteSearch()
         {
             try
@@ -390,9 +486,11 @@ namespace EverythingFastAlias.ViewModels
                     Results.Add(item);
                 }
 
+                ApplySorting();
+
                 var ruleCount = mappings.Count;
                 StatusMessage = $"Everything 서비스 활성화 완료 | 매핑 테이블 규칙: {ruleCount}개 로드됨";
-                ResultCountMessage = $"검색 결과: {Results.Count:n0}개 항목";
+                UpdateResultCountMessage();
             }
             catch (Exception ex)
             {
@@ -408,6 +506,9 @@ namespace EverythingFastAlias.ViewModels
             _customExtensions = string.Empty;
             _minSize = null;
             _maxSize = null;
+            _selectedCount = 0;
+            _sortColumn = string.Empty;
+            _sortDirection = System.ComponentModel.ListSortDirection.Ascending;
 
             Options.UseFastAlias = true;
             Options.MatchCase = false;
@@ -426,6 +527,7 @@ namespace EverythingFastAlias.ViewModels
             OnPropertyChanged(nameof(MinSizeText));
             OnPropertyChanged(nameof(MaxSizeText));
             OnPropertyChanged(nameof(Options));
+            OnPropertyChanged(nameof(SelectedCount));
 
             NotifyScopeProperties();
             NotifySizeUnitProperties();

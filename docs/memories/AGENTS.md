@@ -30,3 +30,16 @@
 - **WPF StackPanel Spacing 미지원**: WPF의 기본 `StackPanel`은 WinUI/UWP와 달리 `Spacing` 속성을 기본 제공하지 않아 빌드 에러가 발생함. `ModernWpf` 라이브러리의 `<modern:SimpleStackPanel Spacing="X">`로 대체하여 세련된 간격 배치 해결.
 - **WPF TextBox PlaceholderText 미지원**: 표준 `TextBox`에는 `PlaceholderText` 속성이 없음. ModernWpf의 Helper 속성인 `<TextBox modern:ControlHelper.PlaceholderText="X"/>`로 매핑하여 플레이스홀더 렌더링 해결.
 - **네이티브 IContextMenu LPCSTR 마샬링**: 쉘 메뉴 호출 시 `CMINVOKECOMMANDINFO`의 `lpVerb` 멤버를 `string`으로 마샬링하면 정수형 명령 인덱스 할당 시 캐스팅 오류가 발생함. `IntPtr`로 선언하여 P/Invoke 메모리 할당 무결성 보장.
+- **ModernWpf ResourceDictionary XamlParseException**: `App.xaml`에서 `pack://application:,,,/ModernWpf;component/ThemeResources/Light.xaml`와 같이 특정 내부 리소스 파일 경로를 하드코딩해서 불러오면 런타임 어셈블리 리소스 해석 실패로 인해 `XamlParseException`이 발생함. 네임스페이스 `xmlns:ui="http://schemas.modernwpf.com/2019"`를 선언하고, `<ui:ThemeResources />`와 `<ui:XamlControlsResources />` 태그 조합으로 병합(Merge)하여 테마 리소스를 머지하는 것이 정석적인 해결 방법임.
+- **WPF & WinForms global using 충돌 (UseWindowsForms)**: 트레이 기능을 위해 `.csproj`에 `<UseWindowsForms>true</UseWindowsForms>`를 설정하면, `<ImplicitUsings>enable</ImplicitUsings>` 환경에서 WPF와 WinForms의 동일한 명칭을 가진 어셈블리 클래스(Application, UserControl, MouseEventArgs, KeyEventArgs, Point 등)가 암시적 global using으로 선언되어 CS0104 모호성 에러가 발생함. 이 경우 `.csproj` 내에 `<ItemGroup><Using Remove="System.Windows.Forms" /></ItemGroup>`를 추가하여 global using 충돌을 완전히 해제하고, 트레이 관련 FFI를 수행하는 구체 클래스 파일 맨 위에서만 `using System.Windows.Forms;`를 명시적으로 Import하여 해결하는 것이 가장 안전하고 모범적인 해결책임.
+- **Everything SDK DLL EntryPointNotFoundException (GetLastError)**: `everything64.dll` 연동 시 Win32 GetLastError를 조회하기 위한 DLL 함수는 `Everything_GetGetLastError`가 아닌 `Everything_GetLastError`임. SDK의 공식 P/Invoke 시그니처 이름을 정확하게 `Everything_GetLastError`로 선언하고 호출해야 런타임 진입점 오류(System.EntryPointNotFoundException)로 인한 기동 실패를 해결할 수 있음.
+- **WPF ModernWpf 미정의 StaticResource 예외 (StaticResourceExtension)**: `Views/MainWindow.xaml`에서 `CardToggleSwitchStyle`, `TextBoxStyle`, `ButtonStyle` 등 존재하지 않는 스타일 키를 `StaticResource`로 참조하면 `System.Windows.StaticResourceExtension` 예외가 throw되며 앱 구동이 정지됨. ModernWpf의 테마 사전이 적용된 상태에서는 스타일 키를 명시적으로 할당하지 않아도 기본 컨트롤에 아름다운 WinUI 스타일이 자동으로 완전 상속되므로, 해당 스타일 선언을 지워주는 것이 가장 안전하고 호환성이 높은 해결책임.
+
+### 4. 추가적인 5대 이슈 트러블슈팅 지식
+- **ExcelDataReader CSV HeaderException**: UTF-8 BOM이 없는 CSV 파일 파싱 시 인코딩 문제 등으로 `HeaderException`이 발생할 수 있음. `ExcelReaderFactory.CreateCsvReader(stream, new ExcelReaderConfiguration { FallbackEncoding = Encoding.UTF8 })`와 같이 인코딩 사양을 명시적으로 설정하여 방지함.
+- **Everything SDK BOOL 리턴값 마샬링 실패**: C++ `BOOL`은 4바이트 정수이지만 C# `bool`은 1바이트이므로, P/Invoke 호출 시 `[return: MarshalAs(UnmanagedType.Bool)]` 어트리뷰트가 누락되면 참/거짓 판단이 항상 `true`로 깨질 수 있음. 이로 인해 모든 파일 결과가 폴더(`IsFolder = true`)로 잘못 식별되어 크기가 `<DIR>`로 고정되고, 날짜 조회 함수들이 실패(0 반환 ➔ 1601년 변환)하는 문제가 발생함.
+- **WPF StatusBar 짤림 및 여백 처리**: 가로 폭이 제한되거나 패딩 설정이 어긋날 때 우측 끝 텍스트("개" 등)가 잘릴 수 있음. StatusBar 내에 `Width` 강제 바인딩을 피하고, `ItemsPanelTemplate`을 `Grid`로 구성하여 고정 칼럼 분할 정렬을 적용하고 우측 끝 마진 여백을 부여하여 안전하게 레이아웃을 처리함.
+
+
+
+

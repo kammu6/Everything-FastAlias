@@ -21,6 +21,7 @@
 ## 2. 기술 스택
 
 ### 개발 환경 및 런타임
+
 - **런타임 및 데스크톱 쉘**: C# .NET 9.0 (WPF 데스크톱 애플리케이션)
 - **UI 및 테마 라이브러리**: ModernWPF (Windows 11 스타일의 깔끔한 WinUI UI 적용)
 - **MVVM 프레임워크**: CommunityToolkit.Mvvm (ObservableObject, RelayCommand 모델 지원)
@@ -34,68 +35,72 @@
 ## 3. 프로젝트 구조
 
 ### 3.1. 폴더 및 파일 트리 구조
+
 ```text
 D:\3_Code\3_Apps\43_Search-Edit\Everything검색기\
 ├── .gitignore
-├── EverythingFastAlias.sln
-├── src/
-│   └── EverythingFastAlias/
-│       ├── EverythingFastAlias.csproj
-│       ├── App.xaml
-│       ├── App.xaml.cs
-│       ├── Config/
-│       │   ├── AppConstants.cs            # IPC 및 설정 상수
-│       │   └── UIConstants.cs             # UI 크기 및 기본 핫키 설정
-│       ├── Models/
-│       │   ├── SearchResultItem.cs        # 검색 결과 데이터 객체
-│       │   ├── SearchOptions.cs           # 9가지 검색 토글 옵션 상태 객체
-│       │   └── AliasMapping.cs            # 동의어 매핑 도메인 객체
-│       ├── ViewModels/
-│       │   ├── MainWindowViewModel.cs     # 메인 창 컨트롤 뷰모델
-│       │   ├── SearchViewModel.cs         # 검색창 및 옵션 뷰모델
-│       │   └── AliasManagerViewModel.cs   # 매핑 관리자 뷰모델
-│       ├── Views/
-│       │   ├── MainWindow.xaml            # 메인 레이아웃 뷰
-│       │   ├── MainWindow.xaml.cs
-│       │   ├── LeftSidebarView.xaml       # 좌측 옵션 컨트롤 패널 뷰
-│       │   ├── LeftSidebarView.xaml.cs
-│       │   ├── ResultGridView.xaml        # 우측 버추얼 테이블 뷰
-│       │   ├── ResultGridView.xaml.cs
-│       │   ├── Modals/
-│       │   │   ├── HelpWindow.xaml        # 도움말 및 검색 문법 가이드 창
-│       │   │   └── AliasManagerWindow.xaml# 매핑 사전 에디터 창
-│       │   └── Components/
-│       │       └── ToggleChip.xaml        # 컴팩트 토글 칩 스타일
-│       ├── Native/
-│       │   ├── EverythingSdk.cs           # everything64.dll P/Invoke 래퍼
-│       │   ├── EverythingBridge.cs        # 고레벨 Everything API 컨트롤러
-│       │   ├── Win32ClipboardHelper.cs    # 클립보드 FileDrop 및 Ctrl+C/X/V 구현
-│       │   └── ShellContextMenu.cs        # Windows 네이티브 IContextMenu 팝업 호출기
-│       ├── Services/
-│       │   ├── QueryTransformer.cs        # 매핑 치환 및 문법 가공 서비스
-│       │   ├── ExcelService.cs            # ExcelDataReader 기반 고속 파서
-│       │   └── DatabaseService.cs         # SQLite Connection 및 벌크 트랜잭션 CRUD
-│       └── Assets/
-│           └── dll/
-│               └── Everything64.dll       # FFI 타겟 DLL 파일
+├── docs/
+├── .codegraph/
+└── src/
+    └── EverythingFastAlias/
+```
+
+```text
+D:\3_Code\3_Apps\43_Search-Edit\Everything검색기\src\EverythingFastAlias\
+├── App.xaml                   # ModernWpfUI 테마 리소스 병합
+├── App.xaml.cs
+├── EverythingFastAlias.csproj # NuGet 패키지 및 Native DLL 복사 빌드 규칙 지정
+├── Config/
+│   ├── AppConstants.cs        # IPC 및 시스템 제어용 상수
+│   └── UIConstants.cs         # UI 크기 및 기본 핫키 설정
+├── Models/
+│   ├── SearchResultItem.cs    # 검색 행 데이터 모델 ( display size 및 날짜 자동 가공 )
+│   ├── SearchOptions.cs       # 9가지 검색 조건 옵션 모델
+│   └── AliasMapping.cs        # MVVM 바인딩용 매핑 정보 모델
+├── ViewModels/
+│   ├── MainWindowViewModel.cs # 메인 레이아웃 및 윈도우 생성 이벤트 중계
+│   ├── SearchViewModel.cs     # 실시간 검색 쿼리 질의 및 상태 관리 뷰모델
+│   └── AliasManagerViewModel.cs # 매핑 데이터 CRUD 및 엑셀 파싱 조율
+├── Views/
+│   ├── MainWindow.xaml        # 메인 윈도우 UI (3:7 Grid Splitter)
+│   ├── MainWindow.xaml.cs     # 모달 호출 및 엔진 미구동 감지 시 자동 시작 핸들러
+│   ├── LeftSidebarView.xaml   # 좌측 스마트 컨트롤 패널 (UniformGrid, WrapPanel)
+│   ├── LeftSidebarView.xaml.cs # 크기 필터 리셋 트리거
+│   ├── ResultGridView.xaml    # 우측 파일 데이터 가상화 리스트뷰
+│   └── ResultGridView.xaml.cs # Drag-out 마운트, 네이티브 ContextMenu 팝업, Ctrl+C/X 단축키 감지
+├── Native/
+│   ├── EverythingSdk.cs       # kernel32.dll LoadLibrary 기반 FFI 및 P/Invoke
+│   ├── EverythingBridge.cs    # Everything 엔진 상태 점검 및 검색 질의 래핑
+│   ├── Win32ClipboardHelper.cs # 파일 클립보드 복사/잘라내기 네이티브 래퍼
+│   ├── ShellContextMenu.cs    # COM 인터페이스 마샬링 기반 윈도우 네이티브 우클릭 메뉴 팝업
+│   └── TrayIconHelper.cs      # System.Windows.Forms.NotifyIcon 기반 시스템 트레이 아이콘 전담
+└── Services/
+    ├── QueryTransformer.cs    # 동의어 치환 및 Everything 공식 문법 최종 변환 서비스
+    ├── ExcelService.cs        # ExcelDataReader 기반 고속 파싱
+    ├── DatabaseService.cs     # SQLite 연결 싱글톤 및 Bulk Save 트랜잭션 구문
+    └── AutoStartService.cs    # 시작프로그램 자동 실행 등록/해제 관리 서비스
 ```
 
 ### 3.2. 폴더 및 파일 역할
 
 #### Models (데이터 도메인)
+
 - **`SearchResultItem.cs`**: Everything SDK로부터 수신한 개별 파일/폴더 정보(이름, 경로, 크기, 수정일 등)를 저장하는 모델.
 - **`SearchOptions.cs`**: 정규식, 대소문자, 전체단어, 미디어 필터 등 9가지 검색 스위치 옵션 상태값 보유.
 
 #### ViewModels (비즈니스 로직 및 상태 관리)
+
 - **`MainWindowViewModel.cs`**: 메인 화면의 레이아웃 상태(리사이저, 모달 활성화) 제어 및 전역 Command 매핑.
 - **`SearchViewModel.cs`**: 검색 키워드 바인딩, 옵션 전이 제어, EverythingBridge를 통한 검색 질의 처리 담당.
 - **`AliasManagerViewModel.cs`**: SQLite와 연동되어 매핑 테이블의 실시간 추가/수정/삭제 관리 및 엑셀 대용량 임포트 제어.
 
 #### Views (UI 마크업 레이어)
+
 - **`ResultGridView.xaml`**: `VirtualizingStackPanel` 및 `VirtualizingPanel.IsVirtualizing="True"`를 활성화하여 대용량 행 렌더링 최적화. 컬럼 드래그 순서 변경(Reorder) 및 정렬 방향 화살표 탑재.
 - **`LeftSidebarView.xaml`**: 아코디언 형태의 고도화된 조건 필터들과 다중 선택 가능한 프리셋 미디어 칩 배치.
 
 #### Native & Services (네이티브 FFI 및 가공 서비스)
+
 - **`EverythingSdk.cs`**: `wchar_t*` Unicode API 함수(`Everything_SetSearchW` 등) 정의.
 - **`ShellContextMenu.cs`**: 파일들의 전체 경로 목록을 윈도우 OS의 `IContextMenu` 및 `SHGetContextMenu` API에 연동하여 네이티브 우클릭 메뉴 팝업 트리거.
 - **`QueryTransformer.cs`**: 입력어 분석 후 중괄호가 아닌 부등호 `< >`와 OR 연산자(`|`)를 기반으로 동의어들을 가공하여 Everything 규격 문자열로 완성하는 변환기.

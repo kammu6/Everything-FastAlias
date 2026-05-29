@@ -41,6 +41,15 @@ namespace EverythingFastAlias.Native
             // 3. 기본 Windows PATH 탐색에 의존 (기본 DllImport 동작)
         }
 
+        public const uint EVERYTHING_REQUEST_FILE_NAME = 0x00000001;
+        public const uint EVERYTHING_REQUEST_PATH = 0x00000002;
+        public const uint EVERYTHING_REQUEST_SIZE = 0x00000010;
+        public const uint EVERYTHING_REQUEST_DATE_MODIFIED = 0x00000040;
+        public const uint EVERYTHING_REQUEST_EXTENSION = 0x00000100;
+
+        [DllImport(DllName)]
+        public static extern void Everything_SetRequestFlags(uint dwRequestFlags);
+
         [DllImport(DllName, CharSet = CharSet.Unicode)]
         public static extern void Everything_SetSearchW(string lpSearchString);
 
@@ -65,6 +74,9 @@ namespace EverythingFastAlias.Native
         [DllImport(DllName)]
         public static extern uint Everything_GetNumResults();
 
+        [DllImport(DllName)]
+        public static extern uint Everything_GetResultListRequestFlags();
+
         [DllImport(DllName, CharSet = CharSet.Unicode)]
         private static extern IntPtr Everything_GetResultFileNameW(uint nIndex);
 
@@ -72,16 +84,19 @@ namespace EverythingFastAlias.Native
         private static extern IntPtr Everything_GetResultPathW(uint nIndex);
 
         [DllImport(DllName)]
+        [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool Everything_GetResultSize(uint nIndex, out long lpSize);
 
         [DllImport(DllName)]
+        [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool Everything_GetResultDateModified(uint nIndex, out long lpFileTime);
 
         [DllImport(DllName)]
+        [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool Everything_IsFolderResult(uint nIndex);
 
         [DllImport(DllName)]
-        public static extern uint Everything_GetGetLastError();
+        public static extern uint Everything_GetLastError();
 
         // wchar_t* 리턴값을 안전하게 C# string으로 마샬링하는 헬퍼 함수
         public static string GetResultFileName(uint nIndex)

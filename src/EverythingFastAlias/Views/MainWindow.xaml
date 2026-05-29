@@ -9,7 +9,8 @@
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource SystemControlPageBackgroundChromeLowBrush}"
         modern:ThemeManager.RequestedTheme="Light"
-        Loaded="Window_Loaded">
+        Loaded="Window_Loaded"
+        Closing="Window_Closing">
 
     <Window.DataContext>
         <vm:MainWindowViewModel/>
@@ -27,6 +28,12 @@
         <Menu Grid.Row="0" Background="{DynamicResource SystemControlBackgroundAltHighBrush}" Padding="5,2,5,2"
               BorderBrush="{DynamicResource SystemControlElevationBorderBrush}" BorderThickness="0,0,0,1">
             <MenuItem Header="파일(F)">
+                <MenuItem Header="새창 띄우기(N)" Command="{Binding NewWindowCommand}"/>
+                <MenuItem Header="결과 내보내기(E)..." Command="{Binding ExportResultsCommand}"/>
+                <Separator/>
+                <MenuItem Header="시작프로그램 등록" IsCheckable="True" IsChecked="{Binding IsAutoStartEnabled}"/>
+                <MenuItem Header="시스템 트레이 최소화 사용" IsCheckable="True" IsChecked="{Binding IsMinimizeToTrayEnabled}"/>
+                <Separator/>
                 <MenuItem Header="종료(X)" Click="MenuExit_Click"/>
             </MenuItem>
             <MenuItem Header="도구(T)">
@@ -43,29 +50,54 @@
             <modern:SimpleStackPanel Spacing="10">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/> <!-- FastAlias On/Off 스위치 -->
+                        <ColumnDefinition Width="Auto"/> <!-- 토글 스위치들 -->
                         <ColumnDefinition Width="*"/>    <!-- 검색 인풋 박스 -->
                     </Grid.ColumnDefinitions>
 
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,15,0">
-                        <TextBlock Text="FastAlias" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="12" Margin="0,0,8,0"/>
-                        <modern:ToggleSwitch IsOn="{Binding SearchVM.Options.UseFastAlias}" 
-                                             OnContent="ON" OffContent="OFF" 
-                                             Style="{StaticResource CardToggleSwitchStyle}"
-                                             Toggled="FastAliasSwitch_Toggled"/>
-                    </StackPanel>
+                    <modern:SimpleStackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center" Margin="0,0,15,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="FastAlias" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="11" Width="65" Margin="0,0,5,0"/>
+                            <modern:ToggleSwitch IsOn="{Binding SearchVM.Options.UseFastAlias}" 
+                                                 OnContent="ON" OffContent="OFF" 
+                                                 Toggled="FastAliasSwitch_Toggled"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="옵션패널" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="11" Width="65" Margin="0,0,5,0"/>
+                            <modern:ToggleSwitch x:Name="SidebarToggleSwitch" IsOn="True" 
+                                                 OnContent="ON" OffContent="OFF" 
+                                                 Toggled="SidebarToggleSwitch_Toggled"/>
+                        </StackPanel>
+                    </modern:SimpleStackPanel>
 
                     <!-- 검색창 인풋 -->
                     <Grid Grid.Column="1">
-                        <TextBox FontSize="15" Padding="8,5,30,5" 
+                        <TextBox FontSize="13" Padding="8,5,60,5" 
                                  modern:ControlHelper.PlaceholderText="검색할 파일 또는 폴더명을 입력하세요... (예: 사과 | banana)" 
-                                 Text="{Binding SearchVM.SearchQuery, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource TextBoxStyle}"/>
+                                 Text="{Binding SearchVM.SearchQuery, UpdateSourceTrigger=PropertyChanged}"/>
                         
-                        <!-- 전체 지우기 [X] 버튼 -->
-                        <Button Content="✕" Width="20" Height="20" HorizontalAlignment="Right" VerticalAlignment="Center" 
-                                Margin="0,0,8,0" Style="{StaticResource ButtonStyle}" Click="ClearSearch_Click" 
-                                Background="Transparent" BorderThickness="0" Foreground="Gray" FontSize="11"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,8,0">
+                            <!-- FastAlias 상태 인디케이터 아이콘 -->
+                            <TextBlock Text="💡" FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0" Cursor="Help">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SearchVM.Options.UseFastAlias}" Value="True">
+                                                <Setter Property="Opacity" Value="1.0"/>
+                                                <Setter Property="ToolTip" Value="FastAlias 매핑 활성화됨 (ON)"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding SearchVM.Options.UseFastAlias}" Value="False">
+                                                <Setter Property="Opacity" Value="0.2"/>
+                                                <Setter Property="ToolTip" Value="FastAlias 매핑 비활성화됨 (OFF)"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            
+                            <!-- 전체 지우기 [X] 버튼 -->
+                            <Button Content="✕" Width="20" Height="20" Click="ClearSearch_Click" 
+                                    Background="Transparent" BorderThickness="0" Foreground="Gray" FontSize="11" VerticalAlignment="Center"/>
+                        </StackPanel>
                     </Grid>
                 </Grid>
 
@@ -77,10 +109,10 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <TextBox Grid.Column="0" modern:ControlHelper.PlaceholderText="최종 쿼리에서 제외할 단어 입력... (예: tmp;temp)" 
+                    <TextBox Grid.Column="0" FontSize="11" modern:ControlHelper.PlaceholderText="최종 쿼리에서 제외할 단어 입력... (예: tmp;temp)" 
                              Text="{Binding SearchVM.ExcludedWords, UpdateSourceTrigger=PropertyChanged}"/>
                     
-                    <TextBox Grid.Column="2" modern:ControlHelper.PlaceholderText="검색할 직계 경로 지정... (예: C:\Folder1;D:\Folder2)" 
+                    <TextBox Grid.Column="2" FontSize="11" modern:ControlHelper.PlaceholderText="검색할 직계 경로 지정... (예: C:\Folder1;D:\Folder2)" 
                              Text="{Binding SearchVM.FolderPaths, UpdateSourceTrigger=PropertyChanged}"/>
                 </Grid>
             </modern:SimpleStackPanel>
@@ -89,17 +121,17 @@
         <!-- 3. 메인 스플릿 바디 (30% : 70% 리사이징) -->
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="320" MinWidth="320"/> <!-- 30% 좌측 사이드바 -->
+                <ColumnDefinition x:Name="SidebarColumn" Width="320" MinWidth="320"/> <!-- 30% 좌측 사이드바 -->
                 <ColumnDefinition Width="Auto"/>               <!-- 리사이저 드래그 핸들 -->
                 <ColumnDefinition Width="*"/>                  <!-- 70% 우측 데이터 그리드 -->
             </Grid.ColumnDefinitions>
 
             <!-- 좌측 컨트롤러 사이드바 -->
-            <views:LeftSidebarView Grid.Column="0" DataContext="{Binding SearchVM}"
+            <views:LeftSidebarView x:Name="SidebarView" Grid.Column="0" DataContext="{Binding SearchVM}"
                                    BorderBrush="{DynamicResource SystemControlElevationBorderBrush}" BorderThickness="0,0,1,0"/>
 
             <!-- 3:7 스플릿 리사이저 핸들 -->
-            <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch"
+            <GridSplitter x:Name="SidebarSplitter" Grid.Column="1" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch"
                           Background="{DynamicResource SystemControlElevationBorderBrush}"/>
 
             <!-- 우측 데이터 가상화 리스트뷰 -->
@@ -108,11 +140,26 @@
 
         <!-- 4. 상태 표시 바 (StatusBar) -->
         <StatusBar Grid.Row="3" Background="{DynamicResource SystemControlPageBackgroundChromeLowBrush}"
-                   BorderBrush="{DynamicResource SystemControlElevationBorderBrush}" BorderThickness="0,1,0,0" Padding="10,5,10,5">
-            <Grid Width="{Binding RelativeSource={RelativeSource AncestorType=StatusBar}, Path=ActualWidth}" Margin="0,0,20,0">
-                <TextBlock Text="{Binding SearchVM.StatusMessage}" FontSize="12" Foreground="DimGray" HorizontalAlignment="Left"/>
-                <TextBlock Text="{Binding SearchVM.ResultCountMessage}" FontSize="12" Foreground="DimGray" HorizontalAlignment="Right" Margin="0,0,10,0"/>
-            </Grid>
+                   BorderBrush="{DynamicResource SystemControlElevationBorderBrush}" BorderThickness="0,1,0,0" Padding="10,5,10,5"
+                   HorizontalContentAlignment="Stretch">
+            <StatusBar.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                    </Grid>
+                </ItemsPanelTemplate>
+            </StatusBar.ItemsPanel>
+
+            <StatusBarItem Grid.Column="0" HorizontalAlignment="Left">
+                <TextBlock Text="{Binding SearchVM.StatusMessage}" FontSize="11" Foreground="DimGray"/>
+            </StatusBarItem>
+
+            <StatusBarItem Grid.Column="1" HorizontalAlignment="Right" Margin="0,0,15,0">
+                <TextBlock Text="{Binding SearchVM.ResultCountMessage}" FontSize="11" Foreground="DimGray"/>
+            </StatusBarItem>
         </StatusBar>
     </Grid>
 </Window>

@@ -22,12 +22,9 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     
-                    <RadioButton Grid.Column="0" Content="전체" IsChecked="{Binding ScopeAll}"
-                                 Style="{StaticResource ToggleButtonRadioButtonStyle}" Height="32"/>
-                    <RadioButton Grid.Column="1" Content="파일만" IsChecked="{Binding ScopeFile}"
-                                 Style="{StaticResource ToggleButtonRadioButtonStyle}" Height="32"/>
-                    <RadioButton Grid.Column="2" Content="폴더만" IsChecked="{Binding ScopeFolder}"
-                                 Style="{StaticResource ToggleButtonRadioButtonStyle}" Height="32"/>
+                    <RadioButton Grid.Column="0" Content="전체" IsChecked="{Binding ScopeAll}" Height="32" FontSize="11"/>
+                    <RadioButton Grid.Column="1" Content="파일만" IsChecked="{Binding ScopeFile}" Height="32" FontSize="11"/>
+                    <RadioButton Grid.Column="2" Content="폴더만" IsChecked="{Binding ScopeFolder}" Height="32" FontSize="11"/>
                 </Grid>
             </modern:SimpleStackPanel>
 
@@ -36,10 +33,10 @@
                 <TextBlock Text="검색 엔진 옵션" FontWeight="SemiBold" FontSize="13"
                            Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
                 <UniformGrid Columns="2" Rows="2">
-                    <CheckBox Content="대소문자 구분" IsChecked="{Binding Options.MatchCase}" Margin="2,5,2,5"/>
-                    <CheckBox Content="전체 단어 일치" IsChecked="{Binding Options.MatchWholeWord}" Margin="2,5,2,5"/>
-                    <CheckBox Content="정규식 검색" IsChecked="{Binding Options.UseRegex}" Margin="2,5,2,5"/>
-                    <CheckBox Content="휴지통 포함" IsChecked="{Binding Options.IncludeRecycleBin}" Margin="2,5,2,5"/>
+                    <CheckBox Content="대소문자 구분" IsChecked="{Binding Options.MatchCase}" Margin="2,2,2,2" FontSize="11"/>
+                    <CheckBox Content="전체 단어 일치" IsChecked="{Binding Options.MatchWholeWord}" Margin="2,2,2,2" FontSize="11"/>
+                    <CheckBox Content="정규식 검색" IsChecked="{Binding Options.UseRegex}" Margin="2,2,2,2" FontSize="11"/>
+                    <CheckBox Content="휴지통 포함" IsChecked="{Binding Options.IncludeRecycleBin}" Margin="2,2,2,2" FontSize="11"/>
                 </UniformGrid>
             </modern:SimpleStackPanel>
 
@@ -48,14 +45,14 @@
                 <TextBlock Text="미디어 필터 (다중 선택)" FontWeight="SemiBold" FontSize="13"
                            Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
                 <WrapPanel Margin="0,0,0,5">
-                    <ToggleButton Content="전체" IsChecked="{Binding MediaAll}" Margin="2" Height="28"/>
-                    <ToggleButton Content="영상" IsChecked="{Binding MediaVideo}" Margin="2" Height="28"/>
-                    <ToggleButton Content="음악" IsChecked="{Binding MediaAudio}" Margin="2" Height="28"/>
-                    <ToggleButton Content="사진" IsChecked="{Binding MediaPic}" Margin="2" Height="28"/>
-                    <ToggleButton Content="문서" IsChecked="{Binding MediaDoc}" Margin="2" Height="28"/>
-                    <ToggleButton Content="코드" IsChecked="{Binding MediaCode}" Margin="2" Height="28"/>
-                    <ToggleButton Content="실행" IsChecked="{Binding MediaExe}" Margin="2" Height="28"/>
-                    <ToggleButton Content="압축" IsChecked="{Binding MediaZip}" Margin="2" Height="28"/>
+                    <ToggleButton Content="전체" IsChecked="{Binding MediaAll}" Margin="1" Height="28" FontSize="11" Padding="4,2,4,2"/>
+                    <ToggleButton Content="영상" IsChecked="{Binding MediaVideo}" Margin="1" Height="28" FontSize="11" Padding="4,2,4,2"/>
+                    <ToggleButton Content="음악" IsChecked="{Binding MediaAudio}" Margin="1" Height="28" FontSize="11" Padding="4,2,4,2"/>
+                    <ToggleButton Content="사진" IsChecked="{Binding MediaPic}" Margin="1" Height="28" FontSize="11" Padding="4,2,4,2"/>
+                    <ToggleButton Content="문서" IsChecked="{Binding MediaDoc}" Margin="1" Height="28" FontSize="11" Padding="4,2,4,2"/>
+                    <ToggleButton Content="코드" IsChecked="{Binding MediaCode}" Margin="1" Height="28" FontSize="11" Padding="4,2,4,2"/>
+                    <ToggleButton Content="실행" IsChecked="{Binding MediaExe}" Margin="1" Height="28" FontSize="11" Padding="4,2,4,2"/>
+                    <ToggleButton Content="압축" IsChecked="{Binding MediaZip}" Margin="1" Height="28" FontSize="11" Padding="4,2,4,2"/>
                 </WrapPanel>
                 
                 <TextBlock Text="커스텀 확장자 필터" FontSize="11" Foreground="Gray"/>
@@ -86,10 +83,10 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     
-                    <RadioButton Grid.Column="0" Content="KB" IsChecked="{Binding SizeKB}" Style="{StaticResource ToggleButtonRadioButtonStyle}" Height="28"/>
-                    <RadioButton Grid.Column="1" Content="MB" IsChecked="{Binding SizeMB}" Style="{StaticResource ToggleButtonRadioButtonStyle}" Height="28"/>
-                    <RadioButton Grid.Column="2" Content="GB" IsChecked="{Binding SizeGB}" Style="{StaticResource ToggleButtonRadioButtonStyle}" Height="28"/>
-                    <Button Grid.Column="3" Content="크기 초기화" Click="ResetSize_Click" Margin="5,0,0,0" Height="28"/>
+                    <RadioButton Grid.Column="0" Content="KB" IsChecked="{Binding SizeKB}" Height="28" FontSize="11"/>
+                    <RadioButton Grid.Column="1" Content="MB" IsChecked="{Binding SizeMB}" Height="28" FontSize="11"/>
+                    <RadioButton Grid.Column="2" Content="GB" IsChecked="{Binding SizeGB}" Height="28" FontSize="11"/>
+                    <Button Grid.Column="3" Content="크기 초기화" Click="ResetSize_Click" Margin="5,0,0,0" Height="28" FontSize="11" Padding="4,2,4,2"/>
                 </Grid>
             </modern:SimpleStackPanel>
 

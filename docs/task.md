@@ -21,3 +21,14 @@
     - [x] QueryTransformer 단위 테스트 작성 및 dotnet test 검증
     - [x] 외부 탐색기 파일 이동/복사 등 수동 시나리오 최종 확인
     - [x] walkthrough.md 작성 및 AGENTS.md 업데이트
+- [x] Phase 6: 누락 및 보완 기능 구현
+    - [x] EverythingFastAlias.csproj에 UseWindowsForms 설정 활성화
+    - [x] AutoStartService 구현 (시작프로그램 HKCU 등록/해제)
+    - [x] TrayIconHelper 구현 (System.Windows.Forms.NotifyIcon 트레이 제어)
+    - [x] SearchViewModel에 정렬(SortResults) 및 선택 카운팅(SelectedCount) 기능 추가
+    - [x] MainWindowViewModel에 내보내기, 새창, 시작프로그램/트레이 설정 명령 추가
+    - [x] App.xaml에 Slate-50 라이트 테마 브러시 재정의 적용
+    - [x] Views/MainWindow.xaml & cs 메뉴바 추가, FastAlias 상태 인디케이터, Closing 트레이 리디렉션 연동
+    - [x] Views/ResultGridView.xaml & cs 헤더 정렬 바인딩 및 선택 감지 이벤트 연동
+    - [x] 전체 빌드 및 동작 수동/자동 검증 완료
+    - [x] walkthrough.md 갱신 및 AGENTS.md 업데이트

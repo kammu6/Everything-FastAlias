@@ -5,9 +5,16 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using EverythingFastAlias.Models;
 using EverythingFastAlias.Native;
+using EverythingFastAlias.ViewModels;
+
+using UserControl = System.Windows.Controls.UserControl;
+using MouseEventArgs = System.Windows.Input.MouseEventArgs;
+using KeyEventArgs = System.Windows.Input.KeyEventArgs;
+using Point = System.Windows.Point;
 
 namespace EverythingFastAlias.Views
 {
@@ -152,6 +159,37 @@ namespace EverythingFastAlias.Views
                         }
                     }
                 }
+            }
+        }
+
+        #endregion
+
+        #region 정렬 및 선택 항목 이벤트 연동
+
+        private void ResultsGridViewHeader_Click(object sender, RoutedEventArgs e)
+        {
+            if (e.OriginalSource is GridViewColumnHeader header && header.Column != null)
+            {
+                var binding = header.Column.DisplayMemberBinding as Binding;
+                string? propertyName = binding?.Path?.Path;
+
+                if (string.IsNullOrEmpty(propertyName))
+                {
+                    propertyName = header.Column.Header as string;
+                }
+
+                if (propertyName != null && DataContext is SearchViewModel vm)
+                {
+                    vm.SortResults(propertyName);
+                }
+            }
+        }
+
+        private void ResultsListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (DataContext is SearchViewModel vm)
+            {
+                vm.SelectedCount = ResultsListView.SelectedItems.Count;
             }
         }
 

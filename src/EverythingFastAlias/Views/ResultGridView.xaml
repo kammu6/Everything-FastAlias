@@ -18,7 +18,9 @@
                   SelectionMode="Extended"
                   BorderThickness="0"
                   KeyDown="ResultsListView_KeyDown"
-                  MouseRightButtonUp="ResultsListView_MouseRightButtonUp">
+                  MouseRightButtonUp="ResultsListView_MouseRightButtonUp"
+                  SelectionChanged="ResultsListView_SelectionChanged"
+                  GridViewColumnHeader.Click="ResultsGridViewHeader_Click">
             
             <ListView.ItemContainerStyle>
                 <Style TargetType="ListViewItem">

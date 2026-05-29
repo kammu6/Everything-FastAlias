@@ -12,7 +12,7 @@ namespace EverythingFastAlias.Native
 {
     public class EverythingBridge
     {
-        public const uint EVERYTHING_ERROR_IPC = 1;
+        public const uint EVERYTHING_ERROR_IPC = 2;
 
         public static bool IsEverythingRunning()
         {
@@ -21,7 +21,7 @@ namespace EverythingFastAlias.Native
             EverythingSdk.Everything_SetMax(1);
             EverythingSdk.Everything_QueryW(false);
             
-            var err = EverythingSdk.Everything_GetGetLastError();
+            var err = EverythingSdk.Everything_GetLastError();
             return err != EVERYTHING_ERROR_IPC;
         }
 
@@ -93,28 +93,47 @@ namespace EverythingFastAlias.Native
         {
             var results = new List<SearchResultItem>();
 
-            // 1. 검색 옵션 주입
+            // 1. 요청 플래그 주입 (이름, 경로, 크기, 수정한 날짜)
+            EverythingSdk.Everything_SetRequestFlags(
+                EverythingSdk.EVERYTHING_REQUEST_FILE_NAME |
+                EverythingSdk.EVERYTHING_REQUEST_PATH |
+                EverythingSdk.EVERYTHING_REQUEST_SIZE |
+                EverythingSdk.EVERYTHING_REQUEST_DATE_MODIFIED
+            );
+
+            // 2. 검색 옵션 주입
             EverythingSdk.Everything_SetMatchCase(options.MatchCase);
             EverythingSdk.Everything_SetMatchWholeWord(options.MatchWholeWord);
             EverythingSdk.Everything_SetRegex(options.UseRegex);
             
-            // 2. 최대 조회 개수 설정
+            // 3. 최대 조회 개수 설정
             EverythingSdk.Everything_SetMax(EverythingFastAlias.Config.AppConstants.DllConfig.DefaultMaxResults);
             EverythingSdk.Everything_SetOffset(0);
 
-            // 3. 쿼리 전달
+            // 4. 쿼리 전달
             EverythingSdk.Everything_SetSearchW(processedQuery);
 
             // 4. 실행 (동기형 쿼리)
             bool success = EverythingSdk.Everything_QueryW(true);
             if (!success)
             {
-                var err = EverythingSdk.Everything_GetGetLastError();
+                var err = EverythingSdk.Everything_GetLastError();
                 if (err == EVERYTHING_ERROR_IPC)
                 {
                     throw new InvalidOperationException("Everything 엔진이 꺼져 있거나 연결에 실패했습니다.");
                 }
-                return results;
+
+                // v2 쿼리 실패 시(예: 권한/IPC 오류 등) 이름과 경로만 조회하는 v1 쿼리로 안전하게 폴백(재시도)
+                EverythingSdk.Everything_SetRequestFlags(
+                    EverythingSdk.EVERYTHING_REQUEST_FILE_NAME |
+                    EverythingSdk.EVERYTHING_REQUEST_PATH
+                );
+
+                success = EverythingSdk.Everything_QueryW(true);
+                if (!success)
+                {
+                    return results;
+                }
             }
 
             // 5. 결과 목록 가공

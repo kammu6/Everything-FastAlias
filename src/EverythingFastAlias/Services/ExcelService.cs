@@ -24,7 +24,9 @@ namespace EverythingFastAlias.Services
             }
 
             using var stream = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            using var reader = ExcelReaderFactory.CreateReader(stream);
+            using var reader = Path.GetExtension(filePath).Equals(".csv", StringComparison.OrdinalIgnoreCase)
+                ? ExcelReaderFactory.CreateCsvReader(stream, new ExcelReaderConfiguration { FallbackEncoding = Encoding.UTF8 })
+                : ExcelReaderFactory.CreateReader(stream);
 
             // 첫 번째 행은 헤더로 간주하여 건너뛰기 여부 결정 (Keyword, Words/Aliases 등으로 매핑)
             bool isFirstRow = true;

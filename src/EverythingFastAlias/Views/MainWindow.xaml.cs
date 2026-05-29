@@ -9,6 +9,8 @@ namespace EverythingFastAlias.Views
     public partial class MainWindow : Window
     {
         private MainWindowViewModel? VM => DataContext as MainWindowViewModel;
+        private TrayIconHelper? _trayIcon;
+        private bool _isClosingForReal = false;
 
         public MainWindow()
         {
@@ -22,9 +24,16 @@ namespace EverythingFastAlias.Views
                 // 1. 모달창 오픈 요청 이벤트 구독
                 VM.RequestOpenAliasManager += OpenAliasManager;
                 VM.RequestOpenHelp += OpenHelp;
+                VM.RequestNewWindow += OpenNewWindow;
 
                 // 2. 엔진 미감지 경고 이벤트 구독
                 VM.SearchVM.EngineNotRunningDetected += HandleEngineNotRunning;
+
+                // 3. 시스템 트레이 활성화
+                if (_trayIcon == null)
+                {
+                    _trayIcon = new TrayIconHelper(this);
+                }
             }
         }
 
@@ -104,9 +113,52 @@ namespace EverythingFastAlias.Views
             VM?.SearchVM.ExecuteSearch();
         }
 
+        private void SidebarToggleSwitch_Toggled(object sender, RoutedEventArgs e)
+        {
+            if (SidebarToggleSwitch == null || SidebarColumn == null || SidebarSplitter == null || SidebarView == null)
+                return;
+
+            if (SidebarToggleSwitch.IsOn)
+            {
+                SidebarColumn.Width = new GridLength(320);
+                SidebarColumn.MinWidth = 320;
+                SidebarSplitter.Visibility = Visibility.Visible;
+                SidebarView.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                SidebarColumn.Width = new GridLength(0);
+                SidebarColumn.MinWidth = 0;
+                SidebarSplitter.Visibility = Visibility.Collapsed;
+                SidebarView.Visibility = Visibility.Collapsed;
+            }
+        }
+
         private void MenuExit_Click(object sender, RoutedEventArgs e)
         {
+            _isClosingForReal = true;
+            _trayIcon?.Dispose();
             Application.Current.Shutdown();
+        }
+
+        private void OpenNewWindow()
+        {
+            var newWindow = new MainWindow();
+            newWindow.Show();
+        }
+
+        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            if (VM != null && VM.IsMinimizeToTrayEnabled && !_isClosingForReal)
+            {
+                e.Cancel = true;
+                this.Hide();
+                _trayIcon?.ShowBalloonTip(2000, "Everything FastAlias", "프로그램이 백그라운드 트레이로 최소화되었습니다.", System.Windows.Forms.ToolTipIcon.Info);
+            }
+            else
+            {
+                _trayIcon?.Dispose();
+            }
         }
     }
 }

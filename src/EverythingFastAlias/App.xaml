@@ -2,13 +2,19 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:EverythingFastAlias"
-             StartupUri="MainWindow.xaml">
+             xmlns:ui="http://schemas.modernwpf.com/2019"
+             StartupUri="Views/MainWindow.xaml">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="pack://application:,,,/ModernWpf;component/ThemeResources/Light.xaml" />
-                <ResourceDictionary Source="pack://application:,,,/ModernWpf;component/ThemeResources/ControlStyles.xaml" />
+                <ui:ThemeResources />
+                <ui:XamlControlsResources />
             </ResourceDictionary.MergedDictionaries>
+            
+            <!-- Slate-50 기반 클린 라이트 테마 브러시 재정의 -->
+            <SolidColorBrush x:Key="SystemControlPageBackgroundChromeLowBrush" Color="#F8FAFC"/>
+            <SolidColorBrush x:Key="SystemControlBackgroundAltHighBrush" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="SystemControlElevationBorderBrush" Color="#E2E8F0"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

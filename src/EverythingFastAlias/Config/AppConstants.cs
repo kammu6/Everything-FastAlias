@@ -4,7 +4,8 @@ namespace EverythingFastAlias.Config
     {
         public static class DllConfig
         {
-            public const uint DefaultMaxResults = 1000;
+            // DefaultMaxResults = 0xFFFFFFFF 은 Everything SDK에서 무제한(EVERYTHING_MAX_ALL) 조회를 뜻함
+            public const uint DefaultMaxResults = 0xFFFFFFFF;
             public const string RecycleBinPath = "!$Recycle.Bin";
         }
 
