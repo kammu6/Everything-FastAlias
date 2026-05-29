@@ -106,6 +106,40 @@ namespace EverythingFastAlias.Native
             int GetCommandString(IntPtr idCmd, uint uFlags, ref uint pwReserved, [MarshalAs(UnmanagedType.LPStr)] string pszName, uint cchMax);
         }
 
+        [ComImport]
+        [Guid("000214F4-0000-0000-C000-000000000046")]
+        [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+        private interface IContextMenu2 : IContextMenu
+        {
+            [PreserveSig]
+            new int QueryContextMenu(IntPtr hMenu, uint indexMenu, uint idCmdFirst, uint idCmdLast, uint uFlags);
+            [PreserveSig]
+            new int InvokeCommand(ref CMINVOKECOMMANDINFO pici);
+            [PreserveSig]
+            new int GetCommandString(IntPtr idCmd, uint uFlags, ref uint pwReserved, [MarshalAs(UnmanagedType.LPStr)] string pszName, uint cchMax);
+
+            [PreserveSig]
+            int HandleMenuMsg(uint uMsg, IntPtr wParam, IntPtr lParam);
+        }
+
+        [ComImport]
+        [Guid("30F105C9-681E-11D0-A83B-00A0C9054129")]
+        [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+        private interface IContextMenu3 : IContextMenu2
+        {
+            [PreserveSig]
+            new int QueryContextMenu(IntPtr hMenu, uint indexMenu, uint idCmdFirst, uint idCmdLast, uint uFlags);
+            [PreserveSig]
+            new int InvokeCommand(ref CMINVOKECOMMANDINFO pici);
+            [PreserveSig]
+            new int GetCommandString(IntPtr idCmd, uint uFlags, ref uint pwReserved, [MarshalAs(UnmanagedType.LPStr)] string pszName, uint cchMax);
+            [PreserveSig]
+            new int HandleMenuMsg(uint uMsg, IntPtr wParam, IntPtr lParam);
+
+            [PreserveSig]
+            int HandleMenuMsg2(uint uMsg, IntPtr wParam, IntPtr lParam, out IntPtr plResult);
+        }
+
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
         private struct CMINVOKECOMMANDINFO
         {
@@ -120,7 +154,47 @@ namespace EverythingFastAlias.Native
             public IntPtr hIcon;
         }
 
+        private const int WM_INITMENUPOPUP = 0x0117;
+        private const int WM_DRAWITEM = 0x002B;
+        private const int WM_MEASUREITEM = 0x002C;
+        private const int WM_MENUCHAR = 0x0120;
+
         #endregion
+
+        private static IContextMenu? _contextMenu;
+        private static IContextMenu2? _contextMenu2;
+        private static IContextMenu3? _contextMenu3;
+
+        private static IntPtr HookWindowMessages(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            switch (msg)
+            {
+                case WM_INITMENUPOPUP:
+                case WM_DRAWITEM:
+                case WM_MEASUREITEM:
+                case WM_MENUCHAR:
+                    if (_contextMenu3 != null)
+                    {
+                        int hr = _contextMenu3.HandleMenuMsg2((uint)msg, wParam, lParam, out IntPtr lResult);
+                        if (hr >= 0) // S_OK
+                        {
+                            handled = true;
+                            return lResult;
+                        }
+                    }
+                    else if (_contextMenu2 != null)
+                    {
+                        int hr = _contextMenu2.HandleMenuMsg((uint)msg, wParam, lParam);
+                        if (hr >= 0) // S_OK
+                        {
+                            handled = true;
+                            return IntPtr.Zero;
+                        }
+                    }
+                    break;
+            }
+            return IntPtr.Zero;
+        }
 
         public static void ShowContextMenu(Window parentWindow, List<string> filePaths)
         {
@@ -204,14 +278,24 @@ namespace EverythingFastAlias.Native
                 // 6. 포인터에서 인터페이스 객체로 마샬링
                 IContextMenu contextMenu = (IContextMenu)Marshal.GetTypedObjectForIUnknown(contextMenuPtr, typeof(IContextMenu));
 
-                // 5. 팝업 메뉴 생성 및 아이템 쿼리
+                // 서브메뉴 소유자 그리기(Owner Draw) 처리를 위해 IContextMenu2/3 캐스팅
+                _contextMenu = contextMenu;
+                _contextMenu2 = contextMenu as IContextMenu2;
+                _contextMenu3 = contextMenu as IContextMenu3;
+
+                // 7. 팝업 메뉴 생성 및 아이템 쿼리
                 IntPtr hMenu = CreatePopupMenu();
                 if (hMenu == IntPtr.Zero) return;
 
                 // CMF_EXPLORER 플래그로 윈도우 탐색기 전용 스타일 메뉴 쿼리
                 contextMenu.QueryContextMenu(hMenu, 0, CMD_FIRST, CMD_LAST, CMF_EXPLORER | CMF_NORMAL);
 
-                // 6. 메뉴 전시 및 선택된 명령 ID 획득
+                // WPF HwndSource 메시지 후크 연결 (TrackPopupMenuEx 도중 발생하는 메시지 위임)
+                HwndSource hwndSource = HwndSource.FromHwnd(hwndOwner);
+                HwndSourceHook hook = HookWindowMessages;
+                hwndSource.AddHook(hook);
+
+                // 8. 메뉴 전시 및 선택된 명령 ID 획득
                 uint selectedCmd = TrackPopupMenuEx(
                     hMenu,
                     TPM_LEFTALIGN | TPM_RIGHTBUTTON | TPM_RETURNCMD,
@@ -221,7 +305,13 @@ namespace EverythingFastAlias.Native
                     IntPtr.Zero
                 );
 
-                // 7. 명령 수행 (CMD_FIRST 이상의 ID가 선택된 경우)
+                // 메시지 후크 즉시 해제
+                hwndSource.RemoveHook(hook);
+                _contextMenu = null;
+                _contextMenu2 = null;
+                _contextMenu3 = null;
+
+                // 9. 명령 수행 (CMD_FIRST 이상의 ID가 선택된 경우)
                 if (selectedCmd >= CMD_FIRST && selectedCmd <= CMD_LAST)
                 {
                     var pici = new CMINVOKECOMMANDINFO
@@ -234,7 +324,7 @@ namespace EverythingFastAlias.Native
                     contextMenu.InvokeCommand(ref pici);
                 }
 
-                // 8. 정리
+                // 10. 정리
                 DestroyMenu(hMenu);
                 Marshal.Release(contextMenuPtr);
             }

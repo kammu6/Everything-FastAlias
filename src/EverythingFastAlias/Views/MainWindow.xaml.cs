@@ -28,12 +28,6 @@ namespace EverythingFastAlias.Views
 
                 // 2. 엔진 미감지 경고 이벤트 구독
                 VM.SearchVM.EngineNotRunningDetected += HandleEngineNotRunning;
-
-                // 3. 시스템 트레이 활성화
-                if (_trayIcon == null)
-                {
-                    _trayIcon = new TrayIconHelper(this);
-                }
             }
         }
 
@@ -147,17 +141,41 @@ namespace EverythingFastAlias.Views
             newWindow.Show();
         }
 
+        public void DestroyTrayIcon()
+        {
+            _trayIcon?.Dispose();
+            _trayIcon = null;
+        }
+
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            if (VM != null && VM.IsMinimizeToTrayEnabled && !_isClosingForReal)
+            // 나 외에 다른 MainWindow가 실행 중인지 검사
+            int otherMainWindowCount = 0;
+            foreach (Window win in Application.Current.Windows)
+            {
+                if (win is MainWindow && win != this)
+                {
+                    otherMainWindowCount++;
+                }
+            }
+
+            // 트레이 최소화가 활성화되어 있고, 내가 마지막 남은 1개의 창인 경우에만 트레이로 숨김
+            if (VM != null && VM.IsMinimizeToTrayEnabled && !_isClosingForReal && otherMainWindowCount == 0)
             {
                 e.Cancel = true;
+
+                // 트레이로 최소화되는 시점에 동적으로 트레이 아이콘 생성
+                if (_trayIcon == null)
+                {
+                    _trayIcon = new TrayIconHelper(this);
+                }
+
                 this.Hide();
-                _trayIcon?.ShowBalloonTip(2000, "Everything FastAlias", "프로그램이 백그라운드 트레이로 최소화되었습니다.", System.Windows.Forms.ToolTipIcon.Info);
+                _trayIcon.ShowBalloonTip(2000, "Everything FastAlias", "프로그램이 백그라운드 트레이로 최소화되었습니다.", System.Windows.Forms.ToolTipIcon.Info);
             }
             else
             {
-                _trayIcon?.Dispose();
+                DestroyTrayIcon();
             }
         }
     }

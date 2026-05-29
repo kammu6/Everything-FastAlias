@@ -77,6 +77,12 @@ namespace EverythingFastAlias.Native
                 _ownerWindow.Show();
                 _ownerWindow.WindowState = WindowState.Normal;
                 _ownerWindow.Activate();
+
+                // 창이 복원되었으므로 트레이 아이콘 제거
+                if (_ownerWindow is Views.MainWindow mainWin)
+                {
+                    mainWin.DestroyTrayIcon();
+                }
             });
         }
 

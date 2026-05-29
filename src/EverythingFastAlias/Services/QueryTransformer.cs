@@ -40,13 +40,14 @@ namespace EverythingFastAlias.Services
                 }
                 else if (options.Scope == SearchScope.All)
                 {
-                    // 경로 또는 파일명에 hojo가 들어간 대상 -> 검색어 | path:<검색어>
-                    sb.Append($@"<{processedQuery}> | path:<{processedQuery}>");
+                    // 경로 또는 파일명에 hojo가 들어간 대상 -> <검색어 | path:<검색어>>
+                    // 전체를 하나의 대그룹으로 감싸서 뒤에 오는 AND(공백) 조건들이 전체 식에 적용되도록 보장
+                    sb.Append($@"<<{processedQuery}> | path:<{processedQuery}>>");
                 }
                 else
                 {
-                    // 파일명에 hojo가 들어간 대상 -> 검색어 그대로
-                    sb.Append(processedQuery);
+                    // 파일명에 hojo가 들어간 대상 -> <검색어> (동의어 OR 그룹 등 연산자 우선순위 방어)
+                    sb.Append($@"<{processedQuery}>");
                 }
             }
 
@@ -142,6 +143,11 @@ namespace EverythingFastAlias.Services
             if (mediaQueries.Count > 0)
             {
                 AppendSeparator(sb);
+                if (!isFolderPreset)
+                {
+                    sb.Append("file: ");
+                }
+                
                 if (mediaQueries.Count == 1)
                 {
                     sb.Append(mediaQueries[0]);
