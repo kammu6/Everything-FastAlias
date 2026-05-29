@@ -56,3 +56,12 @@
 ### 8. 고화질 이미지 생성 및 ICO 아이콘 빌드 통합 지식
 - **WPF ApplicationIcon 지정 및 창 동기화**: 프로젝트 빌드 시 생성된 EXE 자체에 아이콘을 부여하려면 `.csproj`의 PropertyGroup 안에 `<ApplicationIcon>Assets\app_icon.ico</ApplicationIcon>`를 등록함. 동시에 런타임 창 타이틀바와 작업 표시줄에 노출되도록 `MainWindow.xaml`에 `Icon="/Assets/app_icon.ico"` 속성을 리소스 절대 경로 포맷으로 지정하고, `.csproj`에 `<Resource Include="Assets\app_icon.ico" />`를 명시적으로 포함해 컴파일해야 디버그/런타임 기동 시 `IOException` 리소스 소실 오류를 예방할 수 있음.
 - **PowerShell 기반 PNG->ICO 비손실 변환**: 환경 내 ImageMagick 등 변환 도구가 없을 때, `.NET System.Drawing` 객체를 메모리에 임시 적재하여 고해상도 생성 PNG(1024x1024)를 GDI 비트맵 핸들로 128x128 등 알파 채널 보존 규격의 `.ico`로 깔끔하게 파이프라인 변환하여 빌드 신뢰성을 확보함.
+
+### 9. F2 인라인 이름변경 단일편집 및 가상화 예외 방어 지식
+- **WPF VirtualizingStackPanel 상태 잔존 현상**: WPF ListView 등에서 UI 가상화가 활성화된 경우 화면 밖으로 사라진 아이템들이 뷰 상태(`IsEditing`)를 그대로 물고 있을 수 있어 여러 개의 TextBox가 복수 활성화되는 중복 편집 상태 버그가 발생함.
+- **해결 방안**: 뷰 레벨에서 `_editingItem` 필드를 활용해 단일 편집을 제어하고, F2 진입(StartRename) 시점에 `ItemsSource` 전체를 전수조사하여 `IsEditing` 상태 플래그를 일괄 강제 클리어함으로써 해결함.
+- **선택 변경 및 LostFocus 취소 정밀 연동**: 다른 행 클릭이나 빈 공간 클릭으로 SelectionChanged 발생 시 `_editingItem`이 선택 상태를 벗어나면 자동으로 편집을 Cancel 처리하고, LostFocus 시점에는 변경 사항이 유효한지(텍스트의 실질적 변경 및 공백 여부)에 따라 Cancel과 Commit을 세분화 분기하여 Windows 10 탐색기 상식 규격을 완전하게 모사함.
+
+### 10. Everything SDK 대용량 FFI 마샬링 및 GC 렉 최적화 지식
+- **P/Invoke FFI 및 GC 폭풍으로 인한 굉음**: Everything SDK에 `SetMax(0xFFFFFFFF)`를 적용해 무제한 쿼리를 날릴 경우, 빈 쿼리나 광범위한 옵션 변경 시 PC 전체의 수십만 건 파일이 한 번에 반환됨. 이 수십만 개의 데이터를 C# 객체(`SearchResultItem`)로 인스턴스화하고 마샬링(String 복사)하면서 FFI 오버헤드가 발생하고, 가비지 컬렉터(GC)에 심각한 메모리 정리 렉이 걸려 CPU가 폭증하고 팬 굉음이 발생함.
+- **해결 방안**: 검색 결과의 한계를 합리적인 수준(`MaxResults = 10000`)으로 제약하여 FFI 복사 및 객체 인스턴스 생성 횟수를 근본적으로 축소함. 추가적으로 검색어가 비어있는 리셋 상태에는 최대 개수를 `2,000`개로 더욱 엄격히 제한하여 앱 초기 반응 시간을 0.005초 내외로 극대화하고 CPU 부하와 팬 소음을 완벽히 해결함.

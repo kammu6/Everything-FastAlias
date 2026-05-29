@@ -22,6 +22,7 @@ namespace EverythingFastAlias.Views
     {
         private Point _startPoint;
         private bool _isDragging;
+        private SearchResultItem? _editingItem;
 
         public ResultGridView()
         {
@@ -128,6 +129,129 @@ namespace EverythingFastAlias.Views
 
         #endregion
 
+        #region F2 인라인 이름변경 구현
+
+        private void StartRename(SearchResultItem target)
+        {
+            // 1. 기존에 다른 항목이 편집 중이었다면 확실하게 취소
+            if (_editingItem != null && _editingItem != target)
+            {
+                CancelRename(_editingItem);
+            }
+
+            // 2. 가상화 환경 대비하여 잔여 편집 플래그 일괄 강제 클리어
+            if (ResultsListView.ItemsSource is System.Collections.IEnumerable items)
+            {
+                foreach (var obj in items)
+                {
+                    if (obj is SearchResultItem item && item != target && item.IsEditing)
+                    {
+                        item.IsEditing = false;
+                        item.EditingName = item.Name;
+                    }
+                }
+            }
+
+            _editingItem = target;
+            target.EditingName = target.Name;
+            target.IsEditing = true;
+        }
+
+        private void RenameBox_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (sender is TextBox tb)
+            {
+                tb.Focus();
+                tb.SelectAll();
+            }
+        }
+
+        private void RenameBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (sender is not TextBox tb || tb.DataContext is not SearchResultItem item) return;
+
+            if (e.Key == Key.Enter)
+            {
+                e.Handled = true;
+                string newName = tb.Text.Trim();
+                if (string.IsNullOrEmpty(newName) || newName == item.Name)
+                {
+                    CancelRename(item);
+                }
+                else
+                {
+                    CommitRename(item, tb.Text);
+                }
+            }
+            else if (e.Key == Key.Escape)
+            {
+                e.Handled = true;
+                CancelRename(item);
+            }
+        }
+
+        private void RenameBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (sender is TextBox tb && tb.DataContext is SearchResultItem item && item.IsEditing)
+            {
+                string newName = tb.Text.Trim();
+                if (string.IsNullOrEmpty(newName) || newName == item.Name)
+                {
+                    CancelRename(item);
+                }
+                else
+                {
+                    CommitRename(item, tb.Text);
+                }
+            }
+        }
+
+        private void CommitRename(SearchResultItem item, string newBaseName)
+        {
+            newBaseName = newBaseName.Trim();
+            if (_editingItem == item)
+            {
+                _editingItem = null;
+            }
+            item.IsEditing = false;
+
+            if (string.IsNullOrEmpty(newBaseName) || newBaseName == item.Name)
+                return;
+
+            try
+            {
+                string oldPath = item.FullPath;
+                string newPath = System.IO.Path.Combine(item.Path, newBaseName);
+
+                if (item.IsFolder)
+                    Directory.Move(oldPath, newPath);
+                else
+                    File.Move(oldPath, newPath);
+
+                // 모델 갱신 (INotifyPropertyChanged 연동)
+                item.Name = newBaseName;
+                item.Extension = item.IsFolder ? string.Empty : System.IO.Path.GetExtension(newBaseName);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"이름 변경 실패: {ex.Message}", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
+                // 실패 시 EditingName 원복
+                item.EditingName = item.Name;
+            }
+        }
+
+        private void CancelRename(SearchResultItem item)
+        {
+            if (_editingItem == item)
+            {
+                _editingItem = null;
+            }
+            item.EditingName = item.Name;
+            item.IsEditing = false;
+        }
+
+        #endregion
+
         #region 단축키 (클립보드 Copy/Cut 및 Enter 파일 실행) 구현
 
         private void ResultsListView_KeyDown(object sender, KeyEventArgs e)
@@ -163,7 +287,16 @@ namespace EverythingFastAlias.Views
                     MessageBox.Show(ex.Message, "오류", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
-            // 3. 실행 (Enter)
+            // 3. F2 이름변경 (단일 선택 시에만)
+            else if (e.Key == Key.F2)
+            {
+                e.Handled = true;
+                if (selectedItems.Count == 1)
+                {
+                    StartRename(selectedItems[0]);
+                }
+            }
+            // 4. 실행 (Enter)
             else if (e.Key == Key.Enter)
             {
                 e.Handled = true;
@@ -217,6 +350,11 @@ namespace EverythingFastAlias.Views
             if (DataContext is SearchViewModel vm)
             {
                 vm.SelectedCount = ResultsListView.SelectedItems.Count;
+            }
+
+            if (_editingItem != null && !ResultsListView.SelectedItems.Contains(_editingItem))
+            {
+                CancelRename(_editingItem);
             }
         }
 

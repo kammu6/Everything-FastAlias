@@ -93,6 +93,12 @@ namespace EverythingFastAlias.Native
         {
             var results = new List<SearchResultItem>();
 
+            // 검색어가 완전히 비어있다면 무거운 FFI 쿼리와 개수 조회를 진행하지 않고 즉시 빈 목록 반환 (굉음/버벅임 원천 차단)
+            if (string.IsNullOrWhiteSpace(processedQuery))
+            {
+                return results;
+            }
+
             // 1. 요청 플래그 주입 (이름, 경로, 크기, 수정한 날짜)
             EverythingSdk.Everything_SetRequestFlags(
                 EverythingSdk.EVERYTHING_REQUEST_FILE_NAME |

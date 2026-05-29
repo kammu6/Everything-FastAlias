@@ -1,19 +1,45 @@
 using System;
+using System.ComponentModel;
 using System.IO;
 
 namespace EverythingFastAlias.Models
 {
-    public class SearchResultItem
+    public class SearchResultItem : INotifyPropertyChanged
     {
-        public string Name { get; set; } = string.Empty;
+        public event PropertyChangedEventHandler? PropertyChanged;
+        private void Notify(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
+        private string _name = string.Empty;
+        public string Name
+        {
+            get => _name;
+            set { _name = value; Notify(nameof(Name)); Notify(nameof(FullPath)); }
+        }
+
         public string Path { get; set; } = string.Empty;
-        
+
         public string FullPath => System.IO.Path.Combine(Path, Name);
-        
+
         public long Size { get; set; }
         public DateTime ModifiedDate { get; set; }
         public string Extension { get; set; } = string.Empty;
         public bool IsFolder { get; set; }
+
+        // ── F2 인라인 이름변경 지원 ──
+        private bool _isEditing;
+        public bool IsEditing
+        {
+            get => _isEditing;
+            set { _isEditing = value; Notify(nameof(IsEditing)); Notify(nameof(IsNotEditing)); }
+        }
+        public bool IsNotEditing => !_isEditing;
+
+        private string _editingName = string.Empty;
+        public string EditingName
+        {
+            get => _editingName;
+            set { _editingName = value; Notify(nameof(EditingName)); }
+        }
 
         public string DisplaySize
         {

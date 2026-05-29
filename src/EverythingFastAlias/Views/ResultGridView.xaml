@@ -35,11 +35,39 @@
 
             <ListView.View>
                 <GridView x:Name="ResultsGridView" AllowsColumnReorder="True">
-                    <GridViewColumn Header="이름" DisplayMemberBinding="{Binding Name}" Width="250"/>
-                    <GridViewColumn Header="경로" DisplayMemberBinding="{Binding Path}" Width="350"/>
+
+                    <!-- 이름 컬럼: F2 인라인 이름변경 지원 -->
+                    <GridViewColumn Header="이름" Width="250">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <!-- 일반 표시: TextBlock -->
+                                    <TextBlock Text="{Binding Name}"
+                                               Visibility="{Binding IsNotEditing,
+                                                   Converter={StaticResource BoolToVisConverter}}"
+                                               VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis"/>
+
+                                    <!-- 편집 중: TextBox (IsEditing=True 일 때만 표시) -->
+                                    <TextBox x:Name="RenameBox"
+                                             Text="{Binding EditingName, UpdateSourceTrigger=PropertyChanged}"
+                                             Visibility="{Binding IsEditing,
+                                                 Converter={StaticResource BoolToVisConverter}}"
+                                             VerticalAlignment="Center"
+                                             BorderThickness="1"
+                                             Padding="2,0"
+                                             KeyDown="RenameBox_KeyDown"
+                                             LostFocus="RenameBox_LostFocus"
+                                             Loaded="RenameBox_Loaded"/>
+                                </Grid>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+
+                    <GridViewColumn Header="경로"        DisplayMemberBinding="{Binding Path}"                Width="350"/>
                     <GridViewColumn Header="수정한 날짜" DisplayMemberBinding="{Binding DisplayModifiedDate}" Width="150"/>
-                    <GridViewColumn Header="크기" DisplayMemberBinding="{Binding DisplaySize}" Width="100"/>
-                    <GridViewColumn Header="확장자" DisplayMemberBinding="{Binding Extension}" Width="80"/>
+                    <GridViewColumn Header="크기"        DisplayMemberBinding="{Binding DisplaySize}"         Width="100"/>
+                    <GridViewColumn Header="확장자"      DisplayMemberBinding="{Binding Extension}"           Width="80"/>
                 </GridView>
             </ListView.View>
             

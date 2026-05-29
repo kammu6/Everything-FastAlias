@@ -79,6 +79,8 @@ D:\3_Code\3_Apps\43_Search-Edit\Everything검색기\src\EverythingFastAlias\
     ├── ExcelService.cs        # ExcelDataReader 기반 고속 파싱
     ├── DatabaseService.cs     # SQLite 연결 싱글톤 및 Bulk Save 트랜잭션 구문
     └── AutoStartService.cs    # 시작프로그램 자동 실행 등록/해제 관리 서비스
+└── Converters/
+    └── BoolToVisibilityConverter.cs # Bool → Visibility 전역 변환 서비스
 ```
 
 ### 3.2. 폴더 및 파일 역할

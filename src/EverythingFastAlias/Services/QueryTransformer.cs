@@ -104,31 +104,24 @@ namespace EverythingFastAlias.Services
                     switch (preset)
                     {
                         case "영상":
-                            // video: 매크로와 함께 주요 영상 확장자 및 스트리밍 파일(m3u8, ts) 포함
-                            mediaQueries.Add("(video:|ext:mp4;mkv;avi;wmv;flv;mov;webm;m3u8;ts)");
+                            mediaQueries.Add("ext:mp4;mkv;avi;wmv;flv;mov;webm;m3u8;ts");
                             break;
                         case "음악":
-                            // audio: 매크로와 함께 주요 음원 확장자 포함
-                            mediaQueries.Add("(audio:|ext:mp3;wav;flac;ogg;wma;m4a;aac)");
+                            mediaQueries.Add("ext:mp3;wav;flac;ogg;wma;m4a;aac");
                             break;
                         case "사진":
-                            // pic: 매크로와 함께 주요 이미지 확장자(웹용, 원본, 그래픽) 포함
-                            mediaQueries.Add("(pic:|ext:jpg;jpeg;jfif;png;gif;bmp;webp;tiff;psd;ai;svg)");
+                            mediaQueries.Add("ext:jpg;jpeg;jfif;png;gif;bmp;webp;tiff;psd;ai;svg");
                             break;
                         case "문서":
-                            // doc: 매크로와 함께 오피스 계열, PDF, 한글(hwp/hwpx), 텍스트 포함
-                            mediaQueries.Add("(doc:|ext:pdf;txt;hwp;hwpx;doc;docx;xls;xlsx;ppt;pptx;rtf)");
+                            mediaQueries.Add("ext:pdf;txt;hwp;hwpx;doc;docx;xls;xlsx;ppt;pptx;rtf");
                             break;
                         case "실행":
-                            // 주요 실행 파일 및 스크립트/설치 파일
-                            mediaQueries.Add("ext:exe;bat;cmd;msi;lnk;scr;sh;pyw;lnk");
+                            mediaQueries.Add("ext:exe;bat;cmd;msi;lnk;scr;sh;pyw");
                             break;
                         case "압축":
-                            // 주요 압축 포맷 및 분할 압축 포맷 포함
                             mediaQueries.Add("ext:zip;7z;rar;tar;gz;bz2;iso;alz;egg");
                             break;
                         case "코드":
-                            // 웹, 모바일, 백엔드, 스크립트 및 구성 파일을 망라한 확장자 (ts 포함)
                             mediaQueries.Add("ext:ts;tsx;js;jsx;json;java;py;pyw;cpp;c;h;cs;html;css;go;rs;sh;md;yml;yaml");
                             break;
                     }

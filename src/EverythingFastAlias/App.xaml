@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:EverythingFastAlias"
              xmlns:ui="http://schemas.modernwpf.com/2019"
+             xmlns:conv="clr-namespace:EverythingFastAlias.Converters"
              StartupUri="Views/MainWindow.xaml">
     <Application.Resources>
         <ResourceDictionary>
@@ -15,6 +16,9 @@
             <SolidColorBrush x:Key="SystemControlPageBackgroundChromeLowBrush" Color="#F8FAFC"/>
             <SolidColorBrush x:Key="SystemControlBackgroundAltHighBrush" Color="#FFFFFF"/>
             <SolidColorBrush x:Key="SystemControlElevationBorderBrush" Color="#E2E8F0"/>
+
+            <!-- Bool → Visibility 전역 컨버터 -->
+            <conv:BoolToVisibilityConverter x:Key="BoolToVisConverter"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
