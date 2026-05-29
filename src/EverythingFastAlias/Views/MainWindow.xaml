@@ -10,7 +10,8 @@
         Background="{DynamicResource SystemControlPageBackgroundChromeLowBrush}"
         modern:ThemeManager.RequestedTheme="Light"
         Closing="Window_Closing"
-        Loaded="Window_Loaded">
+        Loaded="Window_Loaded"
+        Icon="/Assets/app_icon.ico">
 
     <Window.Resources>
         <!-- 글씨 크기 스타일 일괄 적용 정의 -->

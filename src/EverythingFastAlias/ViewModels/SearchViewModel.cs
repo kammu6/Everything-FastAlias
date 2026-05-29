@@ -18,6 +18,7 @@ namespace EverythingFastAlias.ViewModels
     {
         private readonly System.Windows.Threading.DispatcherTimer _debounceTimer;
         private bool _isSearching = false;
+        private string? _pendingQuery = null;
 
         private string _searchQuery = string.Empty;
         public string SearchQuery
@@ -492,8 +493,13 @@ namespace EverythingFastAlias.ViewModels
 
         public async void ExecuteSearchAsync()
         {
-            if (_isSearching) return;
+            if (_isSearching)
+            {
+                _pendingQuery = SearchQuery;
+                return;
+            }
             _isSearching = true;
+            _pendingQuery = null;
 
             try
             {
@@ -551,6 +557,10 @@ namespace EverythingFastAlias.ViewModels
             finally
             {
                 _isSearching = false;
+                if (_pendingQuery != null)
+                {
+                    ExecuteSearchAsync();
+                }
             }
         }
 

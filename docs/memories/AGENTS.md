@@ -52,3 +52,7 @@
 ### 7. Everything SDK 파일시간(FileTime) 마샬링 예외 방어
 - **Win32 FileTime 유효 범위 오류 (ArgumentOutOfRangeException)**: Everything SDK의 `Everything_GetResultDateModified`를 통해 파일 수정일 정보를 가져올 때, 해당 파일의 속성 조회 실패나 유효하지 않은 OS 시스템 시간 값 등이 유입될 경우 C# `DateTime.FromFileTime`이 예외를 발생시키며 비동기 검색 스레드가 충돌함.
 - **해결 방안**: API의 반환 여부(`bool`)를 안전하게 검사하고, 유입된 `fileTime` 값이 `0` 미만인 음수값이거나 예외 범위를 넘을 수 있으므로 `try-catch` 블록으로 `ArgumentOutOfRangeException`을 감싸 실패 시 `new DateTime(1601, 1, 1)`(기본 Win32 에폭 시작점)로 폴백하도록 보완함.
+
+### 8. 고화질 이미지 생성 및 ICO 아이콘 빌드 통합 지식
+- **WPF ApplicationIcon 지정 및 창 동기화**: 프로젝트 빌드 시 생성된 EXE 자체에 아이콘을 부여하려면 `.csproj`의 PropertyGroup 안에 `<ApplicationIcon>Assets\app_icon.ico</ApplicationIcon>`를 등록함. 동시에 런타임 창 타이틀바와 작업 표시줄에 노출되도록 `MainWindow.xaml`에 `Icon="/Assets/app_icon.ico"` 속성을 리소스 절대 경로 포맷으로 지정하고, `.csproj`에 `<Resource Include="Assets\app_icon.ico" />`를 명시적으로 포함해 컴파일해야 디버그/런타임 기동 시 `IOException` 리소스 소실 오류를 예방할 수 있음.
+- **PowerShell 기반 PNG->ICO 비손실 변환**: 환경 내 ImageMagick 등 변환 도구가 없을 때, `.NET System.Drawing` 객체를 메모리에 임시 적재하여 고해상도 생성 PNG(1024x1024)를 GDI 비트맵 핸들로 128x128 등 알파 채널 보존 규격의 `.ico`로 깔끔하게 파이프라인 변환하여 빌드 신뢰성을 확보함.

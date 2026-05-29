@@ -180,6 +180,8 @@ namespace EverythingFastAlias.Services
 
         private static string ReplaceAliases(string query, Dictionary<string, List<string>> mappings)
         {
+            if (string.IsNullOrWhiteSpace(query)) return query;
+
             // 1. 역방향 및 그룹 확장을 위한 전역 동의어 확장 맵 빌드
             var aliasGroups = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
 
@@ -188,13 +190,12 @@ namespace EverythingFastAlias.Services
                 var keyword = kvp.Key.Trim();
                 if (string.IsNullOrEmpty(keyword)) continue;
 
-                // 단어와 매핑된 동의어들을 하나의 그룹으로 취합
                 var group = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { keyword };
                 if (kvp.Value != null)
                 {
                     foreach (var syn in kvp.Value)
                     {
-                        var trimmedSyn = syn.Trim().TrimEnd(';'); // 세미콜론 등 불필요 후행 문자 제거
+                        var trimmedSyn = syn.Trim().TrimEnd(';');
                         if (!string.IsNullOrEmpty(trimmedSyn))
                         {
                             group.Add(trimmedSyn);
@@ -202,7 +203,6 @@ namespace EverythingFastAlias.Services
                     }
                 }
 
-                // 그룹 내 모든 원소에 대하여, 기존에 존재하는 그룹들과 상호 병합
                 foreach (var member in group)
                 {
                     if (aliasGroups.TryGetValue(member, out var existingGroup))
@@ -219,46 +219,60 @@ namespace EverythingFastAlias.Services
                     }
                 }
 
-                // 참조 그룹이 최신 셋으로 업데이트되었으므로 각 멤버들의 가리키는 셋 참조를 일치화
                 foreach (var member in group)
                 {
                     aliasGroups[member] = group;
                 }
             }
 
-            // 2. 검색 쿼리 토큰 단위 치환
-            var matches = TokenRegex.Matches(query);
-            var result = new StringBuilder();
+            // 2. 동의어 키 목록을 글자 수가 긴 순으로 정렬 (Longest Match First)
+            var sortedKeys = new List<string>(aliasGroups.Keys);
+            sortedKeys.Sort((a, b) => b.Length.CompareTo(a.Length));
 
-            foreach (Match match in matches)
+            // 3. 쿼리 내에서 각 키워드 직접 치환
+            string processed = query;
+            var tempReplacements = new List<string>();
+
+            foreach (var key in sortedKeys)
             {
-                var token = match.Value;
+                if (!aliasGroups.TryGetValue(key, out var synonyms) || synonyms == null || synonyms.Count <= 1)
+                    continue;
 
-                if (IsWordToken(token))
+                // 정규식으로 단어 경계 및 연산자 경계를 탐색 (다국어 및 공백 포함 완벽 대응)
+                string escapedKey = Regex.Escape(key);
+                string pattern = $@"(?<=^|[\s|&()!])" + escapedKey + @"(?=$|[\s|&()!])";
+
+                var list = new List<string>(synonyms);
+                list.Remove(key);
+                list.Insert(0, key);
+
+                // Everything 검색에서 공백이 포함된 동의어 토큰은 큰따옴표로 자동 감싸주어 검색 호환성 보장
+                for (int i = 0; i < list.Count; i++)
                 {
-                    if (aliasGroups.TryGetValue(token, out var synonyms) && synonyms != null && synonyms.Count > 1)
+                    if (list[i].Contains(" ") && !list[i].StartsWith("\""))
                     {
-                        // 동의어 목록 조합: <원래단어|동의어1|동의어2...> (원래 입력 단어가 맨 처음에 오도록 정렬)
-                        var list = new List<string>(synonyms);
-                        list.Remove(token);
-                        list.Insert(0, token);
-
-                        result.Append($"<{string.Join("|", list)}>");
-                    }
-                    else
-                    {
-                        result.Append(token);
+                        list[i] = $"\"{list[i]}\"";
                     }
                 }
-                else
-                {
-                    result.Append(token);
-                }
 
-                result.Append(" ");
+                string replacementValue = $"<{string.Join("|", list)}>";
+
+                // 중복 치환 방지를 위해 임시 플레이스홀더 사용
+                processed = Regex.Replace(processed, pattern, m =>
+                {
+                    string placeholder = $"__ALIAS_PLACEHOLDER_{tempReplacements.Count}__";
+                    tempReplacements.Add(replacementValue);
+                    return placeholder;
+                }, RegexOptions.IgnoreCase);
             }
 
-            return result.ToString().Trim().Replace(" ( ", " (").Replace(" ) ", ") ").Replace(" ! ", " !");
+            // 4. 최종적으로 플레이스홀더를 실제 치환값으로 복원
+            for (int i = 0; i < tempReplacements.Count; i++)
+            {
+                processed = processed.Replace($"__ALIAS_PLACEHOLDER_{i}__", tempReplacements[i]);
+            }
+
+            return processed;
         }
 
         private static bool IsWordToken(string token)

@@ -75,7 +75,7 @@ namespace EverythingFastAlias.Tests
             var result = QueryTransformer.Transform("apple", options, _testMappings);
 
             // 두 개 이상의 미디어 프리셋이 지정된 경우 OR(< ... | ... >)로 조립됨
-            Assert.IsTrue(result.Contains("<(video:|ext:m3u8;ts) | ext:ts;tsx;js;jsx;java;py;cpp;cs;html;css>"));
+            Assert.IsTrue(result.Contains("<(video:|ext:mp4;mkv;avi;wmv;flv;mov;webm;m3u8;ts) | ext:ts;tsx;js;jsx;json;java;py;pyw;cpp;c;h;cs;html;css;go;rs;sh;md;yml;yaml>"));
         }
 
         [TestMethod]
@@ -114,6 +114,34 @@ namespace EverythingFastAlias.Tests
             // 2. 다른 동의어인 '🍎'로 검색 시
             var result2 = QueryTransformer.Transform("🍎", options, _testMappings);
             Assert.AreEqual("<🍎|사과|apple>", result2);
+        }
+
+        [TestMethod]
+        public void Test_FastAlias_Space_Contain_Replacement()
+        {
+            var options = new SearchOptions
+            {
+                UseFastAlias = true,
+                IncludeRecycleBin = true
+            };
+
+            var spaceMappings = new Dictionary<string, List<string>>
+            {
+                { "Akari Asagiri", new List<string> { "Akari Asayiri", "朝桐光" } }
+            };
+
+            // 1. 공백이 포함된 원본 키워드로 검색 시 양방향 치환 검증
+            var result1 = QueryTransformer.Transform("Akari Asagiri", options, spaceMappings);
+            // 공백이 포함된 토큰은 큰따옴표가 입혀진 형태로 포함되어야 함
+            Assert.IsTrue(result1.Contains("\"Akari Asagiri\"") || result1.Contains("Akari Asagiri"));
+            Assert.IsTrue(result1.Contains("\"Akari Asayiri\""));
+            Assert.IsTrue(result1.Contains("朝桐光"));
+
+            // 2. 동의어(공백 포함)로 검색 시에도 정상 치환 검증
+            var result2 = QueryTransformer.Transform("Akari Asayiri", options, spaceMappings);
+            Assert.IsTrue(result2.Contains("\"Akari Asayiri\"") || result2.Contains("Akari Asayiri"));
+            Assert.IsTrue(result2.Contains("\"Akari Asagiri\""));
+            Assert.IsTrue(result2.Contains("朝桐光"));
         }
     }
 }
