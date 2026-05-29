@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="EverythingFastAlias.Tests/EverythingFastAlias.Tests.csproj" />
+  <Project Path="EverythingFastAlias/EverythingFastAlias.csproj" />
+</Solution>

@@ -1,0 +1,23 @@
+# Task List - Everything FastAlias
+
+- [x] Phase 1: 개발 환경 구성 및 프로젝트 뼈대 생성
+    - [x] `dotnet new wpf`로 신규 프로젝트 생성 및 `.sln` 구성
+    - [x] NuGet 패키지 추가 (`Microsoft.Data.Sqlite`, `ExcelDataReader`, `ModernWpfUI`, `CommunityToolkit.Mvvm` 등)
+    - [x] 물리적인 폴더 구조(Config, Models, ViewModels, Views, Native, Services, Assets) 생성
+- [x] Phase 2: 데이터베이스 및 비즈니스 로직 레이어 구현
+    - [x] DatabaseService 싱글톤 및 SQLite DDL 작성
+    - [x] ExcelService 구현 (ExcelDataReader 기반 고속 파싱 및 벌크 트랜잭션 적재)
+    - [x] QueryTransformer 구현 (동의어 치환 및 Everything 연산자/필터 변환)
+- [x] Phase 3: 네이티브 FFI 및 OS 연동 레이어 구현
+    - [x] EverythingSdk P/Invoke 선언 및 EverythingBridge 래퍼 작성
+    - [x] Everything 서비스 체크 및 백그라운드 자동 기동 유틸리티 구현
+    - [x] Win32ClipboardHelper 파일 클립보드 복사/잘라내기 (CF_HDROP) 구현
+    - [x] ShellContextMenu Windows 네이티브 IContextMenu 팝업 연동 구현
+- [x] Phase 4: UI 컴포넌트 및 MVVM 구현
+    - [x] UI XAML 디자인 적용 (MainWindow, LeftSidebar, ResultGrid)
+    - [x] ListView UI 가상화 (VirtualizingStackPanel) 및 드래그 아웃 (Drag-out) 구현
+    - [x] ViewModel 상태 바인딩 및 모달(Help, AliasManager) 구현
+- [x] Phase 5: 검증 및 자산화
+    - [x] QueryTransformer 단위 테스트 작성 및 dotnet test 검증
+    - [x] 외부 탐색기 파일 이동/복사 등 수동 시나리오 최종 확인
+    - [x] walkthrough.md 작성 및 AGENTS.md 업데이트

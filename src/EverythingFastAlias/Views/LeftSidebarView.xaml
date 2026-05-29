@@ -1,0 +1,107 @@
+<UserControl x:Class="EverythingFastAlias.Views.LeftSidebarView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:modern="http://schemas.modernwpf.com/2019"
+             xmlns:models="clr-namespace:EverythingFastAlias.Models"
+             mc:Ignorable="d" 
+             d:DesignHeight="750" d:DesignWidth="320">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <modern:SimpleStackPanel Margin="15" Spacing="20">
+            
+            <!-- SECTION B: 대상 탐색 범위 -->
+            <modern:SimpleStackPanel Spacing="8">
+                <TextBlock Text="탐색 대상 범위" FontWeight="SemiBold" FontSize="13" 
+                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <RadioButton Grid.Column="0" Content="전체" IsChecked="{Binding ScopeAll}"
+                                 Style="{StaticResource ToggleButtonRadioButtonStyle}" Height="32"/>
+                    <RadioButton Grid.Column="1" Content="파일만" IsChecked="{Binding ScopeFile}"
+                                 Style="{StaticResource ToggleButtonRadioButtonStyle}" Height="32"/>
+                    <RadioButton Grid.Column="2" Content="폴더만" IsChecked="{Binding ScopeFolder}"
+                                 Style="{StaticResource ToggleButtonRadioButtonStyle}" Height="32"/>
+                </Grid>
+            </modern:SimpleStackPanel>
+
+            <!-- SECTION E: 토글 옵션 그룹 (Grid 2x2) -->
+            <modern:SimpleStackPanel Spacing="8">
+                <TextBlock Text="검색 엔진 옵션" FontWeight="SemiBold" FontSize="13"
+                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                <UniformGrid Columns="2" Rows="2">
+                    <CheckBox Content="대소문자 구분" IsChecked="{Binding Options.MatchCase}" Margin="2,5,2,5"/>
+                    <CheckBox Content="전체 단어 일치" IsChecked="{Binding Options.MatchWholeWord}" Margin="2,5,2,5"/>
+                    <CheckBox Content="정규식 검색" IsChecked="{Binding Options.UseRegex}" Margin="2,5,2,5"/>
+                    <CheckBox Content="휴지통 포함" IsChecked="{Binding Options.IncludeRecycleBin}" Margin="2,5,2,5"/>
+                </UniformGrid>
+            </modern:SimpleStackPanel>
+
+            <!-- SECTION C: 프리셋 미디어 필터 -->
+            <modern:SimpleStackPanel Spacing="8">
+                <TextBlock Text="미디어 필터 (다중 선택)" FontWeight="SemiBold" FontSize="13"
+                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                <WrapPanel Margin="0,0,0,5">
+                    <ToggleButton Content="전체" IsChecked="{Binding MediaAll}" Margin="2" Height="28"/>
+                    <ToggleButton Content="영상" IsChecked="{Binding MediaVideo}" Margin="2" Height="28"/>
+                    <ToggleButton Content="음악" IsChecked="{Binding MediaAudio}" Margin="2" Height="28"/>
+                    <ToggleButton Content="사진" IsChecked="{Binding MediaPic}" Margin="2" Height="28"/>
+                    <ToggleButton Content="문서" IsChecked="{Binding MediaDoc}" Margin="2" Height="28"/>
+                    <ToggleButton Content="코드" IsChecked="{Binding MediaCode}" Margin="2" Height="28"/>
+                    <ToggleButton Content="실행" IsChecked="{Binding MediaExe}" Margin="2" Height="28"/>
+                    <ToggleButton Content="압축" IsChecked="{Binding MediaZip}" Margin="2" Height="28"/>
+                </WrapPanel>
+                
+                <TextBlock Text="커스텀 확장자 필터" FontSize="11" Foreground="Gray"/>
+                <TextBox modern:ControlHelper.PlaceholderText="예: zip;7z;rar" Text="{Binding CustomExtensions, UpdateSourceTrigger=PropertyChanged}"/>
+            </modern:SimpleStackPanel>
+
+            <!-- SECTION D: 파일 크기 필터 -->
+            <modern:SimpleStackPanel Spacing="8">
+                <TextBlock Text="파일 크기 필터" FontWeight="SemiBold" FontSize="13"
+                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <TextBox Grid.Column="0" modern:ControlHelper.PlaceholderText="최소 크기" Text="{Binding MinSizeText, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Grid.Column="1" Text="~" VerticalAlignment="Center" Margin="5,0,5,0"/>
+                    <TextBox Grid.Column="2" modern:ControlHelper.PlaceholderText="최대 크기" Text="{Binding MaxSizeText, UpdateSourceTrigger=PropertyChanged}"/>
+                </Grid>
+                
+                <Grid Margin="0,5,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <RadioButton Grid.Column="0" Content="KB" IsChecked="{Binding SizeKB}" Style="{StaticResource ToggleButtonRadioButtonStyle}" Height="28"/>
+                    <RadioButton Grid.Column="1" Content="MB" IsChecked="{Binding SizeMB}" Style="{StaticResource ToggleButtonRadioButtonStyle}" Height="28"/>
+                    <RadioButton Grid.Column="2" Content="GB" IsChecked="{Binding SizeGB}" Style="{StaticResource ToggleButtonRadioButtonStyle}" Height="28"/>
+                    <Button Grid.Column="3" Content="크기 초기화" Click="ResetSize_Click" Margin="5,0,0,0" Height="28"/>
+                </Grid>
+            </modern:SimpleStackPanel>
+
+            <Separator Margin="0,10,0,10"/>
+
+            <!-- SECTION A: 하단 조건 초기화 바 -->
+            <Button Content="조건 초기화" Command="{Binding ResetCommand}" 
+                    HorizontalAlignment="Stretch" Height="40" 
+                    Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+                    Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                    FontWeight="SemiBold" BorderThickness="1"/>
+            
+        </modern:SimpleStackPanel>
+    </ScrollViewer>
+</UserControl>
