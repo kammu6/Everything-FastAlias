@@ -687,10 +687,21 @@ namespace EverythingFastAlias.ViewModels
                                                 .Select(d => d.Trim())
                                                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-                var fixedDrives = System.IO.DriveInfo.GetDrives()
-                                    .Where(d => d.DriveType == System.IO.DriveType.Fixed)
-                                    .Select(d => d.Name.Substring(0, 2))
-                                    .ToList();
+                var fixedDrives = new List<string>();
+                foreach (var d in System.IO.DriveInfo.GetDrives())
+                {
+                    try
+                    {
+                        if (d.DriveType == System.IO.DriveType.Fixed)
+                        {
+                            fixedDrives.Add(d.Name.Substring(0, 2));
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"드라이브 속성 접근 무시 ({d.Name}): {ex.Message}");
+                    }
+                }
 
                 Drives.Clear();
                 foreach (var drive in fixedDrives)

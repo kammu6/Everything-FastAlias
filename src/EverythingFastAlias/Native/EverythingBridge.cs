@@ -13,16 +13,20 @@ namespace EverythingFastAlias.Native
     public class EverythingBridge
     {
         public const uint EVERYTHING_ERROR_IPC = 2;
+        private static readonly object _engineLock = new object();
 
         public static bool IsEverythingRunning()
         {
-            // 임의로 쿼리를 날려서 IPC 에러가 발생하지 않는지 체크하는 것이 가장 정확함
-            EverythingSdk.Everything_SetSearchW("test");
-            EverythingSdk.Everything_SetMax(1);
-            EverythingSdk.Everything_QueryW(false);
-            
-            var err = EverythingSdk.Everything_GetLastError();
-            return err != EVERYTHING_ERROR_IPC;
+            lock (_engineLock)
+            {
+                // 임의로 쿼리를 날려서 IPC 에러가 발생하지 않는지 체크하는 것이 가장 정확함
+                EverythingSdk.Everything_SetSearchW("test");
+                EverythingSdk.Everything_SetMax(1);
+                EverythingSdk.Everything_QueryW(false);
+                
+                var err = EverythingSdk.Everything_GetLastError();
+                return err != EVERYTHING_ERROR_IPC;
+            }
         }
 
         public static bool StartEverythingEngine()
@@ -99,90 +103,93 @@ namespace EverythingFastAlias.Native
                 return results;
             }
 
-            // 1. 요청 플래그 주입 (이름, 경로, 크기, 수정한 날짜)
-            EverythingSdk.Everything_SetRequestFlags(
-                EverythingSdk.EVERYTHING_REQUEST_FILE_NAME |
-                EverythingSdk.EVERYTHING_REQUEST_PATH |
-                EverythingSdk.EVERYTHING_REQUEST_SIZE |
-                EverythingSdk.EVERYTHING_REQUEST_DATE_MODIFIED
-            );
-
-            // 2. 검색 옵션 주입
-            EverythingSdk.Everything_SetMatchCase(options.MatchCase);
-            EverythingSdk.Everything_SetMatchWholeWord(options.MatchWholeWord);
-            EverythingSdk.Everything_SetRegex(options.UseRegex);
-            
-            // 3. 최대 조회 개수 설정
-            EverythingSdk.Everything_SetMax(EverythingFastAlias.Config.AppConstants.DllConfig.DefaultMaxResults);
-            EverythingSdk.Everything_SetOffset(0);
-
-            // 4. 쿼리 전달
-            EverythingSdk.Everything_SetSearchW(processedQuery);
-
-            // 4. 실행 (동기형 쿼리)
-            bool success = EverythingSdk.Everything_QueryW(true);
-            if (!success)
+            lock (_engineLock)
             {
-                var err = EverythingSdk.Everything_GetLastError();
-                if (err == EVERYTHING_ERROR_IPC)
-                {
-                    throw new InvalidOperationException("Everything 엔진이 꺼져 있거나 연결에 실패했습니다.");
-                }
-
-                // v2 쿼리 실패 시(예: 권한/IPC 오류 등) 이름과 경로만 조회하는 v1 쿼리로 안전하게 폴백(재시도)
+                // 1. 요청 플래그 주입 (이름, 경로, 크기, 수정한 날짜)
                 EverythingSdk.Everything_SetRequestFlags(
                     EverythingSdk.EVERYTHING_REQUEST_FILE_NAME |
-                    EverythingSdk.EVERYTHING_REQUEST_PATH
+                    EverythingSdk.EVERYTHING_REQUEST_PATH |
+                    EverythingSdk.EVERYTHING_REQUEST_SIZE |
+                    EverythingSdk.EVERYTHING_REQUEST_DATE_MODIFIED
                 );
 
-                success = EverythingSdk.Everything_QueryW(true);
+                // 2. 검색 옵션 주입
+                EverythingSdk.Everything_SetMatchCase(options.MatchCase);
+                EverythingSdk.Everything_SetMatchWholeWord(options.MatchWholeWord);
+                EverythingSdk.Everything_SetRegex(options.UseRegex);
+                
+                // 3. 최대 조회 개수 설정
+                EverythingSdk.Everything_SetMax(EverythingFastAlias.Config.AppConstants.DllConfig.DefaultMaxResults);
+                EverythingSdk.Everything_SetOffset(0);
+
+                // 4. 쿼리 전달
+                EverythingSdk.Everything_SetSearchW(processedQuery);
+
+                // 4. 실행 (동기형 쿼리)
+                bool success = EverythingSdk.Everything_QueryW(true);
                 if (!success)
                 {
-                    return results;
-                }
-            }
-
-            // 5. 결과 목록 가공
-            uint numResults = EverythingSdk.Everything_GetNumResults();
-            for (uint i = 0; i < numResults; i++)
-            {
-                var name = EverythingSdk.GetResultFileName(i);
-                var path = EverythingSdk.GetResultPath(i);
-                
-                bool hasSize = EverythingSdk.Everything_GetResultSize(i, out long size);
-                if (!hasSize) size = 0;
-
-                bool hasDate = EverythingSdk.Everything_GetResultDateModified(i, out long fileTime);
-                DateTime modifiedDate;
-                if (hasDate && fileTime >= 0)
-                {
-                    try
+                    var err = EverythingSdk.Everything_GetLastError();
+                    if (err == EVERYTHING_ERROR_IPC)
                     {
-                        modifiedDate = DateTime.FromFileTime(fileTime);
+                        throw new InvalidOperationException("Everything 엔진이 꺼져 있거나 연결에 실패했습니다.");
                     }
-                    catch (ArgumentOutOfRangeException)
+
+                    // v2 쿼리 실패 시(예: 권한/IPC 오류 등) 이름과 경로만 조회하는 v1 쿼리로 안전하게 폴백(재시도)
+                    EverythingSdk.Everything_SetRequestFlags(
+                        EverythingSdk.EVERYTHING_REQUEST_FILE_NAME |
+                        EverythingSdk.EVERYTHING_REQUEST_PATH
+                    );
+
+                    success = EverythingSdk.Everything_QueryW(true);
+                    if (!success)
+                    {
+                        return results;
+                    }
+                }
+
+                // 5. 결과 목록 가공
+                uint numResults = EverythingSdk.Everything_GetNumResults();
+                for (uint i = 0; i < numResults; i++)
+                {
+                    var name = EverythingSdk.GetResultFileName(i);
+                    var path = EverythingSdk.GetResultPath(i);
+                    
+                    bool hasSize = EverythingSdk.Everything_GetResultSize(i, out long size);
+                    if (!hasSize) size = 0;
+
+                    bool hasDate = EverythingSdk.Everything_GetResultDateModified(i, out long fileTime);
+                    DateTime modifiedDate;
+                    if (hasDate && fileTime >= 0)
+                    {
+                        try
+                        {
+                            modifiedDate = DateTime.FromFileTime(fileTime);
+                        }
+                        catch (ArgumentOutOfRangeException)
+                        {
+                            modifiedDate = new DateTime(1601, 1, 1);
+                        }
+                    }
+                    else
                     {
                         modifiedDate = new DateTime(1601, 1, 1);
                     }
+
+                    bool isFolder = EverythingSdk.Everything_IsFolderResult(i);
+
+                    var ext = isFolder ? string.Empty : Path.GetExtension(name).TrimStart('.');
+
+                    results.Add(new SearchResultItem
+                    {
+                        Name = name,
+                        Path = path,
+                        Size = size,
+                        ModifiedDate = modifiedDate,
+                        Extension = ext,
+                        IsFolder = isFolder
+                    });
                 }
-                else
-                {
-                    modifiedDate = new DateTime(1601, 1, 1);
-                }
-
-                bool isFolder = EverythingSdk.Everything_IsFolderResult(i);
-
-                var ext = isFolder ? string.Empty : Path.GetExtension(name).TrimStart('.');
-
-                results.Add(new SearchResultItem
-                {
-                    Name = name,
-                    Path = path,
-                    Size = size,
-                    ModifiedDate = modifiedDate,
-                    Extension = ext,
-                    IsFolder = isFolder
-                });
             }
 
             return results;

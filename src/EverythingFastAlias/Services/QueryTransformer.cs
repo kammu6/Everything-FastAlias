@@ -10,7 +10,8 @@ namespace EverythingFastAlias.Services
     {
         private static readonly Regex TokenRegex = new(
             @"("".*?""|<(?:[^<>]+|(?<angle><)|(?<-angle>>))*(?(angle)(?!))>|[^|&\s()""!<>]+|\||&|\(|\)|!|<|>)", 
-            RegexOptions.Compiled
+            RegexOptions.Compiled,
+            TimeSpan.FromMilliseconds(150)
         );
 
         public static string Transform(string rawQuery, SearchOptions options, Dictionary<string, List<string>> mappings)
@@ -374,9 +375,6 @@ namespace EverythingFastAlias.Services
             if (string.IsNullOrEmpty(token)) return false;
             
             if (token == "|" || token == "&" || token == "(" || token == ")" || token == "!")
-                return false;
-
-            if (token.StartsWith("\"") && token.EndsWith("\""))
                 return false;
 
             return true;

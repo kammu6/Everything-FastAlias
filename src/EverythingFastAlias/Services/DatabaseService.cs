@@ -33,9 +33,15 @@ namespace EverythingFastAlias.Services
             using var connection = new SqliteConnection(_connectionString);
             connection.Open();
 
+            // WAL 모드 활성화로 동시 읽기/쓰기 성능 향상 및 락 예외 방지
+            using (var commandWAL = new SqliteCommand("PRAGMA journal_mode=WAL;", connection))
+            {
+                commandWAL.ExecuteNonQuery();
+            }
+
             var createTableQuery = @"
                 CREATE TABLE IF NOT EXISTS AliasMappings (
-                    Keyword TEXT PRIMARY KEY,
+                    Keyword TEXT PRIMARY KEY COLLATE NOCASE,
                     Words TEXT NOT NULL
                 );";
 
@@ -44,7 +50,7 @@ namespace EverythingFastAlias.Services
 
             var createSettingsTableQuery = @"
                 CREATE TABLE IF NOT EXISTS AppSettings (
-                    SettingKey TEXT PRIMARY KEY,
+                    SettingKey TEXT PRIMARY KEY COLLATE NOCASE,
                     SettingValue TEXT
                 );";
 
