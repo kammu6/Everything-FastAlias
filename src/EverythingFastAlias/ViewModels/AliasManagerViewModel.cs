@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using EverythingFastAlias.Models;
@@ -32,6 +33,13 @@ namespace EverythingFastAlias.ViewModels
         {
             get => _statusMessage;
             set => SetProperty(ref _statusMessage, value);
+        }
+
+        private System.Windows.Media.Brush _statusForeground = System.Windows.Media.Brushes.DimGray;
+        public System.Windows.Media.Brush StatusForeground
+        {
+            get => _statusForeground;
+            set => SetProperty(ref _statusForeground, value);
         }
 
         private string _searchText = string.Empty;
@@ -116,10 +124,13 @@ namespace EverythingFastAlias.ViewModels
                 {
                     Mappings.Add(new AliasMapping(kvp.Key, kvp.Value));
                 }
+                StatusForeground = System.Windows.Media.Brushes.DimGray;
                 StatusMessage = $"총 {Mappings.Count}개의 매핑 규칙을 로드했습니다.";
+                PerformSearch();
             }
             catch (Exception ex)
             {
+                StatusForeground = System.Windows.Media.Brushes.Red;
                 StatusMessage = $"로드 실패: {ex.Message}";
             }
         }
@@ -129,6 +140,7 @@ namespace EverythingFastAlias.ViewModels
             var newMapping = new AliasMapping("새키워드", "동의어1;동의어2");
             Mappings.Add(newMapping);
             SelectedMapping = newMapping;
+            StatusForeground = System.Windows.Media.Brushes.DimGray;
             StatusMessage = "새 행을 추가했습니다. 저장 버튼을 눌러 확정하세요.";
         }
  
@@ -149,12 +161,14 @@ namespace EverythingFastAlias.ViewModels
                     DatabaseService.Instance.ClearAllMappings();
                     LoadMappings();
                     SelectedMapping = null;
-                    StatusMessage = "모든 매핑 규칙이 초기화되었습니다.";
+                    StatusForeground = System.Windows.Media.Brushes.Red;
+                    StatusMessage = $"[초기화 완료 - {DateTime.Now:HH:mm:ss}] 모든 매핑 규칙이 초기화되었습니다.";
                     MessageBox.Show("초기화가 성공적으로 완료되었습니다.", "알림", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             }
             catch (Exception ex)
             {
+                StatusForeground = System.Windows.Media.Brushes.Red;
                 StatusMessage = $"초기화 실패: {ex.Message}";
                 MessageBox.Show($"초기화 실패: {ex.Message}", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
             }
@@ -164,6 +178,7 @@ namespace EverythingFastAlias.ViewModels
         {
             if (SelectedMapping == null)
             {
+                StatusForeground = System.Windows.Media.Brushes.Red;
                 StatusMessage = "삭제할 행을 선택하세요.";
                 return;
             }
@@ -182,16 +197,43 @@ namespace EverythingFastAlias.ViewModels
                     DatabaseService.Instance.DeleteMapping(SelectedMapping.Keyword);
                     Mappings.Remove(SelectedMapping);
                     SelectedMapping = null;
-                    StatusMessage = "매핑이 삭제되었습니다.";
+                    StatusForeground = System.Windows.Media.Brushes.Red;
+                    StatusMessage = $"[삭제 완료 - {DateTime.Now:HH:mm:ss}] 매핑이 안전하게 삭제 및 동기화되었습니다.";
                 }
             }
             catch (Exception ex)
             {
+                StatusForeground = System.Windows.Media.Brushes.Red;
                 StatusMessage = $"삭제 실패: {ex.Message}";
             }
         }
 
         private void SaveSelectedMapping()
+        {
+            try
+            {
+                foreach (var mapping in Mappings)
+                {
+                    if (string.IsNullOrWhiteSpace(mapping.Keyword))
+                    {
+                        MessageBox.Show("원본 단어(Keyword)는 비워둘 수 없습니다.", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
+                        return;
+                    }
+                }
+                var syncData = Mappings.Select(m => (m.Keyword, m.Words));
+                DatabaseService.Instance.SaveAllSync(syncData);
+                PerformSearch();
+                StatusForeground = System.Windows.Media.Brushes.ForestGreen;
+                StatusMessage = $"[저장 완료 - {DateTime.Now:HH:mm:ss}] 모든 수정사항이 데이터베이스 및 캐시에 저장 및 동기화되었습니다.";
+            }
+            catch (Exception ex)
+            {
+                StatusForeground = System.Windows.Media.Brushes.Red;
+                StatusMessage = $"저장 실패: {ex.Message}";
+            }
+        }
+
+        private void SaveSelectedMapping_Dummy()
         {
             if (SelectedMapping == null) return;
 
@@ -205,10 +247,12 @@ namespace EverythingFastAlias.ViewModels
             {
                 DatabaseService.Instance.SaveMapping(SelectedMapping.Keyword, SelectedMapping.Words);
                 LoadMappings(); // 리프레시 및 캐싱 강제 동기화
-                StatusMessage = "성공적으로 저장 및 갱신되었습니다.";
+                StatusForeground = System.Windows.Media.Brushes.ForestGreen;
+                StatusMessage = $"[저장 완료 - {DateTime.Now:HH:mm:ss}] '{SelectedMapping.Keyword}' 규칙이 데이터베이스 및 캐시에 저장 및 동기화되었습니다.";
             }
             catch (Exception ex)
             {
+                StatusForeground = System.Windows.Media.Brushes.Red;
                 StatusMessage = $"저장 실패: {ex.Message}";
             }
         }
@@ -245,11 +289,13 @@ namespace EverythingFastAlias.ViewModels
                         MessageBoxButton.OK, 
                         MessageBoxImage.Information
                     );
-                    StatusMessage = $"{list.Count}개 대량 업로드 완료";
+                    StatusForeground = System.Windows.Media.Brushes.ForestGreen;
+                    StatusMessage = $"[가져오기 완료 - {DateTime.Now:HH:mm:ss}] 총 {list.Count}개의 매핑이 벌크 갱신되었습니다.";
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show($"가져오기 실패: {ex.Message}", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
+                    StatusForeground = System.Windows.Media.Brushes.Red;
                     StatusMessage = $"엑셀 임포트 에러: {ex.Message}";
                 }
             }
@@ -307,6 +353,68 @@ namespace EverythingFastAlias.ViewModels
         }
 
         private void PerformSearch()
+        {
+            _matchedItems.Clear();
+            if (string.IsNullOrWhiteSpace(SearchText))
+            {
+                TotalSearchMatches = 0;
+                CurrentSearchMatchIndex = -1;
+                UpdateSearchStatus();
+                return;
+            }
+
+            var searchTerms = SearchText.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (searchTerms.Length == 0)
+            {
+                TotalSearchMatches = 0;
+                CurrentSearchMatchIndex = -1;
+                UpdateSearchStatus();
+                return;
+            }
+
+            foreach (var mapping in Mappings)
+            {
+                bool isAllMatch = true;
+                foreach (var term in searchTerms)
+                {
+                    bool isTermMatch = (mapping.Keyword != null && mapping.Keyword.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+                                       (mapping.Words != null && mapping.Words.Contains(term, StringComparison.OrdinalIgnoreCase));
+                    if (!isTermMatch)
+                    {
+                        isAllMatch = false;
+                        break;
+                    }
+                }
+
+                if (isAllMatch)
+                {
+                    _matchedItems.Add(mapping);
+                }
+            }
+
+            TotalSearchMatches = _matchedItems.Count;
+            UpdateSearchStatus();
+
+            if (TotalSearchMatches > 0)
+            {
+                if (_currentSearchMatchIndex != 0)
+                {
+                    _currentSearchMatchIndex = 0;
+                    OnPropertyChanged(nameof(CurrentSearchMatchIndex));
+                }
+                NavigateToMatch();
+            }
+            else
+            {
+                if (_currentSearchMatchIndex != -1)
+                {
+                    _currentSearchMatchIndex = -1;
+                    OnPropertyChanged(nameof(CurrentSearchMatchIndex));
+                }
+            }
+        }
+
+        private void PerformSearch_Dummy()
         {
             _matchedItems.Clear();
             if (string.IsNullOrWhiteSpace(SearchText))

@@ -62,8 +62,8 @@
                 <MenuItem Header="새창 띄우기(N)" Command="{Binding NewWindowCommand}"/>
                 <MenuItem Header="결과 내보내기(E)..." Command="{Binding ExportResultsCommand}"/>
                 <Separator/>
-                <MenuItem Header="시작프로그램 등록" IsCheckable="True" IsChecked="{Binding IsAutoStartEnabled}"/>
-                <MenuItem Header="시스템 트레이 최소화 사용" IsCheckable="True" IsChecked="{Binding IsMinimizeToTrayEnabled}"/>
+                <MenuItem Header="시작프로그램 등록" IsCheckable="True" IsChecked="{Binding IsAutoStartEnabled, Mode=TwoWay}"/>
+                <MenuItem Header="시스템 트레이 최소화 사용" IsCheckable="True" IsChecked="{Binding IsMinimizeToTrayEnabled, Mode=TwoWay}"/>
                 <Separator/>
                 <MenuItem Header="종료(X)" Click="MenuExit_Click"/>
             </MenuItem>

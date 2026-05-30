@@ -75,7 +75,7 @@ namespace EverythingFastAlias.Tests
             var result = QueryTransformer.Transform("apple", options, _testMappings);
 
             // 두 개 이상의 미디어 프리셋이 지정된 경우 OR(< ... | ... >)로 조립됨
-            Assert.IsTrue(result.Contains("<(video:|ext:mp4;mkv;avi;wmv;flv;mov;webm;m3u8;ts) | ext:ts;tsx;js;jsx;json;java;py;pyw;cpp;c;h;cs;html;css;go;rs;sh;md;yml;yaml>"));
+            Assert.IsTrue(result.Contains("<ext:mp4;mkv;avi;wmv;flv;mov;webm;m3u8;ts | ext:ts;tsx;js;jsx;json;java;py;pyw;cpp;c;h;cs;html;css;go;rs;sh;md;yml;yaml>"));
         }
 
         [TestMethod]

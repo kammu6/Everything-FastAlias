@@ -211,6 +211,46 @@ namespace EverythingFastAlias.Services
             LoadMappingsToCache();
         }
 
+        public void SaveAllSync(IEnumerable<(string Keyword, string Words)> mappings)
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+
+            using var transaction = connection.BeginTransaction();
+            try
+            {
+                var deleteQuery = "DELETE FROM AliasMappings";
+                using var deleteCmd = new SqliteCommand(deleteQuery, connection, transaction);
+                deleteCmd.ExecuteNonQuery();
+
+                var insertQuery = @"
+                    INSERT INTO AliasMappings (Keyword, Words) 
+                    VALUES ($keyword, $words);";
+
+                using var command = new SqliteCommand(insertQuery, connection, transaction);
+                var keywordParam = command.Parameters.Add("$keyword", SqliteType.Text);
+                var wordsParam = command.Parameters.Add("$words", SqliteType.Text);
+
+                foreach (var mapping in mappings)
+                {
+                    if (string.IsNullOrWhiteSpace(mapping.Keyword)) continue;
+                    
+                    keywordParam.Value = mapping.Keyword.Trim();
+                    wordsParam.Value = mapping.Words.Trim();
+                    command.ExecuteNonQuery();
+                }
+
+                transaction.Commit();
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+
+            LoadMappingsToCache();
+        }
+
         public void SaveMapping(string keyword, string words)
         {
             using var connection = new SqliteConnection(_connectionString);

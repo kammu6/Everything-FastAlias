@@ -9,14 +9,12 @@ namespace EverythingFastAlias.Services
     public class QueryTransformer
     {
         private static readonly Regex TokenRegex = new(
-            @"("".*?""|[^|&\s()""!]+|\||&|\(|\)|!)", 
+            @"("".*?""|<.*?>|[^|&\s()""!]+|\||&|\(|\)|!)", 
             RegexOptions.Compiled
         );
 
         public static string Transform(string rawQuery, SearchOptions options, Dictionary<string, List<string>> mappings)
         {
-            var sb = new StringBuilder();
-
             // 1. FastAlias 동의어 치환 처리
             string processedQuery;
             if (options.UseFastAlias && !string.IsNullOrWhiteSpace(rawQuery))
@@ -30,26 +28,64 @@ namespace EverythingFastAlias.Services
 
             processedQuery = processedQuery.Trim();
 
-            // 2. 탐색 대상 범위 (전체 / 파일 / 경로) 쿼리 조립
+            var sb = new StringBuilder();
+
             if (!string.IsNullOrEmpty(processedQuery))
             {
-                if (options.Scope == SearchScope.Path)
+                var matches = TokenRegex.Matches(processedQuery);
+                var queryParts = new List<string>();
+
+                foreach (Match match in matches)
                 {
-                    // 경로명에 hojo가 들어간 대상 -> path:<검색어>
-                    sb.Append($@"path:<{processedQuery}>");
+                    string token = match.Value;
+                    if (IsWordToken(token))
+                    {
+                        string inner = token;
+                        bool isGroup = token.StartsWith("<") && token.EndsWith(">");
+
+                        // Scope에 따른 쿼리 가공
+                        string scopeQuery;
+                        if (options.Scope == SearchScope.Path)
+                        {
+                            scopeQuery = isGroup ? $@"path:{inner}" : $@"path:<{inner}>";
+                        }
+                        else if (options.Scope == SearchScope.All)
+                        {
+                            if (isGroup)
+                            {
+                                scopeQuery = $@"<{inner} | path:{inner}>";
+                            }
+                            else
+                            {
+                                scopeQuery = $@"<<{inner}> | path:<{inner}>>";
+                            }
+                        }
+                        else
+                        {
+                            // File 검색: 괄호를 임의로 추가하지 않고 그대로 둠 (동의어 그룹인 경우에만 이미 <...> 괄호가 적용되어 있음)
+                            scopeQuery = inner;
+                        }
+                        queryParts.Add(scopeQuery);
+                    }
+                    else
+                    {
+                        queryParts.Add(token);
+                    }
                 }
-                else if (options.Scope == SearchScope.All)
+
+                for (int i = 0; i < queryParts.Count; i++)
                 {
-                    // 경로 또는 파일명에 hojo가 들어간 대상 -> <검색어 | path:<검색어>>
-                    // 전체를 하나의 대그룹으로 감싸서 뒤에 오는 AND(공백) 조건들이 전체 식에 적용되도록 보장
-                    sb.Append($@"<<{processedQuery}> | path:<{processedQuery}>>");
-                }
-                else
-                {
-                    // 파일명에 hojo가 들어간 대상 -> <검색어> (동의어 OR 그룹 등 연산자 우선순위 방어)
-                    sb.Append($@"<{processedQuery}>");
+                    AppendSeparator(sb);
+                    sb.Append(queryParts[i]);
                 }
             }
+
+            return BuildOptionConstraints(sb.ToString().Trim(), options);
+        }
+
+        private static string BuildOptionConstraints(string baseQuery, SearchOptions options)
+        {
+            var sb = new StringBuilder(baseQuery);
 
             // 3. 폴더 제약 조건 및 재귀 탐색 제어
             if (!string.IsNullOrWhiteSpace(options.FolderPaths))
@@ -135,7 +171,6 @@ namespace EverythingFastAlias.Services
                         case "코드":
                             mediaQueries.Add("ext:ts;tsx;js;jsx;json;java;py;pyw;cpp;c;h;cs;html;css;go;rs;sh;md;yml;yaml");
                             break;
-                        // "폴더"는 아래에서 별도 처리하므로 여기서 제외
                     }
                 }
             }
@@ -214,30 +249,72 @@ namespace EverythingFastAlias.Services
         {
             if (string.IsNullOrWhiteSpace(query)) return query;
 
-            // 1. DatabaseService에 보관된 캐시된 동의어 정보 재사용 (매 쿼리별 사전 빌드 O(N^2) 병목 제거)
-            var cache = DatabaseService.Instance.GetAliasGroupsCache();
-            var aliasGroups = cache.Groups;
-            var sortedKeys = cache.SortedKeys;
+            Dictionary<string, HashSet<string>> aliasGroups;
+            List<string> sortedKeys;
+
+            var globalCache = DatabaseService.Instance.GetAliasGroupsCache();
+            var dbCacheSnapshot = DatabaseService.Instance.GetCacheSnapshot();
+
+            if (mappings != null && mappings.Count > 0 && mappings.Count != dbCacheSnapshot.Count)
+            {
+                var localGroups = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+                foreach (var kvp in mappings)
+                {
+                    var keyword = kvp.Key.Trim();
+                    if (string.IsNullOrEmpty(keyword)) continue;
+
+                    var rowElements = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { keyword };
+                    if (kvp.Value != null)
+                    {
+                        foreach (var syn in kvp.Value)
+                        {
+                            var trimmedSyn = syn.Trim().TrimEnd(';');
+                            if (!string.IsNullOrEmpty(trimmedSyn))
+                            {
+                                rowElements.Add(trimmedSyn);
+                            }
+                        }
+                    }
+
+                    foreach (var member in rowElements)
+                    {
+                        if (!localGroups.TryGetValue(member, out var existingGroup))
+                        {
+                            existingGroup = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                            localGroups[member] = existingGroup;
+                        }
+                        foreach (var m in rowElements)
+                        {
+                            existingGroup.Add(m);
+                        }
+                    }
+                }
+                aliasGroups = localGroups;
+                sortedKeys = new List<string>(aliasGroups.Keys);
+                sortedKeys.Sort((a, b) => b.Length.CompareTo(a.Length));
+            }
+            else
+            {
+                aliasGroups = globalCache.Groups;
+                sortedKeys = globalCache.SortedKeys;
+            }
 
             if (aliasGroups == null || sortedKeys == null || sortedKeys.Count == 0)
             {
                 return query;
             }
 
-            // 2. 쿼리 내에서 각 키워드 직접 치환
             string processed = query;
             var tempReplacements = new List<string>();
 
             foreach (var key in sortedKeys)
             {
-                // [핵심 성능 최적화] 입력 쿼리에 이 키 단어가 아예 존재하지 않는다면 정규식 실행 전 즉시 스킵
                 if (processed.IndexOf(key, StringComparison.OrdinalIgnoreCase) < 0)
                     continue;
 
                 if (!aliasGroups.TryGetValue(key, out var synonyms) || synonyms == null || synonyms.Count <= 1)
                     continue;
 
-                // 정규식으로 단어 경계 및 연산자 경계를 탐색 (다국어 및 공백 포함 완벽 대응)
                 string escapedKey = Regex.Escape(key);
                 string pattern = $@"(?<=^|[\s|&()!])" + escapedKey + @"(?=$|[\s|&()!])";
 
@@ -245,7 +322,6 @@ namespace EverythingFastAlias.Services
                 list.Remove(key);
                 list.Insert(0, key);
 
-                // Everything 검색에서 공백이 포함된 동의어 토큰은 큰따옴표로 자동 감싸주어 검색 호환성 보장
                 for (int i = 0; i < list.Count; i++)
                 {
                     if (list[i].Contains(" ") && !list[i].StartsWith("\""))
@@ -256,7 +332,6 @@ namespace EverythingFastAlias.Services
 
                 string replacementValue = $"<{string.Join("|", list)}>";
 
-                // 중복 치환 방지를 위해 임시 플레이스홀더 사용
                 processed = Regex.Replace(processed, pattern, m =>
                 {
                     string placeholder = $"__ALIAS_PLACEHOLDER_{tempReplacements.Count}__";
@@ -265,7 +340,6 @@ namespace EverythingFastAlias.Services
                 }, RegexOptions.IgnoreCase);
             }
 
-            // 3. 최종적으로 플레이스홀더를 실제 치환값으로 복원
             for (int i = 0; i < tempReplacements.Count; i++)
             {
                 processed = processed.Replace($"__ALIAS_PLACEHOLDER_{i}__", tempReplacements[i]);
@@ -278,11 +352,9 @@ namespace EverythingFastAlias.Services
         {
             if (string.IsNullOrEmpty(token)) return false;
             
-            // 공백, 연산자, 부괄호 등은 치환 대상에서 제외
             if (token == "|" || token == "&" || token == "(" || token == ")" || token == "!")
                 return false;
 
-            // 큰따옴표로 감싸진 검색어는 그대로 둠
             if (token.StartsWith("\"") && token.EndsWith("\""))
                 return false;
 

@@ -28,5 +28,13 @@ namespace EverythingFastAlias.Views.Modals
                 MappingDataGrid.ScrollIntoView(target);
             }
         }
+
+        private void SaveButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (MappingDataGrid != null)
+            {
+                MappingDataGrid.CommitEdit(System.Windows.Controls.DataGridEditingUnit.Row, true);
+            }
+        }
     }
 }

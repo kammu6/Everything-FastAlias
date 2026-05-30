@@ -26,6 +26,8 @@ namespace EverythingFastAlias.ViewModels
                         AutoStartService.Register();
                     else
                         AutoStartService.Unregister();
+
+                    DatabaseService.Instance.SaveSetting("IsAutoStartEnabled", value.ToString());
                 }
             }
         }
@@ -34,7 +36,13 @@ namespace EverythingFastAlias.ViewModels
         public bool IsMinimizeToTrayEnabled
         {
             get => _isMinimizeToTrayEnabled;
-            set => SetProperty(ref _isMinimizeToTrayEnabled, value);
+            set
+            {
+                if (SetProperty(ref _isMinimizeToTrayEnabled, value))
+                {
+                    DatabaseService.Instance.SaveSetting("IsMinimizeToTrayEnabled", value.ToString());
+                }
+            }
         }
 
         public ICommand OpenAliasManagerCommand { get; }
@@ -55,7 +63,12 @@ namespace EverythingFastAlias.ViewModels
             NewWindowCommand = new RelayCommand(() => RequestNewWindow?.Invoke());
             ExportResultsCommand = new RelayCommand(ExportResults);
 
+            // DB에서 설정 불러오기
+            string traySetting = DatabaseService.Instance.GetSetting("IsMinimizeToTrayEnabled", "true");
+            _isMinimizeToTrayEnabled = bool.TryParse(traySetting, out bool trayVal) ? trayVal : true;
+
             _isAutoStartEnabled = AutoStartService.IsRegistered();
+            DatabaseService.Instance.SaveSetting("IsAutoStartEnabled", _isAutoStartEnabled.ToString());
         }
 
         private void ExportResults()
