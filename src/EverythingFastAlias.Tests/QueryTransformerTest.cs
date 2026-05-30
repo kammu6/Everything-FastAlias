@@ -93,6 +93,21 @@ namespace EverythingFastAlias.Tests
         }
 
         [TestMethod]
+        public void Test_UserManual_Drive_And_Constraints_Preserved()
+        {
+            var options = new SearchOptions
+            {
+                UseFastAlias = true,
+                IncludeRecycleBin = true,
+                Scope = SearchScope.All,
+                MediaPresets = new HashSet<string> { "폴더" }
+            };
+
+            var result = QueryTransformer.Transform("path:p: 사과", options, _testMappings);
+            Assert.AreEqual("path:p: <folder:사과 | folder:path:사과 | folder:apple | folder:path:apple | folder:🍎 | folder:path:🍎>", result);
+        }
+
+        [TestMethod]
         public void Test_FolderConstraint_With_Recursive()
         {
             var options = new SearchOptions

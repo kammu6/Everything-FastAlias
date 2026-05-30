@@ -17,14 +17,18 @@
 ## 📂 기술 도메인별 세부 지식 자산 링크 (Knowledge Bases)
 
 ### 🔗 [Everything SDK & Windows Shell Integration](file:///d:/3_Code/3_Apps/43_Search-Edit/Everything%EA%B2%80%EC%83%89%EA%B8%B0/docs/memories/everything_sdk.md)
+
 Everything SDK 연동, 바인딩 마샬링, 대용량 FFI 쿼리 단축 및 Windows Context Menu 연동과 관련된 모든 전문 지식이 요약되어 있습니다.
+
 - `wchar_t*` 기반 Unicode API 사용 규칙
 - `BOOL` 마샬링 크래시 방지 및 `Everything_GetLastError` 진입점 바인딩
 - 수십만 건 대량 쿼리 및 빈 검색어 단락 회로(Short-circuit) 최적화
 - `IContextMenu2/3` Owner Draw 메시지 후킹 및 서브메뉴 렌더링 해결
 
 ### 🔗 [WPF & Code Architecture Guidelines](file:///d:/3_Code/3_Apps/43_Search-Edit/Everything%EA%B2%80%EC%83%89%EA%B8%B0/docs/memories/wpf_coding_guidelines.md)
+
 WPF 프레임워크 제어, UI 컴포넌트 커스터마이징, 빌드 충돌 해결 및 대용량 연관어 매핑 검색과 관련된 코딩 레벨의 노하우가 수록되어 있습니다.
+
 - ModernWpf 테마 로딩 예외 방지 및 XAML 호환 해결법
 - Windows Forms FFI 명칭 충돌(global using) 차단
 - 다중 창 기동 시 트레이 아이콘 생명주기 관리
@@ -34,6 +38,7 @@ WPF 프레임워크 제어, UI 컴포넌트 커스터마이징, 빌드 충돌 �
 ---
 
 ## 🛠️ 최근 작업 기록 (2026-05-30)
+
 - **스마트 매핑 사전 관리자 모달 전체 초기화**: 사고 방지용 경고 팝업(`MessageBox.Show`) 및 SQLite DB 연동 삭제(`DELETE FROM AliasMappings`)와 메모리 캐시 강제 리로딩을 조합해 구현 완료.
 - **로컬 드라이브 동적 토글 칩 (WrapPanel + ToggleButton)**: `System.IO.DriveInfo.GetDrives()`로 고정 드라이브(Fixed)를 동적 감지하여 `ItemsControl`의 `ItemTemplate` 내 `ToggleButton`에 바인딩해 구현. 드라이브가 변경되면 Everything 쿼리에 `<C:|D:>` 형태로 통합 조립.
 - **최소 1개 드라이브 선택 보장**: 드라이브 변경 시 체크된 개수가 0개이면 롤백(이벤트 피드백 무한 루프 차단 플래그 적용)시키고 경고 팝업을 발생시켜 최소 1개의 대상 드라이브 검색을 강제화.
@@ -56,3 +61,57 @@ WPF 프레임워크 제어, UI 컴포넌트 커스터마이징, 빌드 충돌 �
 - **실시간 FFI 전송 쿼리 모니터링 기능 추가 (2026-05-30)**: 드라이브 매칭 오류 및 우선순위 왜곡 디버깅을 위해, 최종 가공되어 Everything64.dll로 전달되는 원시 쿼리 문자열(`transformedQuery`)을 하단 상태표시바(StatusMessage)에 실시간으로 디스플레이하도록 구현하여 현장 진단성을 극대화함.
 - **Everything 쿼리 그룹화 및 수식어 스코프 제한 해결 (2026-05-30)**: Everything 1.4 엔진에서 소괄호 `(...)`는 그룹화가 아닌 리터럴 문자열로 해석되며, 꺾쇠 괄호 `<...>`만이 올바른 그룹화 연산자입니다. 또한 `folder:`, `file:` 등 수식어의 영향 범위(Scope)는 `|` (OR) 연산자를 만나는 순간 끊어집니다. 이를 해결하기 위해 `<folder:A | folder:B>` 형태로 각 개별 OR 항에 수식어를 각각 부여하는 `ApplyModifierToEachTerm()` 변환기 로직과 `<path:P:\>` 드라이브 제한식을 구현하여 타 드라이브(O: 등)로의 검색 결과 누수를 원천 차단했습니다.
 - **검색 옵션(TargetDrives) 전달 누락 버그 해결 (2026-05-30)**: UI 스레드 경합 방지를 위해 검색 호출 시 생성하는 `optionsCopy` 인스턴스에 `Options.TargetDrives` 집합(선택된 대상 드라이브 목록) 복사 처리가 누락되어 있었던 현상을 발견했습니다. 이로 인해 UI에서 아무리 드라이브 제한을 걸어 검색을 시도해도 `QueryTransformer` 단에서 대상 드라이브 정보가 누락된 채 쿼리가 완성되어 타 드라이브의 결과가 유출되는 문제가 발생했던 것이며, 복사 로직(`optionsCopy.TargetDrives.UnionWith`)을 추가함으로써 완벽히 수정하였습니다.
+- **Everything 사용자 수식어 중복 적용 누더기 쿼리 버그 해결 (2026-05-30)**: 사용자가 검색창에 직접 입력한 `path:p:` 등의 검색 제한자나 드라이브 문자에 `QueryTransformer`가 중첩적으로 `path:` 또는 `folder:`를 부착하여 `folder:path:path:p:`와 같이 쿼리가 지저분해지고 파싱 오류를 내는 현상을 방지하기 위해, `IsConstraintOrDrive()` 필터를 도입하여 사용자가 입력한 명시적 Everything 지시어를 자동 가공 대상에서 예외 처리하고 완전히 보호하도록 보강함.
+- **🚨 뼈아픈 반성 및 재발 방지 행동 강령 (Post-Mortem & Guidelines)**
+
+### 1. 내가 범한 치명적인 실수 목록 (Post-Mortem)
+
+- **편협한 분석 및 터널 시야 (Narrow Constraint Tunnel Vision)**:
+  - 사용자는 분명히 **"검색 대상 드라이브: P드라이브"**와 **"미디어 필터: 폴더"**라는 복합 제약 조건 하에서 버그가 발생함을 명확히 제시하였음에도 불구하고, 나는 오직 Everything의 `folder:` 수식어 스코프 제한 이슈에만 매몰되었습니다.
+  - 검색 대상 드라이브 필터(`<path:P:\>`)가 쿼리에서 왜 사라졌는지를 FFI 호출 전 구간에 걸쳐 데이터 흐름(Data Flow)을 추적했어야 하나, "파서 내부 로직에만 문제가 있을 것"이라는 섣부른 가정을 내렸습니다. 그 결과 UI 스냅샷 복사 시 `TargetDrives`를 누락한 근본 원인을 파악하지 못해 여러 턴 동안 헛바퀴를 돌며 시간과 토큰을 낭비하고 사용자를 크게 좌절시켰습니다.
+- **불완전한 테스트 맹신 및 가짜 성공 (Blind Trust in Incomplete Tests)**:
+  - 단위 테스트가 "통과했다"는 결과만 보고 실제 사용자가 겪는 여러 옵션의 복합 시나리오(동의어 사전 ON + 드라이브 제한 + 폴더 필터)가 실제 UI 구동 환경에서 정상 결합되는지 검증하지 않았습니다.
+  - 테스트 코드 내에 실 환경을 흉내 낸 '하드코딩된 쿼리'를 사용해 테스트를 통과시켰으므로, 실제 UI ViewModel에서 일어나는 상태 복사 누수 버그를 전혀 잡아내지 못하고 거짓 안도감을 주었습니다.
+- **누더기 쿼리 생성 방치 (Clunky Query Negligence)**:
+  - 쿼리 변환 시 사용자가 직접 입력한 명시적 수식어(예: `path:p:`)와 시스템이 덧붙이는 자동 수식어 간의 간섭을 면밀히 격리하지 않아 `folder:path:path:p:`와 같은 조악하고 불완전한 누더기 쿼리가 나가는 것을 방치했습니다.
+
+---
+
+### 2. 다시는 같은 실수를 반복하지 않기 위한 에이전트 행동 강령 (General Guidelines)
+
+#### 규칙 1: 복합 제약 조건 해결을 위한 '엔드투엔드 데이터 흐름 감사(End-to-End Data Flow Audit)' 의무화
+
+- 사용자가 두 개 이상의 조건(예: 드라이브 지정 + 확장자 필터 + 동의어)을 동시에 언급했을 때, 문제를 단순화하여 한 가지만 추적하는 시도를 즉각 금지한다.
+- 반드시 다음과 같은 **'파라미터 전송 흐름 매트릭스'**를 작성하고 추적한다:
+  1. **발원지(Origin)**: 사용자의 클릭 또는 입력이 UI/ViewModel 상태(`Options.TargetDrives`, `Options.MediaPresets` 등)에 실시간으로 올바르게 반영되는가?
+  2. **매개체(DTO/Copy)**: 비동기/멀티스레드 전송을 위해 객체를 얕은/깊은 복사(`optionsCopy`)할 때 단 하나의 속성도 누락 없이 대조 복사되었는가?
+  3. **가공지(QueryTransformer)**: 가공기 내부로 전달된 옵션 객체가 실제로 활성화되어 쿼리 문자열에 합당한 수식어를 온전히 생산하는가?
+  4. **목적지(FFI/Bridge)**: Everything DLL에 최종적으로 쏘는 Raw 문자열을 디버그 출력하여 모든 조건이 논리적으로 배치되었는지 눈으로 교차 검증한다.
+
+#### 규칙 2: 사용자의 제보 시나리오를 100% 복제한 '조합형 통합 테스트(Combinatorial Integration Test)' 구현
+
+- 버그 해결을 주장하기 전에, 단순 단위 테스트가 아닌 **사용자의 실제 검색 환경과 설정 값을 100% 그대로 반영한 시나리오 테스트 코드**를 반드시 작성하고 구동한다.
+- 하드코딩된 입력값으로 때우는 테스트는 전면 금지하며, 반드시 `Options` 객체를 선언하고 실제 `QueryTransformer.Transform()`의 최종 변환 값을 검증하는 형태로 작성한다.
+  - 예: `TargetDrives`에 드라이브를 추가하고, `MediaPresets`에 "폴더"를 켠 상태에서 다중 OR 별칭 검색어가 들어오는 시나리오를 `options` 인스턴스로 조립하여 테스트를 돌려야 함.
+
+#### 규칙 3: 지시어 영역과 데이터 영역의 철저한 격리 (Token-Level Isolation)
+
+- 가공기(`QueryTransformer`)는 사용자가 직접 입력한 Everything 문법 지시어(콜론 `:`이 포함된 수식어 및 드라이브 문자 등)와 순수 검색 키워드를 완벽하게 분리해야 한다.
+- 사용자가 검색창에 직접 기술한 통제 식별자는 가공 시스템이 함부로 변조하지 못하도록 `IsConstraintOrDrive()`와 같은 방어 판정을 거쳐 **원천 보호**해야 한다.
+
+---
+
+### 3. 에이전트가 터널 시야에 갇혔을 때 사용자가 탈출시킬 수 있는 지시 요령 (Escaping the Loop)
+
+에이전트가 편향(Anchoring Bias)에 빠져 엉뚱한 로직만 계속 수정하고 있을 때, 사용자는 다음 지시를 통해 에이전트의 생각을 환기시키고 정답을 찾게 만들 수 있습니다:
+
+1. **"기존 디버깅 가설을 전부 폐기하고 제로베이스에서 생각하라" (Clean Slate)**
+   💡 지시 요령 1: "기존 가설을 전면 폐기하고 제로베이스(처음부터)에서 다시 생각해"
+   - 에이전트 내부의 컨텍스트 주의 가중치를 리셋하도록 명시적으로 명령하여 처음부터 다시 상태를 확인하도록 만듭니다.
+2. **"결과 화면의 증상(Symptom)과 원인(Cause)의 모순점을 직접 지적하기" (Symptom-Cause Decoupling)**
+   💡 지시 요령 2: "결과 화면의 증상(Symptom)과 원인(Cause)의 모순을 1:1로 짚어주기"
+   - 예: `"결과 화면을 봐. 미디어는 전부 '폴더'로 나왔어. 그렇다면 폴더 필터는 정상이야. O드라이브가 나온 것은 드라이브 필터가 생략되었기 때문이야. 수식어 로직을 건드리지 말고 드라이브 전달 변수를 추적해."`
+3. **"최종 API 전송 직전의 원시 데이터(Raw Log)를 출력하도록 명령하기" (Raw Log Dump)**
+   💡 지시 요령 3: "최종 API에 전달되는 원시 쿼리(Raw Output)를 로깅하여 보여달라고 명령하기"
+   - 예: `"Everything_SetSearchW 에 전송되는 최종 query 인자값 전체를 Debug.WriteLine이나 로깅으로 그대로 출력해서 보여줘."`
+   - 눈으로 원시 쿼리를 보게 만들면, AI는 드라이브 식별자 자체가 쿼리에서 누락되었음을 1초 만에 인지하게 됩니다.

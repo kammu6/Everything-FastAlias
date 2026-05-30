@@ -47,47 +47,54 @@ namespace EverythingFastAlias.Services
                         {
                             string innerContent = token.Substring(1, token.Length - 2);
                             var words = SplitGroupWords(innerContent);
+                            var processedWords = new List<string>();
 
-                            if (options.Scope == SearchScope.Path)
+                            foreach (var w in words)
                             {
-                                var pathWords = new List<string>();
-                                foreach (var w in words)
+                                if (IsConstraintOrDrive(w))
                                 {
-                                    pathWords.Add($@"path:{w}");
+                                    processedWords.Add(w);
                                 }
-                                queryParts.Add($"<{string.Join(" | ", pathWords)}>");
-                            }
-                            else if (options.Scope == SearchScope.All)
-                            {
-                                var allWords = new List<string>();
-                                foreach (var w in words)
+                                else
                                 {
-                                    allWords.Add(w);
+                                    if (options.Scope == SearchScope.Path)
+                                    {
+                                        processedWords.Add($@"path:{w}");
+                                    }
+                                    else if (options.Scope == SearchScope.All)
+                                    {
+                                        processedWords.Add(w);
+                                        processedWords.Add($@"path:{w}");
+                                    }
+                                    else
+                                    {
+                                        processedWords.Add(w);
+                                    }
                                 }
-                                foreach (var w in words)
-                                {
-                                    allWords.Add($@"path:{w}");
-                                }
-                                queryParts.Add($"<{string.Join(" | ", allWords)}>");
                             }
-                            else
-                            {
-                                queryParts.Add(token);
-                            }
+                            string separator = (options.Scope == SearchScope.Path || options.Scope == SearchScope.All) ? " | " : "|";
+                            queryParts.Add($"<{string.Join(separator, processedWords)}>");
                         }
                         else
                         {
-                            if (options.Scope == SearchScope.Path)
+                            if (IsConstraintOrDrive(token))
                             {
-                                queryParts.Add($@"path:{token}");
-                            }
-                            else if (options.Scope == SearchScope.All)
-                            {
-                                queryParts.Add($@"<{token} | path:{token}>");
+                                queryParts.Add(token);
                             }
                             else
                             {
-                                queryParts.Add(token);
+                                if (options.Scope == SearchScope.Path)
+                                {
+                                    queryParts.Add($@"path:{token}");
+                                }
+                                else if (options.Scope == SearchScope.All)
+                                {
+                                    queryParts.Add($@"<{token} | path:{token}>");
+                                }
+                                else
+                                {
+                                    queryParts.Add(token);
+                                }
                             }
                         }
                     }
@@ -430,13 +437,45 @@ namespace EverythingFastAlias.Services
                             var trimmed = w.Trim();
                             if (!string.IsNullOrEmpty(trimmed))
                             {
-                                if (!trimmed.StartsWith(modifier, StringComparison.OrdinalIgnoreCase))
+                                if (IsConstraintOrDrive(trimmed))
                                 {
-                                    modifiedWords.Add($"{modifier}{trimmed}");
+                                    // path:로 시작하지만 드라이브가 아닌 일반 검색어 경로인 경우 (예: path:"마키 호조")
+                                    // -> folder:path:"마키 호조" 와 같이 modifier가 결합되도록 허용
+                                    if (trimmed.StartsWith("path:", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        string pathVal = trimmed.Substring(5).Trim().Trim('"');
+                                        if (IsDriveLetter(pathVal))
+                                        {
+                                            modifiedWords.Add(trimmed); // 드라이브 제한이면 그냥 유지
+                                        }
+                                        else
+                                        {
+                                            if (!trimmed.StartsWith(modifier, StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                modifiedWords.Add($"{modifier}{trimmed}");
+                                            }
+                                            else
+                                            {
+                                                modifiedWords.Add(trimmed);
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        // 그 외의 수식어(folder:, file:, ext: 등)나 드라이브 문자는 그대로 유지
+                                        modifiedWords.Add(trimmed);
+                                    }
                                 }
                                 else
                                 {
-                                    modifiedWords.Add(trimmed);
+                                    if (!trimmed.StartsWith(modifier, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        modifiedWords.Add($"{modifier}{trimmed}");
+                                    }
+                                    else
+                                    {
+                                        modifiedWords.Add(trimmed);
+                                    }
                                 }
                             }
                         }
@@ -444,13 +483,42 @@ namespace EverythingFastAlias.Services
                     }
                     else
                     {
-                        if (!token.StartsWith(modifier, StringComparison.OrdinalIgnoreCase))
+                        if (IsConstraintOrDrive(token))
                         {
-                            resultParts.Add($"{modifier}{token}");
+                            if (token.StartsWith("path:", StringComparison.OrdinalIgnoreCase))
+                            {
+                                string pathVal = token.Substring(5).Trim().Trim('"');
+                                if (!IsDriveLetter(pathVal))
+                                {
+                                    if (!token.StartsWith(modifier, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        resultParts.Add($"{modifier}{token}");
+                                    }
+                                    else
+                                    {
+                                        resultParts.Add(token);
+                                    }
+                                }
+                                else
+                                {
+                                    resultParts.Add(token);
+                                }
+                            }
+                            else
+                            {
+                                resultParts.Add(token);
+                            }
                         }
                         else
                         {
-                            resultParts.Add(token);
+                            if (!token.StartsWith(modifier, StringComparison.OrdinalIgnoreCase))
+                            {
+                                resultParts.Add($"{modifier}{token}");
+                            }
+                            else
+                            {
+                                resultParts.Add(token);
+                            }
                         }
                     }
                 }
@@ -524,6 +592,43 @@ namespace EverythingFastAlias.Services
                 if (balance <= 0) return false;
             }
             return balance == 1;
+        }
+
+        private static bool IsConstraintOrDrive(string term)
+        {
+            if (string.IsNullOrEmpty(term)) return false;
+
+            var trimmed = term.Trim().Trim('"');
+
+            // 1. 드라이브 문자 확인 (예: C:, D:, C:\, D:\)
+            if (trimmed.Length >= 2 && trimmed[1] == ':')
+            {
+                if (trimmed.Length == 2 || (trimmed.Length == 3 && (trimmed[2] == '\\' || trimmed[2] == '/')))
+                {
+                    return true;
+                }
+            }
+
+            // 2. Everything 수식어/함수 접두사 확인 (예: path:, parent:, folder:, file:, ext:, size:, attrib:)
+            string[] modifiers = { "path:", "parent:", "folder:", "file:", "ext:", "size:", "attrib:" };
+            foreach (var mod in modifiers)
+            {
+                if (trimmed.StartsWith(mod, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool IsDriveLetter(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return false;
+            var trimmed = value.Trim().Trim('"');
+            if (trimmed.Length == 2 && trimmed[1] == ':') return true;
+            if (trimmed.Length == 3 && trimmed[1] == ':' && (trimmed[2] == '\\' || trimmed[2] == '/')) return true;
+            return false;
         }
     }
 }
