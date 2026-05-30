@@ -60,7 +60,7 @@ namespace EverythingFastAlias.ViewModels
                 if (SetProperty(ref _excludedWords, value))
                 {
                     Options.ExcludedWords = value;
-                    TriggerSearch();
+                    TriggerSearchOnly();
                 }
             }
         }
@@ -74,7 +74,7 @@ namespace EverythingFastAlias.ViewModels
                 if (SetProperty(ref _folderPaths, value))
                 {
                     Options.FolderPaths = value;
-                    TriggerSearch();
+                    TriggerSearchOnly();
                 }
             }
         }
@@ -88,7 +88,7 @@ namespace EverythingFastAlias.ViewModels
                 if (SetProperty(ref _customExtensions, value))
                 {
                     Options.CustomExtensions = value;
-                    TriggerSearch();
+                    TriggerSearchOnly();
                 }
             }
         }
@@ -102,7 +102,7 @@ namespace EverythingFastAlias.ViewModels
                 if (SetProperty(ref _minSize, value))
                 {
                     Options.MinSize = value;
-                    TriggerSearch();
+                    TriggerSearchOnly();
                     OnPropertyChanged(nameof(MinSizeText));
                 }
             }
@@ -117,7 +117,7 @@ namespace EverythingFastAlias.ViewModels
                 if (SetProperty(ref _maxSize, value))
                 {
                     Options.MaxSize = value;
-                    TriggerSearch();
+                    TriggerSearchOnly();
                     OnPropertyChanged(nameof(MaxSizeText));
                 }
             }
@@ -157,7 +157,7 @@ namespace EverythingFastAlias.ViewModels
                 if (value)
                 {
                     Options.Scope = SearchScope.All;
-                    TriggerSearch();
+                    TriggerSearchOnly();
                     NotifyScopeProperties();
                 }
             }
@@ -171,7 +171,7 @@ namespace EverythingFastAlias.ViewModels
                 if (value)
                 {
                     Options.Scope = SearchScope.File;
-                    TriggerSearch();
+                    TriggerSearchOnly();
                     NotifyScopeProperties();
                 }
             }
@@ -185,7 +185,7 @@ namespace EverythingFastAlias.ViewModels
                 if (value)
                 {
                     Options.Scope = SearchScope.Path;
-                    TriggerSearch();
+                    TriggerSearchOnly();
                     NotifyScopeProperties();
                 }
             }
@@ -233,7 +233,7 @@ namespace EverythingFastAlias.ViewModels
                 {
                     Options.MinSizeUnit = SizeUnit.KB;
                     Options.MaxSizeUnit = SizeUnit.KB;
-                    TriggerSearch();
+                    TriggerSearchOnly();
                     NotifySizeUnitProperties();
                 }
             }
@@ -248,7 +248,7 @@ namespace EverythingFastAlias.ViewModels
                 {
                     Options.MinSizeUnit = SizeUnit.MB;
                     Options.MaxSizeUnit = SizeUnit.MB;
-                    TriggerSearch();
+                    TriggerSearchOnly();
                     NotifySizeUnitProperties();
                 }
             }
@@ -263,7 +263,7 @@ namespace EverythingFastAlias.ViewModels
                 {
                     Options.MinSizeUnit = SizeUnit.GB;
                     Options.MaxSizeUnit = SizeUnit.GB;
-                    TriggerSearch();
+                    TriggerSearchOnly();
                     NotifySizeUnitProperties();
                 }
             }
@@ -289,7 +289,7 @@ namespace EverythingFastAlias.ViewModels
                     Options.MediaPresets.Clear();
                     Options.MediaPresets.Add("전체");
                     if (folderWasActive) Options.MediaPresets.Add("폴더");
-                    TriggerSearch();
+                    TriggerSearchOnly();
                     NotifyMediaProperties();
                 }
             }
@@ -313,7 +313,7 @@ namespace EverythingFastAlias.ViewModels
                 {
                     Options.MediaPresets.Remove("폴더");
                 }
-                TriggerSearch();
+                TriggerSearchOnly();
                 NotifyMediaProperties();
             }
         }
@@ -373,7 +373,7 @@ namespace EverythingFastAlias.ViewModels
             {
                 Options.MediaPresets.Remove(preset);
             }
-            TriggerSearch();
+            TriggerSearchOnly();
             NotifyMediaProperties();
         }
 
@@ -513,11 +513,16 @@ namespace EverythingFastAlias.ViewModels
             Results.ReplaceRange(sorted);
         }
 
+        private void TriggerSearchOnly()
+        {
+            _debounceTimer.Stop();
+            _debounceTimer.Start();
+        }
+
         private void TriggerSearch()
         {
             SaveSettings();
-            _debounceTimer.Stop();
-            _debounceTimer.Start();
+            TriggerSearchOnly();
         }
 
         private void DebounceTimer_Tick(object? sender, EventArgs e)
@@ -560,6 +565,9 @@ namespace EverythingFastAlias.ViewModels
             }
             _isSearching = true;
             _pendingQuery = null;
+
+            // 실제 검색이 가동되는 순간에 설정을 1회 DB에 일괄 저장 (디스크 I/O 최적화)
+            SaveSettings();
 
             try
             {
@@ -741,7 +749,7 @@ namespace EverythingFastAlias.ViewModels
                 }
 
                 UpdateTargetDrivesFromList();
-                TriggerSearch();
+                TriggerSearchOnly();
             }
         }
 
