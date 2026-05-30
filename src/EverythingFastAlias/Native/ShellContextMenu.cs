@@ -45,6 +45,13 @@ namespace EverythingFastAlias.Native
         [DllImport("user32.dll")]
         private static extern uint TrackPopupMenuEx(IntPtr hMenu, uint fuFlags, int x, int y, IntPtr hwnd, IntPtr lptpm);
 
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern bool InsertMenu(IntPtr hMenu, uint uPosition, uint uFlags, IntPtr uIDNewItem, string? lpNewItem);
+
+        private const uint MF_BYPOSITION = 0x00000400;
+        private const uint MF_STRING = 0x00000000;
+        private const uint MF_SEPARATOR = 0x00000800;
+
         [DllImport("user32.dll")]
         private static extern bool GetCursorPos(out POINT lpPoint);
 
@@ -290,6 +297,16 @@ namespace EverythingFastAlias.Native
                 // CMF_EXPLORER 플래그로 윈도우 탐색기 전용 스타일 메뉴 쿼리
                 contextMenu.QueryContextMenu(hMenu, 0, CMD_FIRST, CMD_LAST, CMF_EXPLORER | CMF_NORMAL);
 
+                // 커스텀 메뉴 항목을 메뉴의 최상단(위치 0부터)에 삽입
+                uint CUSTOM_CMD_OPEN = CMD_LAST + 1;
+                uint CUSTOM_CMD_OPEN_PATH = CMD_LAST + 2;
+                uint CUSTOM_CMD_COPY_PATH = CMD_LAST + 3;
+
+                InsertMenu(hMenu, 0, MF_BYPOSITION | MF_STRING, (IntPtr)CUSTOM_CMD_OPEN, "열기(O)");
+                InsertMenu(hMenu, 1, MF_BYPOSITION | MF_STRING, (IntPtr)CUSTOM_CMD_OPEN_PATH, "경로 열기");
+                InsertMenu(hMenu, 2, MF_BYPOSITION | MF_STRING, (IntPtr)CUSTOM_CMD_COPY_PATH, "전체 경로를 클립보드에 복사(F)");
+                InsertMenu(hMenu, 3, MF_BYPOSITION | MF_SEPARATOR, IntPtr.Zero, null);
+
                 // WPF HwndSource 메시지 후크 연결 (TrackPopupMenuEx 도중 발생하는 메시지 위임)
                 HwndSource hwndSource = HwndSource.FromHwnd(hwndOwner);
                 HwndSourceHook hook = HookWindowMessages;
@@ -312,7 +329,30 @@ namespace EverythingFastAlias.Native
                 _contextMenu3 = null;
 
                 // 9. 명령 수행 (CMD_FIRST 이상의 ID가 선택된 경우)
-                if (selectedCmd >= CMD_FIRST && selectedCmd <= CMD_LAST)
+                if (selectedCmd == CUSTOM_CMD_OPEN)
+                {
+                    foreach (var path in filePaths)
+                    {
+                        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true }); } catch { }
+                    }
+                }
+                else if (selectedCmd == CUSTOM_CMD_OPEN_PATH)
+                {
+                    foreach (var path in filePaths)
+                    {
+                        try { System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{path}\""); } catch { }
+                    }
+                }
+                else if (selectedCmd == CUSTOM_CMD_COPY_PATH)
+                {
+                    var sb = new System.Text.StringBuilder();
+                    foreach (var path in filePaths)
+                    {
+                        sb.AppendLine(path);
+                    }
+                    try { Clipboard.SetText(sb.ToString().TrimEnd()); } catch { }
+                }
+                else if (selectedCmd >= CMD_FIRST && selectedCmd <= CMD_LAST)
                 {
                     var pici = new CMINVOKECOMMANDINFO
                     {
