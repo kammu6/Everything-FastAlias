@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Input;
@@ -71,7 +72,7 @@ namespace EverythingFastAlias.ViewModels
             DatabaseService.Instance.SaveSetting("IsAutoStartEnabled", _isAutoStartEnabled.ToString());
         }
 
-        private void ExportResults()
+        private async void ExportResults()
         {
             if (SearchVM.Results.Count == 0)
             {
@@ -88,29 +89,43 @@ namespace EverythingFastAlias.ViewModels
 
             if (saveFileDialog.ShowDialog() == true)
             {
+                var filePath = saveFileDialog.FileName;
+                var snapshot = SearchVM.Results.ToList();
+                var searchQuery = SearchVM.SearchQuery;
+                var useFastAlias = SearchVM.Options.UseFastAlias;
+                var initialStatus = SearchVM.StatusMessage;
+
                 try
                 {
-                    var sb = new StringBuilder();
-                    sb.AppendLine("[Everything FastAlias 검색 내역 내보내기]");
-                    sb.AppendLine($"내보낸 시간: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-                    sb.AppendLine($"검색어: {SearchVM.SearchQuery}");
-                    sb.AppendLine($"FastAlias 활성화: {(SearchVM.Options.UseFastAlias ? "ON" : "OFF")}");
-                    sb.AppendLine($"총 결과 수: {SearchVM.Results.Count}개");
-                    sb.AppendLine("================================================================================================");
-                    sb.AppendLine("이름\t|\t경로\t|\t수정한 날짜\t|\t크기\t|\t확장자");
-                    sb.AppendLine("------------------------------------------------------------------------------------------------");
+                    SearchVM.StatusMessage = "내보내는 중...";
 
-                    foreach (var item in SearchVM.Results)
+                    await Task.Run(() =>
                     {
-                        sb.AppendLine($"{item.Name}\t|\t{item.FullPath}\t|\t{item.DisplayModifiedDate}\t|\t{item.DisplaySize}\t|\t{item.Extension}");
-                    }
+                        using var writer = new StreamWriter(filePath, false, Encoding.UTF8);
+                        writer.WriteLine("[Everything FastAlias 검색 내역 내보내기]");
+                        writer.WriteLine($"내보낸 시간: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+                        writer.WriteLine($"검색어: {searchQuery}");
+                        writer.WriteLine($"FastAlias 활성화: {(useFastAlias ? "ON" : "OFF")}");
+                        writer.WriteLine($"총 결과 수: {snapshot.Count}개");
+                        writer.WriteLine("================================================================================================");
+                        writer.WriteLine("이름\t|\t경로\t|\t수정한 날짜\t|\t크기\t|\t확장자");
+                        writer.WriteLine("------------------------------------------------------------------------------------------------");
 
-                    File.WriteAllText(saveFileDialog.FileName, sb.ToString(), Encoding.UTF8);
+                        foreach (var item in snapshot)
+                        {
+                            writer.WriteLine($"{item.Name}\t|\t{item.FullPath}\t|\t{item.DisplayModifiedDate}\t|\t{item.DisplaySize}\t|\t{item.Extension}");
+                        }
+                    });
+
                     MessageBox.Show("검색 결과가 성공적으로 내보내졌습니다.", "성공", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show($"내보내기 실패: {ex.Message}", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+                finally
+                {
+                    SearchVM.StatusMessage = initialStatus;
                 }
             }
         }

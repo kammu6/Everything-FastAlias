@@ -510,14 +510,7 @@ namespace EverythingFastAlias.ViewModels
                     return;
             }
 
-            for (int i = 0; i < sorted.Count; i++)
-            {
-                int oldIndex = Results.IndexOf(sorted[i]);
-                if (oldIndex != i && oldIndex != -1)
-                {
-                    Results.Move(oldIndex, i);
-                }
-            }
+            Results.ReplaceRange(sorted);
         }
 
         private void TriggerSearch()
@@ -607,6 +600,12 @@ namespace EverythingFastAlias.ViewModels
                     string transformed = QueryTransformer.Transform(query, optionsCopy, mappings);
                     return EverythingBridge.Search(transformed, optionsCopy);
                 });
+
+                // 방어 코드 추가: 비동기 처리 도중 검색어가 변경되었거나 삭제된 경우 결과 폐기
+                if (query != SearchQuery)
+                {
+                    return;
+                }
 
                 // RangeObservableCollection의 ReplaceRange를 사용하여 단 한 번의 UI 갱신으로 대량 바인딩
                 Results.ReplaceRange(searchItems);

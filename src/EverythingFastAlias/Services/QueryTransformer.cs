@@ -224,7 +224,7 @@ namespace EverythingFastAlias.Services
             if (!string.IsNullOrWhiteSpace(options.CustomExtensions))
             {
                 AppendSeparator(sb);
-                var exts = options.CustomExtensions.Replace(",", ";").Trim();
+                var exts = Regex.Replace(options.CustomExtensions, @"\s*[,;]\s*", ";").Trim(';');
                 sb.Append($"ext:{exts}");
             }
 
@@ -326,6 +326,7 @@ namespace EverythingFastAlias.Services
 
             string processed = query;
             var tempReplacements = new List<string>();
+            string placeholderKey = Guid.NewGuid().ToString("N");
 
             foreach (var key in sortedKeys)
             {
@@ -354,7 +355,7 @@ namespace EverythingFastAlias.Services
 
                 processed = Regex.Replace(processed, pattern, m =>
                 {
-                    string placeholder = $"__ALIAS_PLACEHOLDER_{tempReplacements.Count}__";
+                    string placeholder = $"__ALIAS_{placeholderKey}_{tempReplacements.Count}__";
                     tempReplacements.Add(replacementValue);
                     return placeholder;
                 }, RegexOptions.IgnoreCase);
@@ -362,7 +363,7 @@ namespace EverythingFastAlias.Services
 
             for (int i = 0; i < tempReplacements.Count; i++)
             {
-                processed = processed.Replace($"__ALIAS_PLACEHOLDER_{i}__", tempReplacements[i]);
+                processed = processed.Replace($"__ALIAS_{placeholderKey}_{i}__", tempReplacements[i]);
             }
 
             return processed;
