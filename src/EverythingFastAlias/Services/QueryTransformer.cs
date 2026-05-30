@@ -41,32 +41,55 @@ namespace EverythingFastAlias.Services
                     string token = match.Value;
                     if (IsWordToken(token))
                     {
-                        string inner = token;
                         bool isGroup = token.StartsWith("<") && token.EndsWith(">");
 
-                        // Scope에 따른 쿼리 가공
-                        string scopeQuery;
-                        if (options.Scope == SearchScope.Path)
+                        if (isGroup)
                         {
-                            scopeQuery = isGroup ? $@"path:{inner}" : $@"path:<{inner}>";
-                        }
-                        else if (options.Scope == SearchScope.All)
-                        {
-                            if (isGroup)
+                            string innerContent = token.Substring(1, token.Length - 2);
+                            var words = SplitGroupWords(innerContent);
+
+                            if (options.Scope == SearchScope.Path)
                             {
-                                scopeQuery = $@"<{inner} | path:{inner}>";
+                                var pathWords = new List<string>();
+                                foreach (var w in words)
+                                {
+                                    pathWords.Add($@"path:{w}");
+                                }
+                                queryParts.Add($"<{string.Join(" | ", pathWords)}>");
+                            }
+                            else if (options.Scope == SearchScope.All)
+                            {
+                                var allWords = new List<string>();
+                                foreach (var w in words)
+                                {
+                                    allWords.Add(w);
+                                }
+                                foreach (var w in words)
+                                {
+                                    allWords.Add($@"path:{w}");
+                                }
+                                queryParts.Add($"<{string.Join(" | ", allWords)}>");
                             }
                             else
                             {
-                                scopeQuery = $@"<<{inner}> | path:<{inner}>>";
+                                queryParts.Add(token);
                             }
                         }
                         else
                         {
-                            // File 검색: 괄호를 임의로 추가하지 않고 그대로 둠 (동의어 그룹인 경우에만 이미 <...> 괄호가 적용되어 있음)
-                            scopeQuery = inner;
+                            if (options.Scope == SearchScope.Path)
+                            {
+                                queryParts.Add($@"path:{token}");
+                            }
+                            else if (options.Scope == SearchScope.All)
+                            {
+                                queryParts.Add($@"<{token} | path:{token}>");
+                            }
+                            else
+                            {
+                                queryParts.Add(token);
+                            }
                         }
-                        queryParts.Add(scopeQuery);
                     }
                     else
                     {
@@ -95,17 +118,20 @@ namespace EverythingFastAlias.Services
                                   !options.IncludeRecycleBin ||
                                   (options.TargetDrives != null && options.TargetDrives.Count > 0);
 
+            // folder: 수식어는 | (OR) 연산자를 만나면 스코프가 끊어진다.
+            // 따라서 folder: 프리셋이 활성화된 경우, 각 OR 항목에 개별적으로 folder: 를 부착해야 한다.
+            // 예: <folder:"마키 호조" | folder:"Maki Hojo" | folder:path:"마키 호조" | ...>
+            bool isFolderPreset = options.MediaPresets != null && options.MediaPresets.Contains("폴더");
+
+            if (isFolderPreset && !string.IsNullOrEmpty(baseQuery))
+            {
+                baseQuery = ApplyModifierToEachTerm(baseQuery, "folder:");
+            }
+
             var sb = new StringBuilder();
             if (!string.IsNullOrEmpty(baseQuery))
             {
-                if (hasConstraints && baseQuery.Contains("|"))
-                {
-                    sb.Append($"<{baseQuery}>");
-                }
-                else
-                {
-                    sb.Append(baseQuery);
-                }
+                sb.Append(baseQuery);
             }
 
             // 3. 폴더 제약 조건 및 재귀 탐색 제어
@@ -162,8 +188,9 @@ namespace EverythingFastAlias.Services
             }
 
             // 5. 미디어 프리셋 필터 적용 (다중 선택 가능)
+            // 주의: folder: 프리셋은 이미 위에서 baseQuery의 각 OR 항에 개별 부착 완료.
+            //       여기서는 ext: 기반 파일 타입 필터만 처리한다.
             var mediaQueries = new List<string>();
-            bool isFolderPreset = options.MediaPresets != null && options.MediaPresets.Contains("폴더");
 
             if (options.MediaPresets != null && options.MediaPresets.Count > 0 && !options.MediaPresets.Contains("전체"))
             {
@@ -214,13 +241,6 @@ namespace EverythingFastAlias.Services
                 }
             }
 
-            // 5-1. 폴더 프리셋: folder: 쿼리 추가 (전체+폴더 동시 선택 시에도 동작)
-            if (isFolderPreset)
-            {
-                AppendSeparator(sb);
-                sb.Append("folder:");
-            }
-
             // 6. 커스텀 확장자 필터 적용
             if (!string.IsNullOrWhiteSpace(options.CustomExtensions))
             {
@@ -254,7 +274,8 @@ namespace EverythingFastAlias.Services
                 var driveQueries = new List<string>();
                 foreach (var drive in options.TargetDrives)
                 {
-                    driveQueries.Add(drive.TrimEnd('\\')); // "C:" 형식 유지
+                    string driveLetter = drive.TrimEnd('\\') + "\\";
+                    driveQueries.Add($@"path:{driveLetter}");
                 }
                 if (driveQueries.Count > 0)
                 {
@@ -380,12 +401,129 @@ namespace EverythingFastAlias.Services
             return true;
         }
 
+        /// <summary>
+        /// Everything의 수식어(folder:, file: 등)를 < > 그룹 내의 각 OR 항목에 개별 적용한다.
+        /// Everything 엔진에서 수식어 스코프는 | (OR) 연산자에서 끊어지므로,
+        /// 올바른 형태: <folder:A | folder:B>   (각 항목에 개별 적용)
+        /// 잘못된 형태: <folder:A | B>           (folder:가 A에만 적용됨)
+        /// </summary>
+        private static string ApplyModifierToEachTerm(string query, string modifier)
+        {
+            if (string.IsNullOrEmpty(query)) return query;
+
+            var matches = TokenRegex.Matches(query);
+            var resultParts = new List<string>();
+
+            foreach (Match match in matches)
+            {
+                string token = match.Value;
+                if (IsWordToken(token))
+                {
+                    bool isGroup = token.StartsWith("<") && token.EndsWith(">");
+                    if (isGroup)
+                    {
+                        string innerContent = token.Substring(1, token.Length - 2);
+                        var words = SplitGroupWords(innerContent);
+                        var modifiedWords = new List<string>();
+                        foreach (var w in words)
+                        {
+                            var trimmed = w.Trim();
+                            if (!string.IsNullOrEmpty(trimmed))
+                            {
+                                if (!trimmed.StartsWith(modifier, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    modifiedWords.Add($"{modifier}{trimmed}");
+                                }
+                                else
+                                {
+                                    modifiedWords.Add(trimmed);
+                                }
+                            }
+                        }
+                        resultParts.Add($"<{string.Join(" | ", modifiedWords)}>");
+                    }
+                    else
+                    {
+                        if (!token.StartsWith(modifier, StringComparison.OrdinalIgnoreCase))
+                        {
+                            resultParts.Add($"{modifier}{token}");
+                        }
+                        else
+                        {
+                            resultParts.Add(token);
+                        }
+                    }
+                }
+                else
+                {
+                    resultParts.Add(token);
+                }
+            }
+
+            var sb = new StringBuilder();
+            for (int i = 0; i < resultParts.Count; i++)
+            {
+                AppendSeparator(sb);
+                sb.Append(resultParts[i]);
+            }
+            return sb.ToString().Trim();
+        }
+
         private static void AppendSeparator(StringBuilder sb)
         {
             if (sb.Length > 0 && sb[^1] != ' ')
             {
                 sb.Append(' ');
             }
+        }
+
+        private static List<string> SplitGroupWords(string content)
+        {
+            var result = new List<string>();
+            if (string.IsNullOrEmpty(content)) return result;
+
+            var parts = content.Split('|');
+            foreach (var p in parts)
+            {
+                var trimmed = p.Trim();
+                if (!string.IsNullOrEmpty(trimmed))
+                {
+                    result.Add(trimmed);
+                }
+            }
+            return result;
+        }
+
+        private static bool IsSingleGroup(string query)
+        {
+            if (string.IsNullOrEmpty(query) || query.Length < 2) return false;
+            if (query[0] != '<' || query[query.Length - 1] != '>') return false;
+
+            int balance = 0;
+            for (int i = 0; i < query.Length - 1; i++)
+            {
+                if (query[i] == '<') balance++;
+                else if (query[i] == '>') balance--;
+
+                if (balance <= 0) return false;
+            }
+            return balance == 1;
+        }
+
+        private static bool IsSingleParenthesisGroup(string query)
+        {
+            if (string.IsNullOrEmpty(query) || query.Length < 2) return false;
+            if (query[0] != '(' || query[query.Length - 1] != ')') return false;
+
+            int balance = 0;
+            for (int i = 0; i < query.Length - 1; i++)
+            {
+                if (query[i] == '(') balance++;
+                else if (query[i] == ')') balance--;
+
+                if (balance <= 0) return false;
+            }
+            return balance == 1;
         }
     }
 }

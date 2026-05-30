@@ -79,6 +79,20 @@ namespace EverythingFastAlias.Tests
         }
 
         [TestMethod]
+        public void Test_FolderPreset_With_FastAlias_And_OR()
+        {
+            var options = new SearchOptions
+            {
+                UseFastAlias = true,
+                IncludeRecycleBin = true,
+                MediaPresets = new HashSet<string> { "폴더" }
+            };
+
+            var result = QueryTransformer.Transform("사과 | 바나나", options, _testMappings);
+            Assert.AreEqual("<folder:사과 | folder:apple | folder:🍎> | <folder:바나나 | folder:banana | folder:🍌>", result);
+        }
+
+        [TestMethod]
         public void Test_FolderConstraint_With_Recursive()
         {
             var options = new SearchOptions
@@ -142,6 +156,63 @@ namespace EverythingFastAlias.Tests
             Assert.IsTrue(result2.Contains("\"Akari Asayiri\"") || result2.Contains("Akari Asayiri"));
             Assert.IsTrue(result2.Contains("\"Akari Asagiri\""));
             Assert.IsTrue(result2.Contains("朝桐光"));
+        }
+
+        [TestMethod]
+        public void Test_Everything_Dll_Nesting_Bug()
+        {
+            if (!EverythingBridge.IsEverythingRunning())
+            {
+                Assert.Inconclusive("Everything 서비스가 켜져 있지 않아 DLL 테스트를 건너뜁니다.");
+                return;
+            }
+
+            var options = new SearchOptions { Scope = SearchScope.All };
+
+            // O드라이브 누수가 발생하는지 확인하는 테스트 케이스들
+            string[] testQueries = new[]
+            {
+                // 1. 단순 OR에 folder: 붙임 (유저가 겪는 버그 재현 시도)
+                "<마키 호조 | Maki Hojo | 北条麻妃> folder: <P:>",
+                
+                // 2. folder: 태그를 가장 앞에 배치
+                "folder: <마키 호조 | Maki Hojo | 北条麻妃> <P:>",
+                
+                // 3. folder: 대신 attrib:d (디렉토리 속성) 사용
+                "<마키 호조 | Maki Hojo | 北条麻妃> attrib:d <P:>",
+                
+                // 4. 경로 검색(Scope=All 흉내)을 명시적으로 포함
+                "<마키 호조 | Maki Hojo | 北条麻妃 | path:\"마키 호조\" | path:\"Maki Hojo\"> folder: <P:>",
+                
+                // 5. 경로 검색 포함 + attrib:d
+                "<마키 호조 | Maki Hojo | 北条麻妃 | path:\"마키 호조\" | path:\"Maki Hojo\"> attrib:d <P:>",
+                
+                // 6. 꺾쇠 괄호(<>) 안에 중첩 (< < > >)
+                "< <마키 호조 | Maki Hojo | 北条麻妃 | path:\"마키 호조\" | path:\"Maki Hojo\"> > folder: <P:>"
+            };
+
+            foreach (var query in testQueries)
+            {
+                System.Diagnostics.Debug.WriteLine($"\n--- [Query]: {query} ---");
+                var results = EverythingBridge.Search(query, options);
+
+                int nonPDriveCount = 0;
+                int oDriveCount = 0;
+                for (int i = 0; i < results.Count; i++)
+                {
+                    if (!results[i].Path.StartsWith("P:", System.StringComparison.OrdinalIgnoreCase))
+                    {
+                        nonPDriveCount++;
+                        if (results[i].Path.StartsWith("O:", System.StringComparison.OrdinalIgnoreCase))
+                        {
+                            oDriveCount++;
+                            if (oDriveCount <= 3) // 처음 3개만 출력
+                                System.Diagnostics.Debug.WriteLine($"  [LEAK]: {results[i].Path}\\{results[i].Name}");
+                        }
+                    }
+                }
+                System.Diagnostics.Debug.WriteLine($"[Count]: {results.Count}, [Non-P]: {nonPDriveCount}, [O-Drive]: {oDriveCount}");
+            }
         }
     }
 }

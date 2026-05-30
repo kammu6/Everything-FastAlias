@@ -599,13 +599,16 @@ namespace EverythingFastAlias.ViewModels
                     RecursiveSearch = Options.RecursiveSearch
                 };
                 optionsCopy.MediaPresets.UnionWith(Options.MediaPresets);
+                optionsCopy.TargetDrives.UnionWith(Options.TargetDrives);
 
                 var mappings = DatabaseService.Instance.GetCacheSnapshot();
 
+                string transformedQuery = string.Empty;
                 // FFI 통신 및 동의어 치환 가공은 백그라운드 스레드에서 전담하여 UI 스레드 블로킹 제거
                 var searchItems = await Task.Run(() =>
                 {
                     string transformed = QueryTransformer.Transform(query, optionsCopy, mappings);
+                    transformedQuery = transformed;
                     return EverythingBridge.Search(transformed, optionsCopy);
                 });
 
@@ -621,7 +624,7 @@ namespace EverythingFastAlias.ViewModels
                 ApplySorting();
 
                 var ruleCount = mappings.Count;
-                StatusMessage = $"Everything 서비스 활성화 완료 | 매핑 테이블 규칙: {ruleCount}개 로드됨";
+                StatusMessage = $"[Everything 쿼리]: {transformedQuery} | 매핑 규칙: {ruleCount}개";
                 UpdateResultCountMessage();
             }
             catch (Exception ex)
