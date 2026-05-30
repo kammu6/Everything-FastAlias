@@ -9,7 +9,7 @@ namespace EverythingFastAlias.Services
     public class QueryTransformer
     {
         private static readonly Regex TokenRegex = new(
-            @"("".*?""|<.*?>|[^|&\s()""!]+|\||&|\(|\)|!)", 
+            @"("".*?""|<(?:[^<>]+|(?<angle><)|(?<-angle>>))*(?(angle)(?!))>|[^|&\s()""!<>]+|\||&|\(|\)|!|<|>)", 
             RegexOptions.Compiled
         );
 
@@ -85,7 +85,27 @@ namespace EverythingFastAlias.Services
 
         private static string BuildOptionConstraints(string baseQuery, SearchOptions options)
         {
-            var sb = new StringBuilder(baseQuery);
+            bool hasConstraints = !string.IsNullOrWhiteSpace(options.FolderPaths) ||
+                                  !string.IsNullOrWhiteSpace(options.ExcludedWords) ||
+                                  (options.MediaPresets != null && options.MediaPresets.Count > 0 && !options.MediaPresets.Contains("전체")) ||
+                                  !string.IsNullOrWhiteSpace(options.CustomExtensions) ||
+                                  options.MinSize.HasValue ||
+                                  options.MaxSize.HasValue ||
+                                  !options.IncludeRecycleBin ||
+                                  (options.TargetDrives != null && options.TargetDrives.Count > 0);
+
+            var sb = new StringBuilder();
+            if (!string.IsNullOrEmpty(baseQuery))
+            {
+                if (hasConstraints && baseQuery.Contains("|"))
+                {
+                    sb.Append($"<{baseQuery}>");
+                }
+                else
+                {
+                    sb.Append(baseQuery);
+                }
+            }
 
             // 3. 폴더 제약 조건 및 재귀 탐색 제어
             if (!string.IsNullOrWhiteSpace(options.FolderPaths))
@@ -316,7 +336,7 @@ namespace EverythingFastAlias.Services
                     continue;
 
                 string escapedKey = Regex.Escape(key);
-                string pattern = $@"(?<=^|[\s|&()!])" + escapedKey + @"(?=$|[\s|&()!])";
+                string pattern = $@"(?<=^|[\s|&()!<>])" + escapedKey + @"(?=$|[\s|&()!<>])";
 
                 var list = new List<string>(synonyms);
                 list.Remove(key);

@@ -68,6 +68,13 @@
                         <TextBlock Text="2. FastAlias 스위치를 켜면 검색어 입력 시 관련어가 자동으로 치환되어 쿼리됩니다." TextWrapping="Wrap"/>
                         <TextBlock Text="   (예: '사과' 입력 시 &lt;사과|apple|🍎&gt; 문법으로 자동 쿼리)" TextWrapping="Wrap"/>
                         
+                        <TextBlock Text="FastAlias 다중 키워드 논리 검색 체계" FontSize="16" FontWeight="Bold"/>
+                        <TextBlock Text="FastAlias는 기본 검색 연산자(OR, NOT, 그룹화)와 완벽하게 호환됩니다. 다음과 같이 다중 키워드를 조합할 수 있습니다:" TextWrapping="Wrap"/>
+                        <TextBlock Text="• 다중 OR 검색: 키워드 사이에 | (파이프)를 입력하세요. (예: 사과 | 바나나)" TextWrapping="Wrap" Margin="10,0,0,0"/>
+                        <TextBlock Text="  (미디어 필터를 적용해도 전체 쿼리에 일관되게 필터가 작동합니다.)" TextWrapping="Wrap" Foreground="Gray" Margin="10,0,0,0"/>
+                        <TextBlock Text="• 수동 그룹화 결합: &lt;사과 | 바나나&gt; 와 같이 그룹 기호(&lt; &gt;) 안에서도 동의어 치환이 정상 동작합니다." TextWrapping="Wrap" Margin="10,0,0,0"/>
+                        <TextBlock Text="• 제외 조건 결합: !사과 와 같이 느낌표(!)를 붙이면 해당 키워드와 모든 동의어가 검색에서 일괄 제외됩니다." TextWrapping="Wrap" Margin="10,0,0,0"/>
+                        
                         <Separator Margin="0,10,0,10"/>
                         
                         <TextBlock Text="단축키 팁" FontSize="16" FontWeight="Bold"/>
