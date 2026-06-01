@@ -39,4 +39,9 @@
     - [x] `MainWindow.xaml` 전역 스타일 리소스 지정 및 상단바 3단 세로 대칭 레이아웃 개편
     - [x] 양방향 동의어 치환에 대한 단위 테스트 보완 (`QueryTransformerTest.cs`) 및 통과 검증
     - [x] `dotnet build` 및 `dotnet test`로 컴파일/동작 신뢰성 확보
-    - [x] `task.md` 갱신, `walkthrough.md` 업데이트 및 `AGENTS.md` 지식 자산화
+    - [x] Phase 8: 테스트 코드 정리 및 SearchViewModel 분할 검토
+    - [x] QueryTransformerTest.cs에서 불필요한 공백 포함 테스트를 양방향 테스트로 병합 및 슬림화
+    - [x] SearchViewModel.cs의 partial class 분할 구조 최종 검토 및 overview.md 문서 갱신
+    - [x] dotnet test 실행하여 7개 핵심 단위 테스트 통과 검증
+    - [x] dotnet build 실행하여 컴파일 경고/오류 확인
+    - [x] walkthrough_test_cleanup.md 작성 및 AGENTS.md 지식 자산화

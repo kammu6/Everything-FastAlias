@@ -59,7 +59,9 @@ D:\3_Code\3_Apps\43_Search-Edit\Everything검색기\src\EverythingFastAlias\
 │   └── AliasMapping.cs        # MVVM 바인딩용 매핑 정보 모델
 ├── ViewModels/
 │   ├── MainWindowViewModel.cs # 메인 레이아웃 및 윈도우 생성 이벤트 중계
-│   ├── SearchViewModel.cs     # 실시간 검색 쿼리 질의 및 상태 관리 뷰모델
+│   ├── SearchViewModel.cs     # 실시간 검색 뷰모델 (필드, 기본 속성 및 UI 바인딩 래퍼) [PARTIAL]
+│   ├── SearchViewModel.Search.cs # 실시간 검색 실행 및 결과 정렬 로직 [PARTIAL]
+│   ├── SearchViewModel.Settings.cs # 사용자 설정 저장/로드 및 드라이브 초기화 로직 [PARTIAL]
 │   └── AliasManagerViewModel.cs # 매핑 데이터 CRUD 및 엑셀 파싱 조율
 ├── Views/
 │   ├── MainWindow.xaml        # 메인 윈도우 UI (3:7 Grid Splitter)
@@ -93,7 +95,9 @@ D:\3_Code\3_Apps\43_Search-Edit\Everything검색기\src\EverythingFastAlias\
 #### ViewModels (비즈니스 로직 및 상태 관리)
 
 - **`MainWindowViewModel.cs`**: 메인 화면의 레이아웃 상태(리사이저, 모달 활성화) 제어 및 전역 Command 매핑.
-- **`SearchViewModel.cs`**: 검색 키워드 바인딩, 옵션 전이 제어, EverythingBridge를 통한 검색 질의 처리 담당.
+- **`SearchViewModel.cs` (Partial)**: 검색 키워드 바인딩, 미디어/크기 옵션 전이 제어 등 UI 전용 래퍼 속성을 보유하는 메인 뷰모델 선언부.
+- **`SearchViewModel.Search.cs` (Partial)**: 비동기 백그라운드 검색 실행(Task.Run), 디바운싱 타이머 제어, 결과 정렬(SortResults) 등 검색 연동 핵심 로직 전담.
+- **`SearchViewModel.Settings.cs` (Partial)**: 검색 필터 및 타겟 드라이브 설정값의 SQLite 영속성 관리(Load/SaveSettings), PC의 물리 고정 드라이브 감지 및 초기화(Reset) 전담.
 - **`AliasManagerViewModel.cs`**: SQLite와 연동되어 매핑 테이블의 실시간 추가/수정/삭제 관리 및 엑셀 대용량 임포트 제어.
 
 #### Views (UI 마크업 레이어)

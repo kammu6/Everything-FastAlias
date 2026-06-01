@@ -1,4 +1,4 @@
-# Agent Memory Log (AGENTS.md)
+# Agent Memory Log
 
 이 문서는 AI 에이전트의 작업 원칙 및 핵심 운영 지침을 정의하는 공간입니다. 복잡한 플랫폼별 트러블슈팅 지식은 관련 개발 문서로 분리하고, 본 파일에는 핵심 행동 강령과 지침 링크만을 압축 요약하여 100줄 이내로 콤팩트하게 관리합니다.
 
@@ -36,6 +36,12 @@ WPF 프레임워크 제어, UI 컴포넌트 커스터마이징, 빌드 충돌 �
 - ObservableCollection 렌더링 병목 및 대용량 사전(Regex) O(1) 캐싱 최적화
 
 ---
+
+## 🛠️ 최근 작업 기록 (2026-05-31)
+
+- **QueryTransformerTest.cs 단위 테스트 슬림화**: 중복 검증 로직인 공백 포함 치환(`Test_FastAlias_Space_Contain_Replacement`)을 양방향 치환(`Test_FastAlias_Bidirectional_Replacement`)의 하위 테스트 케이스로 통합하여 테스트 개수를 7개로 슬림화.
+- **MSTEST0037 경고 전면 해결**: MSTest 분석기 권장 사항에 맞춰 `Assert.IsTrue(result.Contains(...))` 형태를 `StringAssert.Contains(result, ...)`로 교체하여 컴파일 경고를 0개로 제거 완료.
+- **SearchViewModel.cs partial class 분할 구조 검토 및 문서화**: 800줄 이상 단일 파일로 인한 코드 뷰 병목을 `SearchViewModel.cs`, `SearchViewModel.Search.cs`, `SearchViewModel.Settings.cs`의 3개 partial 파일로 영구 분리하였으며, `overview.md`에 partial 파일별 역할을 현행화하여 지식 자산화 기록.
 
 ## 🛠️ 최근 작업 기록 (2026-05-30)
 
