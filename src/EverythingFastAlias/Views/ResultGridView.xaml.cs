@@ -38,6 +38,10 @@ namespace EverythingFastAlias.Views
         // ESC/커밋 후 포커스 복원 시 RequestBringIntoView 자동 스크롤 억제 플래그
         private bool _suppressBringIntoView;
 
+        // 드래그 다중 선택 관련 상태 필드
+        private bool _isDragSelecting = false;
+        private Point _dragSelectionStartPoint;
+
         public ResultGridView()
         {
             InitializeComponent();
@@ -65,6 +69,27 @@ namespace EverythingFastAlias.Views
                 }
                 e.Handled = true;
                 return;
+            }
+
+            // 자세히(Details) 모드일 때, '이름' 컬럼 너비를 벗어나는 다른 컬럼 영역을 클릭한 경우
+            // 기존 드래그 앤 드롭 트리거 좌표 기록을 생략하고 이벤트를 부모 ListView로 통과시킵니다.
+            if (DataContext is SearchViewModel vm && vm.ViewMode == ViewMode.Details)
+            {
+                if (sender is ListViewItem item)
+                {
+                    var clickPos = e.GetPosition(item);
+                    double nameColumnWidth = 250; // 기본값
+                    if (ResultsListView.View is GridView gv && gv.Columns.Count > 0)
+                    {
+                        nameColumnWidth = gv.Columns[0].ActualWidth;
+                    }
+
+                    if (clickPos.X > nameColumnWidth)
+                    {
+                        _clickedItem = null;
+                        return; // _startPoint 수집하지 않고 즉시 리턴하여 드래그앤드롭 회피
+                    }
+                }
             }
 
             // 드래그 시작 좌표 기록
@@ -665,6 +690,138 @@ namespace EverythingFastAlias.Views
             if (parentObject is T parent) return parent;
             return FindVisualParent<T>(parentObject);
         }
+
+        #region 마우스 드래그 다중 선택 (Rubber Band Selection) 구현
+
+        private void ResultsListView_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            // [Guard] 편집 모드 중에는 작동 불가
+            if (_viewState == ViewState.Editing) return;
+
+            var dep = (DependencyObject)e.OriginalSource;
+
+            // 1. GridViewColumnHeader 또는 ScrollBar 내부 클릭 시 Rubber Band 미발동
+            if (FindVisualParent<System.Windows.Controls.Primitives.ScrollBar>(dep) != null ||
+                FindVisualParent<GridViewColumnHeader>(dep) != null)
+            {
+                return;
+            }
+
+            // 2. ListViewItem 클릭 여부 감지
+            var lvi = FindVisualParent<ListViewItem>(dep);
+            if (lvi != null)
+            {
+                if (DataContext is SearchViewModel vm && vm.ViewMode == ViewMode.Details)
+                {
+                    // 자세히 모드: 클릭 위치가 '이름' 컬럼 내부라면 일반 드래그(파일 이동/복사) 지원을 위해 우회
+                    var clickPos = e.GetPosition(lvi);
+                    double nameColumnWidth = 250;
+                    if (ResultsListView.View is GridView gv && gv.Columns.Count > 0)
+                    {
+                        nameColumnWidth = gv.Columns[0].ActualWidth;
+                    }
+
+                    if (clickPos.X <= nameColumnWidth)
+                    {
+                        return; // 이름 영역 클릭 시 드래그 다중 선택 패스
+                    }
+                }
+                else
+                {
+                    // 썸네일 모드: 카드 내부를 클릭했다면 일반 드래그 지원을 위해 우회
+                    return;
+                }
+            }
+
+            // 3. 드래그 다중 선택 시작
+            _isDragSelecting = true;
+            _dragSelectionStartPoint = e.GetPosition(ResultsListView);
+            ResultsListView.CaptureMouse();
+            ResultsListView.Focus();
+
+            // Ctrl / Shift 미압박 시 기존 선택 삭제
+            if ((Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Shift)) == 0)
+            {
+                ResultsListView.SelectedItems.Clear();
+            }
+
+            // 캔버스 크기 및 위치 세팅 준비
+            Canvas.SetLeft(DragSelectionRect, _dragSelectionStartPoint.X);
+            Canvas.SetTop(DragSelectionRect, _dragSelectionStartPoint.Y);
+            DragSelectionRect.Width = 0;
+            DragSelectionRect.Height = 0;
+            DragSelectionRect.Visibility = Visibility.Visible;
+
+            e.Handled = true; // 이벤트 독점 (ListViewItem의 포커스 전이 방지)
+        }
+
+        private void ResultsListView_PreviewMouseMove(object sender, MouseEventArgs e)
+        {
+            if (!_isDragSelecting) return;
+
+            var currentPoint = e.GetPosition(ResultsListView);
+
+            // Bounds 계산
+            double x = Math.Min(_dragSelectionStartPoint.X, currentPoint.X);
+            double y = Math.Min(_dragSelectionStartPoint.Y, currentPoint.Y);
+            double width = Math.Abs(_dragSelectionStartPoint.X - currentPoint.X);
+            double height = Math.Abs(_dragSelectionStartPoint.Y - currentPoint.Y);
+
+            // Canvas 배치 갱신
+            Canvas.SetLeft(DragSelectionRect, x);
+            Canvas.SetTop(DragSelectionRect, y);
+            DragSelectionRect.Width = width;
+            DragSelectionRect.Height = height;
+
+            var dragRect = new Rect(x, y, width, height);
+
+            // 생성된 컨테이너 루프 돌며 Bounds 충돌 판별 및 실시간 선택
+            for (int i = 0; i < ResultsListView.Items.Count; i++)
+            {
+                var item = ResultsListView.Items[i];
+                if (ResultsListView.ItemContainerGenerator.ContainerFromItem(item) is ListViewItem lvi)
+                {
+                    try
+                    {
+                        var itemBounds = lvi.TransformToAncestor(ResultsListView).TransformBounds(new Rect(0, 0, lvi.ActualWidth, lvi.ActualHeight));
+                        if (dragRect.IntersectsWith(itemBounds))
+                        {
+                            lvi.IsSelected = true;
+                        }
+                        else
+                        {
+                            lvi.IsSelected = false;
+                        }
+                    }
+                    catch
+                    {
+                        // Visual 트리 바인딩 끊겼거나 가상화 해제 중일 때 에러 방지
+                    }
+                }
+            }
+
+            e.Handled = true;
+        }
+
+        private void ResultsListView_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (!_isDragSelecting) return;
+
+            _isDragSelecting = false;
+            ResultsListView.ReleaseMouseCapture();
+            DragSelectionRect.Visibility = Visibility.Collapsed;
+
+            // 선택 개수 ViewModel 갱신
+            if (DataContext is SearchViewModel vm)
+            {
+                vm.SelectedCount = ResultsListView.SelectedItems.Count;
+                vm.UpdateResultCountMessage();
+            }
+
+            e.Handled = true;
+        }
+
+        #endregion
 
         #endregion
     }

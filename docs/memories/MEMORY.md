@@ -27,6 +27,8 @@
 - **정렬 기준 영속화**: `SearchViewModel.Settings.cs` 및 `SearchViewModel.Search.cs`를 수정하여 사용자의 정렬 조건(`SortColumn`, `SortDirection`)이 변경될 때마다 SQLite 로컬 DB에 실시간 저장하고, 앱 재기동 시 복원하여 검색 결과에 자동으로 선반영되도록 조율.
 - **이름 변경 시 입력 커서 자동 활성화**: WPF 가상화 및 DataTemplate 내에서 TextBox의 Visibility가 Collapsed에서 Visible로 바뀔 때 `Loaded` 이벤트가 다시 호출되지 않아 포커스가 풀리던 현상을 해결하기 위해, `IsVisibleChanged` 이벤트를 연동하여 TextBox가 표시될 때마다 `DispatcherPriority.Input` 지연 실행을 통해 `Keyboard.Focus()` 및 `SelectAll()`이 확실하게 작동하도록 보완.
 - **빌드 배치 파일(bat) 비대화형 실행 개선**: `build-debug.bat` 및 `build-release.bat` 파일 실행 시 `--non-interactive` 매개변수를 넘기면 키보드 대기(`pause`)를 생략하고 즉각 종료하도록 하여 AI 에이전트의 무한 대기 루프를 해결. `dotnet build`의 ERRORLEVEL을 변수에 확보하여 호출 측에 성공 여부(exit code)를 정상 반환하도록 개선.
+- **마우스 드래그 다중 선택 (Rubber Band)**: `ResultGridView.xaml`에 `Canvas`와 반투명 `Rectangle`을 ListView 위에 오버레이. `PreviewMouseLeftButtonDown`에서 마우스 위치가 `ScrollBar`, `GridViewColumnHeader`가 아니고, 자세히 모드의 '이름' 컬럼 내(250px 이하) 또는 썸네일 카드 내부가 아닐 때(빈 배경) 드래그 다중 선택 모드를 활성화. `MouseMove` 시 마우스 드래그 박스와 가상화된 `ListViewItem` 컨테이너의 상대 Bounds 충돌 검사(`IntersectsWith`)를 수행해 실시간 다중 선택을 구현.
+  - **다중 선택 색상 파란색 통일**: 드래그 중 포커스 미획득으로 회색(비활성 선택) 렌더링되던 버그 수정을 위해 드래그 즉시 `ResultsListView.Focus()`를 호출하고, 타 영역 클릭으로 포커스가 이탈해도 배경색이 유지되도록 XAML `ListViewItem.Style` 리소스의 `InactiveSelectionHighlightBrushKey`를 파란색 테마로 재정의.
 - **빌드 결과**: 경고 0개, 오류 0개 ✅
 
 ### [F2 인라인 이름변경 ViewState 상태 머신 재설계] — 2026-06-16 22:00

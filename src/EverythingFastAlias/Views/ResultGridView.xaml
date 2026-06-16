@@ -104,10 +104,19 @@
                   MouseRightButtonUp="ResultsListView_MouseRightButtonUp"
                   SelectionChanged="ResultsListView_SelectionChanged"
                   GridViewColumnHeader.Click="ResultsGridViewHeader_Click"
-                  RequestBringIntoView="ResultsListView_RequestBringIntoView">
+                  RequestBringIntoView="ResultsListView_RequestBringIntoView"
+                  PreviewMouseLeftButtonDown="ResultsListView_PreviewMouseLeftButtonDown"
+                  PreviewMouseMove="ResultsListView_PreviewMouseMove"
+                  PreviewMouseLeftButtonUp="ResultsListView_PreviewMouseLeftButtonUp">
             
             <ListView.ItemContainerStyle>
                 <Style TargetType="ListViewItem">
+                    <Style.Resources>
+                        <!-- 포커스를 잃었을 때(Inactive)의 선택 배경색과 텍스트색을 활성 상태(Active)인 파란색 테마로 통일 -->
+                        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#FF0078D7"/>
+                        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="White"/>
+                    </Style.Resources>
+
                     <!-- 기본 Details 뷰 스타일 설정 -->
                     <Setter Property="Height" Value="28"/>
                     <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -170,5 +179,13 @@
                 </Style>
             </ListView.Style>
         </ListView>
+
+        <Canvas x:Name="DragCanvas" IsHitTestVisible="False" Background="Transparent">
+            <Rectangle x:Name="DragSelectionRect"
+                       Fill="#330078D7"
+                       Stroke="#FF0078D7"
+                       StrokeThickness="1"
+                       Visibility="Collapsed"/>
+        </Canvas>
     </Grid>
 </UserControl>
