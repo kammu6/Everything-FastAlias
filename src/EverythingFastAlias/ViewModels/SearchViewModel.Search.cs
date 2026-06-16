@@ -41,6 +41,7 @@ namespace EverythingFastAlias.ViewModels
             }
 
             ApplySorting();
+            SaveSettings();
         }
 
         private void ApplySorting()

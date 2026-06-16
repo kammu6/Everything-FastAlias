@@ -222,6 +222,13 @@ namespace EverythingFastAlias.ViewModels
 
                 NotifyViewModeProperties();
 
+                SortColumn = db.GetSetting("SortColumn", "이름");
+                var sortDirStr = db.GetSetting("SortDirection", "Ascending");
+                if (Enum.TryParse<System.ComponentModel.ListSortDirection>(sortDirStr, out var dir))
+                    SortDirection = dir;
+                else
+                    SortDirection = System.ComponentModel.ListSortDirection.Ascending;
+
                 InitializeDrives();
             }
             catch (Exception ex)
@@ -251,6 +258,8 @@ namespace EverythingFastAlias.ViewModels
                 db.SaveSetting("ExcludedWords", Options.ExcludedWords);
                 db.SaveSetting("FolderPaths", Options.FolderPaths);
                 db.SaveSetting("ViewMode", ViewMode.ToString());
+                db.SaveSetting("SortColumn", SortColumn);
+                db.SaveSetting("SortDirection", SortDirection.ToString());
 
                 var activeDrives = Drives.Where(d => d.IsChecked).Select(d => d.Name);
                 db.SaveSetting("TargetDrives", string.Join(",", activeDrives));

@@ -162,16 +162,40 @@ namespace EverythingFastAlias.Views
 
         private void ResultsListView_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
         {
-            var selectedItems = ResultsListView.SelectedItems.Cast<SearchResultItem>().ToList();
-            if (selectedItems.Count == 0) return;
+            DependencyObject dep = (DependencyObject)e.OriginalSource;
+            ListViewItem? item = FindVisualParent<ListViewItem>(dep);
 
-            var paths = selectedItems.Select(item => item.FullPath).ToList();
-
-            var parentWindow = Window.GetWindow(this);
-            if (parentWindow != null)
+            if (item != null)
             {
+                // 아이템 우클릭 시, 선택되지 않았다면 유일하게 선택하여 쉘 메뉴에 연결되도록 유도
+                if (!item.IsSelected)
+                {
+                    if ((Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Shift)) == 0)
+                    {
+                        ResultsListView.SelectedItem = item.DataContext;
+                    }
+                    else
+                    {
+                        item.IsSelected = true;
+                    }
+                }
+
+                var selectedItems = ResultsListView.SelectedItems.Cast<SearchResultItem>().ToList();
+                if (selectedItems.Count == 0) return;
+
+                var paths = selectedItems.Select(x => x.FullPath).ToList();
+                var parentWindow = Window.GetWindow(this);
+                if (parentWindow != null)
+                {
+                    e.Handled = true;
+                    ShellContextMenu.ShowContextMenu(parentWindow, paths);
+                }
+            }
+            else
+            {
+                // 빈 공간 우클릭 시, 배경 컨텍스트 메뉴 동적 구성
                 e.Handled = true;
-                ShellContextMenu.ShowContextMenu(parentWindow, paths);
+                ShowBackgroundContextMenu();
             }
         }
 
@@ -373,6 +397,12 @@ namespace EverythingFastAlias.Views
                 foreach (var path in paths)
                     OpenFile(path);
             }
+            // 5. 휴지통 삭제 (Delete)
+            else if (e.Key == Key.Delete)
+            {
+                e.Handled = true;
+                DeleteSelectedItems();
+            }
         }
 
         #endregion
@@ -443,6 +473,162 @@ namespace EverythingFastAlias.Views
         {
             if (_suppressBringIntoView)
                 e.Handled = true;
+        }
+
+        private void ShowBackgroundContextMenu()
+        {
+            if (DataContext is not SearchViewModel vm) return;
+
+            var menu = new ContextMenu();
+
+            // 1. 보기 서브메뉴
+            var viewItem = new MenuItem { Header = "보기" };
+            
+            var detailsMenu = new MenuItem { Header = "자세히", IsCheckable = true, IsChecked = vm.ViewMode == ViewMode.Details };
+            detailsMenu.Click += (s, e) => vm.ViewMode = ViewMode.Details;
+            
+            var thumbSMenu = new MenuItem { Header = "섬네일S", IsCheckable = true, IsChecked = vm.ViewMode == ViewMode.ThumbnailS };
+            thumbSMenu.Click += (s, e) => vm.ViewMode = ViewMode.ThumbnailS;
+            
+            var thumbMMenu = new MenuItem { Header = "섬네일M", IsCheckable = true, IsChecked = vm.ViewMode == ViewMode.ThumbnailM };
+            thumbMMenu.Click += (s, e) => vm.ViewMode = ViewMode.ThumbnailM;
+            
+            var thumbLMenu = new MenuItem { Header = "섬네일L", IsCheckable = true, IsChecked = vm.ViewMode == ViewMode.ThumbnailL };
+            thumbLMenu.Click += (s, e) => vm.ViewMode = ViewMode.ThumbnailL;
+
+            viewItem.Items.Add(detailsMenu);
+            viewItem.Items.Add(thumbSMenu);
+            viewItem.Items.Add(thumbMMenu);
+            viewItem.Items.Add(thumbLMenu);
+            menu.Items.Add(viewItem);
+
+            // 2. 정렬 기준 서브메뉴
+            var sortItem = new MenuItem { Header = "정렬 기준" };
+            
+            var sortByName = new MenuItem { Header = "이름", IsCheckable = true, IsChecked = vm.SortColumn == "이름" || vm.SortColumn == "Name" };
+            sortByName.Click += (s, e) => { vm.SortColumn = "이름"; vm.SortResults("이름"); };
+            
+            var sortByPath = new MenuItem { Header = "경로", IsCheckable = true, IsChecked = vm.SortColumn == "경로" || vm.SortColumn == "Path" };
+            sortByPath.Click += (s, e) => { vm.SortColumn = "경로"; vm.SortResults("경로"); };
+            
+            var sortByDate = new MenuItem { Header = "수정한 날짜", IsCheckable = true, IsChecked = vm.SortColumn == "수정한 날짜" || vm.SortColumn == "DisplayModifiedDate" || vm.SortColumn == "ModifiedDate" };
+            sortByDate.Click += (s, e) => { vm.SortColumn = "수정한 날짜"; vm.SortResults("수정한 날짜"); };
+            
+            var sortBySize = new MenuItem { Header = "크기", IsCheckable = true, IsChecked = vm.SortColumn == "크기" || vm.SortColumn == "DisplaySize" || vm.SortColumn == "Size" };
+            sortBySize.Click += (s, e) => { vm.SortColumn = "크기"; vm.SortResults("크기"); };
+
+            var sortAsc = new MenuItem { Header = "오름차순", IsCheckable = true, IsChecked = vm.SortDirection == System.ComponentModel.ListSortDirection.Ascending };
+            sortAsc.Click += (s, e) => { vm.SortDirection = System.ComponentModel.ListSortDirection.Ascending; vm.SortResults(vm.SortColumn); };
+            
+            var sortDesc = new MenuItem { Header = "내림차순", IsCheckable = true, IsChecked = vm.SortDirection == System.ComponentModel.ListSortDirection.Descending };
+            sortDesc.Click += (s, e) => { vm.SortDirection = System.ComponentModel.ListSortDirection.Descending; vm.SortResults(vm.SortColumn); };
+
+            sortItem.Items.Add(sortByName);
+            sortItem.Items.Add(sortByPath);
+            sortItem.Items.Add(sortByDate);
+            sortItem.Items.Add(sortBySize);
+            sortItem.Items.Add(new Separator());
+            sortItem.Items.Add(sortAsc);
+            sortItem.Items.Add(sortDesc);
+            menu.Items.Add(sortItem);
+
+            menu.Items.Add(new Separator());
+
+            // 3. 새로고침
+            var refreshItem = new MenuItem { Header = "새로고침", InputGestureText = "F5" };
+            refreshItem.Click += (s, e) => { if (vm.RefreshCommand.CanExecute(null)) vm.RefreshCommand.Execute(null); };
+            menu.Items.Add(refreshItem);
+
+            menu.PlacementTarget = ResultsListView;
+            menu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
+            menu.IsOpen = true;
+        }
+
+        private void DeleteSelectedItems()
+        {
+            var selectedItems = ResultsListView.SelectedItems.Cast<SearchResultItem>().ToList();
+            if (selectedItems.Count == 0) return;
+
+            if (DataContext is not SearchViewModel vm) return;
+
+            // 1. 삭제 후 포커스를 가질 대상 미리 선정
+            SearchResultItem? nextSelectedItem = null;
+            int maxIndex = -1;
+            int minIndex = int.MaxValue;
+            foreach (var item in selectedItems)
+            {
+                int idx = ResultsListView.Items.IndexOf(item);
+                if (idx > maxIndex) maxIndex = idx;
+                if (idx < minIndex) minIndex = idx;
+            }
+
+            if (maxIndex != -1)
+            {
+                // 삭제 대상 목록 뒤에 있는 다음 아이템
+                int nextIdx = maxIndex + 1;
+                while (nextIdx < ResultsListView.Items.Count)
+                {
+                    var candidate = (SearchResultItem)ResultsListView.Items[nextIdx];
+                    if (!selectedItems.Contains(candidate))
+                    {
+                        nextSelectedItem = candidate;
+                        break;
+                    }
+                    nextIdx++;
+                }
+
+                // 만약 다음 아이템이 없다면 이전 아이템
+                if (nextSelectedItem == null)
+                {
+                    int prevIdx = minIndex - 1;
+                    while (prevIdx >= 0)
+                    {
+                        var candidate = (SearchResultItem)ResultsListView.Items[prevIdx];
+                        if (!selectedItems.Contains(candidate))
+                        {
+                            nextSelectedItem = candidate;
+                            break;
+                        }
+                        prevIdx--;
+                    }
+                }
+            }
+
+            // 2. 휴지통으로 실제 삭제 및 리스트 뷰에서 제거
+            var removedItems = new List<SearchResultItem>();
+            foreach (var item in selectedItems)
+            {
+                if (Win32RecycleBinHelper.SendToRecycleBin(new[] { item.FullPath }))
+                {
+                    vm.Results.Remove(item);
+                    removedItems.Add(item);
+                }
+            }
+
+            if (removedItems.Count == 0) return;
+
+            // 3. ViewModel 카운트 갱신
+            vm.SelectedCount = ResultsListView.SelectedItems.Count;
+            vm.UpdateResultCountMessage();
+
+            // 4. 후속 포커스 복원 (자동 스크롤 억제 포함)
+            if (nextSelectedItem != null && vm.Results.Contains(nextSelectedItem))
+            {
+                _suppressBringIntoView = true;
+                try
+                {
+                    ResultsListView.SelectedItem = nextSelectedItem;
+                    RestoreFocusToItem(nextSelectedItem);
+                }
+                finally
+                {
+                    _suppressBringIntoView = false;
+                }
+            }
+            else
+            {
+                ResultsListView.SelectedIndex = -1;
+            }
         }
 
         /// <summary>파일 또는 폴더를 기본 연결 프로그램으로 엽니다.</summary>

@@ -1,61 +1,59 @@
-# 구현 계획서: 좌측 패널 구조 변경 및 썸네일 보기 옵션 추가
+# 구현 계획서: 컨텍스트 메뉴 확장, 새로고침 단축키 신설 및 휴지통 삭제 연동
 
-본 계획서는 Everything FastAlias 애플리케이션의 사용자 인터페이스 개선을 위해 좌측 스마트 제어 패널의 섹션 순서를 조정하고, 파일 검색 결과 목록의 썸네일 보기(S, M, L) 옵션을 신규 추가하기 위한 상세 설계서입니다.
+본 계획서는 파일 검색 결과 목록의 빈 공간 우클릭 시 보기/정렬/새로고침을 제어할 수 있는 컨텍스트 메뉴를 추가하고, F5 키를 통한 실시간 새로고침 및 Delete 키 입력을 통한 네이티브 휴지통 삭제 기능을 윈도우 탐색기 수준의 편의성으로 구현하기 위한 설계서입니다.
 
 ---
 
 ## 1. 요구사항 (Requirements)
 
-1. **좌측 패널 레이아웃 순서 재배치**:
-   - `조건 초기화` 버튼을 좌측 패널의 최상단(A-Drive 위)으로 변경.
-   - `검색 엔진 옵션` 섹션을 패널의 최하단으로 이동.
-2. **보기 옵션(ViewMode) 제어 기능 추가**:
-   - `보기 옵션` 섹션을 신설하고 라디오 버튼 그룹 형태로 제공.
-   - 옵션 종류: `자세히`, `섬네일S` (작은 썸네일), `섬네일M` (중간 썸네일), `섬네일L` (큰 썸네일).
-3. **썸네일 뷰 레이아웃 및 비동기 렌더링 구현**:
-   - `자세히` 모드: 기존 `GridView` 컬럼 테이블 형식 유지.
-   - `섬네일S / M / L` 모드: 윈도우 OS의 폴더/파일 기본 아이콘 또는 실제 미디어 파일(이미지/비디오 등)의 썸네일을 비동기 로딩하여 랩패널(WrapPanel) 형태로 배치.
-   - 썸네일 보기 모드에서도 `더블클릭 실행`, `드래그 아웃(Drag Drop)`, `클립보드 복사/잘라내기`, `F2 인라인 이름변경` 기능이 완벽히 연동되도록 설계.
-   - 대량 데이터 조회 시의 UI 프리징 방지를 위한 백그라운드 스레드 풀 기반 썸네일 디스크 I/O 처리 및 메모리 캐싱 적용.
+1. **리스트 뷰 빈 공간 우클릭 컨텍스트 메뉴 지원**:
+   - 자세히 모드 및 섬네일(S, M, L) 모드의 빈 공간 우클릭 시, 탐색기 배경과 유사한 ContextMenu 노출.
+   - 아이템 위에서 우클릭 시에는 기존대로 Windows 네이티브 쉘 메뉴(IContextMenu)를 팝업함.
+2. **배경 컨텍스트 메뉴 구성 및 F5 단축키 연동**:
+   - **보기** 서브메뉴: 자세히, 섬네일S, 섬네일M, 섬네일L 제공 (체크 및 라디오 상태 동기화)
+   - **정렬 기준** 서브메뉴: 이름, 경로, 수정한 날짜, 크기 (체크/라디오 상태 동기화) 및 오름차순, 내림차순 정렬 방향 전환 제공
+   - **새로고침**: 메뉴 항목 제공 및 앱 전체 단축키인 **F5** 신설
+3. **Delete 키 입력 시 휴지통으로 삭제**:
+   - 파일명 선택 상태에서 `Delete` 키 클릭 시 경고창(Confirm Dialog) 없이 즉시 휴지통으로 보내기.
+   - 삭제 작업 후 포커스가 첫 번째 줄로 강제 리셋되거나 스크롤이 튀지 않아야 함.
+   - 현재 삭제된 행 위치의 다음(또는 맨 하단일 경우 이전) 아이템으로 자연스럽게 선택 및 포커스를 보존하고, 리스트 컬렉션에서 해당 항목만 제거(`Remove`)하여 자연스럽게 노출 해제 처리.
+4. **정렬 기준 정보 영속화**:
+   - 사용자가 결과 목록을 정렬한 기준(정렬 컬럼, 정렬 방향)을 SQLite 로컬 DB에 자동 저장.
+   - 앱을 종료 후 재기동할 때, 로컬 DB로부터 정렬 기준 정보를 정상 복원하여 실시간 검색 시 이전 정렬 방식이 온전히 반영되도록 처리.
 
 ---
 
 ## 2. 기술 스택 (Tech Stack)
 
-- **언어 및 런타임**: C# .NET 9.0 (WPF 데스크톱 애플리케이션)
-- **UI 라이브러리**: ModernWPF (Windows 11 스타일)
+- **언어 및 프레임워크**: C# .NET 9.0 (WPF)
 - **Win32 Shell API 연동 (P/Invoke)**:
-  - `SHGetFileInfo` (기본 폴더 및 파일 확장자별 대형 아이콘 추출용)
-  - `IShellItemImageFactory` & `SHCreateItemFromParsingName` (실제 고화질 썸네일 및 파일 아이콘 렌더링용)
-  - `gdi32.dll` -> `DeleteObject` (HBITMAP 핸들 소멸을 통한 메모리 누수 원천 해결)
+  - `SHFileOperation` (shell32.dll) - 파일 목록을 복수로 안전하게 휴지통으로 제거하는 Shell API
+- **WPF MVVM 및 UI 제어**:
+  - `CommunityToolkit.Mvvm` (RelayCommand, ObservableObject)
+  - WPF `InputBindings` (`KeyBinding`)
 
 ---
 
 ## 3. 폴더 및 파일 변경 구조 (Folder Structure)
 
-본 구현은 기존의 `MVVM 패턴`, `SoC(관심사 분리)`, `DRY`, 및 `One Class One File` 원칙을 철저히 고수합니다.
+본 구현은 기존의 `MVVM 패턴`, `SoC(관심사 분리)`, `DRY`, 및 `One Class One File` 원칙을 고수합니다.
 
 ```text
 d:\3_Code\3_Apps\43_Search-Edit\Everything검색기\
 ├── docs/
 │   └── memories/
-│       └── deepwiki_repos.md
-│   └── implementation_plan.md    # [NEW] 본 계획서
+│       └── MEMORY.md
+│   └── implementation_plan.md    # [MODIFY] 본 계획서
 └── src/
     └── EverythingFastAlias/
-        ├── Models/
-        │   ├── SearchResultItem.cs   # [MODIFY] Thumbnail 바인딩 속성 및 비동기 로드 트리거 추가
-        │   └── ViewMode.cs           # [NEW] 자세히/섬네일S/M/L 열거형(Enum) 정의
         ├── Native/
-        │   ├── ShellIconHelper.cs    # [NEW] 기본 폴더 및 파일 아이콘 추출 정적 헬퍼 (SHGetFileInfo)
-        │   └── ShellThumbnailHelper.cs # [NEW] 썸네일 추출 및 GDI 리소스 반환 P/Invoke 헬퍼
+        │   └── Win32RecycleBinHelper.cs # [NEW] SHFileOperation 기반 휴지통 삭제 기능 구현
         ├── ViewModels/
-        │   ├── SearchViewModel.cs    # [MODIFY] ViewMode 양방향 바인딩 래퍼 추가
-        │   └── SearchViewModel.Settings.cs # [MODIFY] ViewMode 설정 저장(SQLite AppSettings) 및 복원
+        │   ├── SearchViewModel.Search.cs # [MODIFY] 정렬 수행 시 설정 즉각 저장 로직 추가
+        │   └── SearchViewModel.Settings.cs # [MODIFY] 정렬 기준 정보 SQLite 로드/저장 추가
         └── Views/
-            ├── LeftSidebarView.xaml  # [MODIFY] 조건 초기화 최상단화, 검색 엔진 옵션 최하단화, 보기 옵션 추가
-            ├── ResultGridView.xaml   # [MODIFY] ViewMode에 따른 Details(GridView)/Thumbnail(WrapPanel) 스타일 트리거 전환 구조 설계
-            └── ResultGridView.xaml.cs # [MODIFY] 썸네일 뷰 모달 및 F2 Rename 렌더링 상태 변경 이벤트 호환 보장
+            ├── MainWindow.xaml        # [MODIFY] F5 새로고침 단축키 등록
+            ├── ResultGridView.xaml.cs # [MODIFY] 우클릭 판별, ContextMenu 동적 빌드, Delete 삭제 및 포커스 보존 로직 추가
 ```
 
 ---
@@ -63,57 +61,64 @@ d:\3_Code\3_Apps\43_Search-Edit\Everything검색기\
 ## 4. 정보 조회 및 검증 도구 (Lookup & Verification Tools)
 
 - **조회 도구 (Lookup Tools)**: 
-  - `yik-parser` 및 `codegraph`를 이용한 기존 뷰 모델과 XAML 바인딩 로직의 종속성 추가 점검.
+  - `yik-parser` 및 `view_file`를 이용해 기존 마우스 이벤트 핸들러와 ViewModel의 정렬/검색 구조를 분석 완료.
 - **검증 도구 (Verification Tools)**:
-  - PowerShell 터미널 빌드: `dotnet build src/EverythingFastAlias/EverythingFastAlias.csproj` 명령어를 이용해 정적 컴파일 무결성 검증.
-  - 단위 테스트 및 동작 검증: Everything 엔진 실행 후 실제 이미지 검색 결과를 썸네일 뷰로 전환하여 정상 렌더링 여부 확인.
+  - 디버그 빌드 스크립트: `build-debug.bat`를 실행하여 컴파일 무결성 검증.
+  - 런타임 수동 테스트를 통해 기능의 정상 동작 여부 체크.
 
 ---
 
 ## 5. 상세 구현 계획 (Implementation Plan)
 
-### 단계 1: 모델 및 Native 헬퍼 계층 구축
-1. **`ViewMode.cs` 생성**:
-   - `Details`, `ThumbnailS`, `ThumbnailM`, `ThumbnailL` 멤버를 가지는 enum 타입 정의.
-2. **`ShellIconHelper.cs` 생성**:
-   - `SHGetFileInfo`를 사용해 OS에 내장된 기본 파일 아이콘과 폴더 아이콘을 로드 및 WPF `ImageSource`로 캐싱.
-3. **`ShellThumbnailHelper.cs` 생성**:
-   - `IShellItemImageFactory`를 통한 썸네일 비트맵 데이터 비동기 추출.
-   - WPF `Interop.Imaging.CreateBitmapSourceFromHBitmap` 완료 즉시 `DeleteObject`를 안전하게 호출하여 GDI 핸들 누수 완벽 차단.
-4. **`SearchResultItem.cs` 수정**:
-   - `ImageSource? Thumbnail` 프로퍼티 신설.
-   - `Thumbnail` 속성 조회 시 캐시가 비어 있으면 내부적으로 `SemaphoreSlim(4)` 제한을 둔 백그라운드 비동기 태스크를 구동해 파일의 실제 썸네일 또는 기본 아이콘(ShellIconHelper)을 읽어와 UI 스레드 바인딩 갱신.
+### 단계 1: 네이티브 휴지통 삭제 헬퍼 구현 (`Native/Win32RecycleBinHelper.cs` [NEW])
+1. `shell32.dll`의 `SHFileOperation` API를 P/Invoke로 정의.
+2. `SendToRecycleBin(IEnumerable<string> paths)` 메소드 구현:
+   - 복수 개의 파일 경로를 널 문자(`\0`)로 구분하고 최종 끝에 이중 널 문자(`\0\0`)를 배치해 전달.
+   - `FOF_ALLOWUNDO` (휴지통으로 전송), `FOF_NOCONFIRMATION` (경고창 없음), `FOF_SILENT` (진행 창 없음), `FOF_NOERRORUI` (에러 UI 감춤) 플래그를 조합해 호출.
+   - 삭제 처리 성공 시 true를 반환하고, 예외나 API 에러 시 false 반환.
 
-### 단계 2: 뷰 모델 및 설정 보존 계층 반영
-1. **`SearchViewModel.cs` 수정**:
-   - `ViewMode` 및 바인딩용 Boolean 래퍼 프로퍼티(Details, ThumbnailS/M/L) 구현.
-   - 보기 옵션 전환에 따른 UI 레이아웃의 크기 바인딩용 읽기전용 도우미 프로퍼티 구성 (예: ThumbnailItemWidth, ThumbnailItemHeight, ThumbnailImageSize).
-2. **`SearchViewModel.Settings.cs` 수정**:
-   - `LoadSettings()` 및 `SaveSettings()` 시 `ViewMode` 상태를 SQLite 데이터베이스의 `AppSettings`에 문자열로 추가 기록 및 구동 시 정상 복원.
+### 단계 2: F5 새로고침 단축키 등록 (`Views/MainWindow.xaml` [MODIFY])
+1. `MainWindow.xaml`의 `<Window>` 루트 엘리먼트 직하에 `<Window.InputBindings>` 선언.
+2. `<KeyBinding Key="F5" Command="{Binding SearchVM.RefreshCommand}"/>`를 설정하여 윈도우 전체 포커스 환경에서 F5 누를 시 새로고침 검색이 트리거되도록 유도.
 
-### 단계 3: UI 마크업(XAML) 레이어 개편
-1. **`LeftSidebarView.xaml` 수정**:
-   - 최하단의 `Button Content="조건 초기화"` 엘리먼트를 최상단(A-Drive 위)으로 배치 이동.
-   - `SECTION E: 검색 엔진 옵션`을 패널의 최하단으로 강제 이동.
-   - 드라이브 및 탐색 범위 사이에 `보기 옵션` 섹션을 배치하고 라디오 버튼 추가.
-2. **`ResultGridView.xaml` 수정**:
-   - `ListView` 컨트롤의 `Style` 내부에 `ViewMode` 값을 판별하는 `DataTrigger`들을 바인딩.
-   - `Details`일 때는 `View` 프로퍼티에 `ResultsGridView(GridView)`를 바인딩하고 `ItemTemplate`을 `null`로 지정.
-   - `ThumbnailS/M/L`일 때는 `View`를 `null`로 강제 지정하고, `ItemsPanel`을 `WrapPanel`로 세팅하며, 썸네일용 `ItemTemplate`을 렌더링.
-   - 썸네일 템플릿 내의 텍스트 영역에 F2 인라인 이름변경용 `TextBlock`/`TextBox` 토글을 결합하여 기능 누락 방지.
+### 단계 3: 우클릭 이벤트 분기 및 배경 ContextMenu 동적 빌드 (`Views/ResultGridView.xaml.cs` [MODIFY])
+1. `ResultsListView_MouseRightButtonUp`에서 `e.OriginalSource`를 기준으로 visual parent 중 `ListViewItem`이 존재하는지 판별.
+2. **아이템 우클릭 시**:
+   - 우클릭한 아이템이 비선택 상태라면 유일하게 선택하여 쉘 메뉴에 안전하게 전달되도록 유도.
+   - 기존의 Windows 네이티브 `ShellContextMenu.ShowContextMenu` 팝업 기동.
+3. **빈 공간 우클릭 시**:
+   - `ContextMenu`를 코드 상에서 동적으로 인스턴스화하여 보기, 정렬 기준, 구분선, 새로고침 메뉴를 추가.
+   - `SearchViewModel`의 `ViewMode`, `SortColumn`, `SortDirection` 값을 읽어와 메뉴 항목 옆에 라디오/체크 마크 상태를 체크(`IsChecked = true`)하여 일관되게 표시.
+   - 메뉴 클릭 이벤트를 바인딩해 `ViewMode` 변경, `SortResults(컬럼)`, `ApplySorting()` 정렬 방향 재반영, `RefreshCommand` 새로고침 기동 명령 등을 바로 호출하도록 연결.
+
+### 단계 4: Delete 단축키 삭제 및 포커스 보존 구현 (`Views/ResultGridView.xaml.cs` [MODIFY])
+1. `ResultsListView_KeyDown` 메서드에 `Key.Delete` 감지 추가.
+2. 삭제 처리 함수 `DeleteSelectedItems()` 호출:
+   - 현재 리스트 뷰에서 선택된 아이템 목록(`selectedItems`)을 획득.
+   - 삭제 완료 후 포커스를 넘겨받을 후속 아이템(`nextSelectedItem`)을 미리 결정:
+     - 선택 항목들 중 가장 뒤쪽 인덱스 다음의 미삭제 아이템을 우선 선정.
+     - 뒤쪽에 없다면, 앞쪽 인덱스 이전의 미삭제 아이템을 차선으로 선정.
+   - 루프를 돌며 개별 파일/폴더 경로를 `Win32RecycleBinHelper.SendToRecycleBin`을 통해 휴지통으로 제거.
+   - 제거 성공한 아이템에 한해 `SearchViewModel.Results.Remove`를 호출하여 리스트에서 안전하게 제외.
+   - 삭제 완료 후, 미리 파악한 `nextSelectedItem`이 컬렉션에 존재한다면 `ResultsListView.SelectedItem = nextSelectedItem`으로 선택을 복원하고, `RestoreFocusToItem`을 비동기로 실행해 가상화 상태 하에서도 스크롤 튀지 않고 안전하게 포커스가 복원되도록 처리.
 
 ---
 
 ## 6. 검증 계획 (Verification Plan)
 
-### 수동 검증 및 동작 테스트
-1. **패널 배치 검증**: 좌측 패널 레이아웃의 버튼 위치가 기획 설계대로 상단/하단에 조화롭게 노출되는지 확인.
-2. **동기화 및 복원 검증**: 보기 모드를 `섬네일M` 등으로 바꾸고 애플리케이션을 재구동했을 때 설정 데이터베이스로부터 보기 모드 상태가 온전히 로드되는지 확인.
-3. **기능 통합 검증**: 썸네일 뷰 모드에서 마우스 더블클릭을 통한 파일 실행, Ctrl+C 복사 후 탐색기 붙여넣기, 외부 탐색기로의 마우스 드래그 앤 드롭, F2 인라인 이름변경 등이 깨지지 않고 모두 정상적으로 적용되는지 수동 교차 검증.
-4. **성능 및 누수 검증**: 수천 개의 검색 결과 상태에서 썸네일 뷰로 스크롤을 무작위로 위아래로 휠링할 때 CPU 및 메모리 점유율 안정성 체크 (GDI 핸들 누수가 없는지 확인).
+### 수동 검증 및 시나리오 테스트
+1. **우클릭 컨텍스트 메뉴 확인**:
+   - 검색 결과 빈 곳을 우클릭하여 보기(자세히, 섬네일S/M/L) 모드가 실시간 연동 및 SQLite 설정 저장이 제대로 이루어지는지 체크.
+   - 정렬 기준(이름/경로/날짜/크기 및 오름/내림차순)을 변경했을 때 리스트가 정렬 순서에 맞게 즉시 업데이트되는지 체크.
+2. **F5 새로고침 확인**:
+   - 검색어가 있는 상태에서 F5 키를 클릭했을 때 검색이 다시 실행되어 데이터가 재갱신되는지 확인.
+3. **Delete 키 삭제 및 포커스 보존 확인**:
+   - 한 개 또는 여러 개의 파일을 선택하고 `Delete` 키를 입력했을 때, 경고 창 없이 휴지통으로 즉시 삭제 처리되는지 확인.
+   - 삭제 후 스크롤이 맨 처음으로 튀지 않고 삭제된 파일 바로 다음 파일에 선택/포커스가 유지되는지 확인.
+   - 휴지통 폴더를 열어 삭제했던 파일이 안전하게 휴지통에 들어가 있는지 최종 확인.
 
 ---
 
 ## 7. 지식 자산화 계획 (Capitalization Plan)
 
-- 썸네일 및 네이티브 아이콘을 비동기 처리하고 GDI 리소스를 메모리 리크 없이 폐기하는 정적 헬퍼 기법 및 WPF `ListView.Style.Triggers`를 사용한 유연한 뷰 교체 레이아웃 아키텍처 지식을 작업 완료 후 `./docs/memories/MEMORY.md` 및 `wpf_coding_guidelines.md`에 등재하여 지식 공유.
+- 윈도우 휴지통 삭제 API P/Invoke 연동 노하우, 리스트 뷰의 가상화 상태에서 특정 항목 제거 후 포커스가 첫 줄로 튀지 않게 하는 스크롤 보존 처리 아키텍처에 대한 최종 개발 경험을 수동 검증 완료 후 `./docs/memories/MEMORY.md` 파일에 영구 자산으로 기록함.

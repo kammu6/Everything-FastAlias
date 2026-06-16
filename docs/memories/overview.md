@@ -76,6 +76,7 @@ D:\3_Code\3_Apps\43_Search-Edit\Everything검색기\src\EverythingFastAlias\
 │   ├── EverythingSdk.cs       # kernel32.dll LoadLibrary 기반 FFI 및 P/Invoke
 │   ├── EverythingBridge.cs    # Everything 엔진 상태 점검 및 검색 질의 래핑
 │   ├── Win32ClipboardHelper.cs # 파일 클립보드 복사/잘라내기 네이티브 래퍼
+│   ├── Win32RecycleBinHelper.cs # SHFileOperation FFI 기반 휴지통 삭제 헬퍼 [NEW]
 │   ├── ShellContextMenu.cs    # COM 인터페이스 마샬링 기반 윈도우 네이티브 우클릭 메뉴 팝업
 │   ├── ShellIconHelper.cs     # 시스템 기본 폴더/파일 아이콘 캐시 헬퍼 [NEW]
 │   ├── ShellThumbnailHelper.cs # IShellItemImageFactory FFI 기반 썸네일 고화질 추출기 [NEW]
@@ -114,6 +115,7 @@ D:\3_Code\3_Apps\43_Search-Edit\Everything검색기\src\EverythingFastAlias\
 
 - **`EverythingSdk.cs`**: `wchar_t*` Unicode API 함수(`Everything_SetSearchW` 등) 정의.
 - **`ShellContextMenu.cs`**: 파일들의 전체 경로 목록을 윈도우 OS의 `IContextMenu` 및 `SHGetContextMenu` API에 연동하여 네이티브 우클릭 메뉴 팝업 트리거.
+- **`Win32RecycleBinHelper.cs`**: `SHFileOperation` API를 활용하여 경고창 없이 무확인으로 파일을 안전하게 휴지통으로 제거하는 전담 헬퍼. [NEW]
 - **`ShellIconHelper.cs`**: 시스템 기본 파일 및 폴더 아이콘 추출 및 Freeze 메모리 캐시 전담.
 - **`ShellThumbnailHelper.cs`**: `IShellItemImageFactory` 기반의 파일 썸네일 비동기 디스크 추출 및 GDI 메모리 환수 전담.
 - **`QueryTransformer.cs`**: 입력어 분석 후 중괄호가 아닌 부등호 `< >`와 OR 연산자(`|`)를 기반으로 동의어들을 가공하여 Everything 공식 문법 최종 변환 서비스.

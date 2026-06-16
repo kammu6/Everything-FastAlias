@@ -13,6 +13,10 @@
         Loaded="Window_Loaded"
         Icon="/Assets/app_icon.ico">
 
+    <Window.InputBindings>
+        <KeyBinding Key="F5" Command="{Binding SearchVM.RefreshCommand}"/>
+    </Window.InputBindings>
+
     <Window.Resources>
         <!-- 글씨 크기 스타일 일괄 적용 정의 -->
         <Style TargetType="Menu">

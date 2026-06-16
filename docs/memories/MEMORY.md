@@ -11,10 +11,21 @@
 3. **IsArtifact: false 준수**: 세션 종료 시 소멸되는 시스템 아티팩트(`IsArtifact: true`)의 사용을 엄격히 배제하고, 작성 및 수정이 필요한 모든 산출물은 `./docs/` 아래의 물리 마크다운 문서로 기록합니다.
 4. **UTF-8 표준 인코딩**: 작업 대상 텍스트 및 마크다운 파일은 `UTF-8` 인코딩 표준을 기본으로 채택하여, 에이전트 도구 간의 파싱 호환 오류를 예방합니다.
 5. **프로젝트 기틀 기록**: 기술 스택 전면 전환 결정(WPF 데스크톱 어플리케이션 채택) 및 쉘 통합 명세 등 초기 결정 사항은 [overview.md](file:///d:/3_Code/3_Apps/43_Search-Edit/Everything%EA%B2%80%EC%83%89%EA%B8%B0/docs/memories/overview.md)를 참고하십시오.
+6. **워크스루 제한**: 사용자의 명시적인 별도 지시가 있기 전까지는 `walkthrough.md` 문서(작업 완료 보고서)를 신규 생성하거나 수정하지 않습니다.
 
 ---
 
 ## 🛠️ 최근 작업 기록 (2026-06-16)
+
+### [컨텍스트 메뉴 확장, 새로고침 단축키 F5 및 네이티브 휴지통 삭제 적용] — 2026-06-16 23:00
+- **배경 컨텍스트 메뉴**: `ResultGridView.xaml.cs`에서 `FindVisualParent<ListViewItem>`을 통해 클릭 대상을 hit test하여, 빈 공간 우클릭 시 동적 `ContextMenu`를 빌드 및 노출. 보기(자세히/섬네일S/M/L) 및 정렬 조건(이름/경로/날짜/크기 및 오름/내림차순)을 ViewModel 상태와 바인딩하고, 새로고침 항목을 연동.
+- **새로고침(F5) 단축키**: `MainWindow.xaml`에 `<Window.InputBindings>`를 신설하여 앱 전역에서 F5 입력 시 새로고침 검색Command가 즉각 수행되도록 개선.
+- **휴지통 삭제 및 포커스 보존**:
+  - `Native/Win32RecycleBinHelper.cs`를 신설하여 Win32 `SHFileOperation` API를 연동. `FOF_ALLOWUNDO | FOF_NOCONFIRMATION` 등의 플래그를 통해 무확인 경고 휴지통 삭제 구현.
+  - Delete 키 입력 시 삭제 후 포커스를 가질 인접 아이템(`nextSelectedItem`)을 사전에 파악.
+  - 성공적으로 디스크 삭제된 항목만 `Results` ObservableCollection에서 `Remove` 처리하고, `RestoreFocusToItem`을 통해 가상화 뷰 상태에서도 스크롤이 첫 줄로 튀지 않고 자연스럽게 다음 파일로 포커스가 계승되도록 구현.
+- **정렬 기준 영속화**: `SearchViewModel.Settings.cs` 및 `SearchViewModel.Search.cs`를 수정하여 사용자의 정렬 조건(`SortColumn`, `SortDirection`)이 변경될 때마다 SQLite 로컬 DB에 실시간 저장하고, 앱 재기동 시 복원하여 검색 결과에 자동으로 선반영되도록 조율.
+- **빌드 결과**: 경고 0개, 오류 0개 ✅
 
 ### [F2 인라인 이름변경 ViewState 상태 머신 재설계] — 2026-06-16 22:00
 - **문제**: F2 키 한 번 누르면 마우스 ban 아이콘 고착 + 앱 전체 먹통. ESC도 무응답.
