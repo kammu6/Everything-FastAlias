@@ -53,6 +53,10 @@ namespace EverythingFastAlias.ViewModels
             NotifyScopeProperties();
             NotifySizeUnitProperties();
             NotifyMediaProperties();
+            NotifyViewModeProperties();
+            
+            _viewMode = ViewMode.Details; // 리셋 시 기본 자세히 모드
+            NotifyViewModeProperties();
 
             SaveSettings();
             ExecuteSearch();
@@ -209,6 +213,14 @@ namespace EverythingFastAlias.ViewModels
                 NotifyScopeProperties();
                 NotifySizeUnitProperties();
                 NotifyMediaProperties();
+                
+                var viewModeStr = db.GetSetting("ViewMode", "Details");
+                if (Enum.TryParse<ViewMode>(viewModeStr, out var vmMode))
+                    _viewMode = vmMode;
+                else
+                    _viewMode = ViewMode.Details;
+
+                NotifyViewModeProperties();
 
                 InitializeDrives();
             }
@@ -238,6 +250,7 @@ namespace EverythingFastAlias.ViewModels
                 db.SaveSetting("MaxSizeUnit", Options.MaxSizeUnit.ToString());
                 db.SaveSetting("ExcludedWords", Options.ExcludedWords);
                 db.SaveSetting("FolderPaths", Options.FolderPaths);
+                db.SaveSetting("ViewMode", ViewMode.ToString());
 
                 var activeDrives = Drives.Where(d => d.IsChecked).Select(d => d.Name);
                 db.SaveSetting("TargetDrives", string.Join(",", activeDrives));

@@ -392,6 +392,80 @@ namespace EverythingFastAlias.ViewModels
 
         #endregion
 
+        // ── 보기 옵션 (ViewMode) ──
+        private ViewMode _viewMode = ViewMode.Details;
+        public ViewMode ViewMode
+        {
+            get => _viewMode;
+            set
+            {
+                if (SetProperty(ref _viewMode, value))
+                {
+                    NotifyViewModeProperties();
+                    SaveSettings();
+                }
+            }
+        }
+
+        public bool ViewModeDetails
+        {
+            get => ViewMode == ViewMode.Details;
+            set { if (value) ViewMode = ViewMode.Details; }
+        }
+
+        public bool ViewModeThumbnailS
+        {
+            get => ViewMode == ViewMode.ThumbnailS;
+            set { if (value) ViewMode = ViewMode.ThumbnailS; }
+        }
+
+        public bool ViewModeThumbnailM
+        {
+            get => ViewMode == ViewMode.ThumbnailM;
+            set { if (value) ViewMode = ViewMode.ThumbnailM; }
+        }
+
+        public bool ViewModeThumbnailL
+        {
+            get => ViewMode == ViewMode.ThumbnailL;
+            set { if (value) ViewMode = ViewMode.ThumbnailL; }
+        }
+
+        public double ThumbnailItemWidth => ViewMode switch
+        {
+            ViewMode.ThumbnailS => 80,
+            ViewMode.ThumbnailM => 160,
+            ViewMode.ThumbnailL => 240,
+            _ => 160
+        };
+
+        public double ThumbnailItemHeight => ViewMode switch
+        {
+            ViewMode.ThumbnailS => 100,
+            ViewMode.ThumbnailM => 200,
+            ViewMode.ThumbnailL => 300,
+            _ => 200
+        };
+
+        public double ThumbnailImageSize => ViewMode switch
+        {
+            ViewMode.ThumbnailS => 64,
+            ViewMode.ThumbnailM => 128,
+            ViewMode.ThumbnailL => 192,
+            _ => 128
+        };
+
+        private void NotifyViewModeProperties()
+        {
+            OnPropertyChanged(nameof(ViewModeDetails));
+            OnPropertyChanged(nameof(ViewModeThumbnailS));
+            OnPropertyChanged(nameof(ViewModeThumbnailM));
+            OnPropertyChanged(nameof(ViewModeThumbnailL));
+            OnPropertyChanged(nameof(ThumbnailItemWidth));
+            OnPropertyChanged(nameof(ThumbnailItemHeight));
+            OnPropertyChanged(nameof(ThumbnailImageSize));
+        }
+
         public SearchViewModel()
         {
             SearchCommand = new RelayCommand(ExecuteSearch);

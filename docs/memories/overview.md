@@ -29,6 +29,7 @@
 - **로컬 데이터베이스**: Microsoft.Data.Sqlite (고성능 ADO.NET 클라이언트 라이브러리)
 - **Excel 파서**: ExcelDataReader (경량 및 고속 `.xlsx` 파일 파서)
 - **아이콘**: Lucide.Wpf
+- **바둑판 뷰 가상화**: VirtualizingWrapPanel (대량의 썸네일 카드 뷰 고속 렌더링 및 픽셀 스크롤링 지원)
 
 ---
 
@@ -56,7 +57,8 @@ D:\3_Code\3_Apps\43_Search-Edit\Everything검색기\src\EverythingFastAlias\
 ├── Models/
 │   ├── SearchResultItem.cs    # 검색 행 데이터 모델 ( display size 및 날짜 자동 가공 )
 │   ├── SearchOptions.cs       # 9가지 검색 조건 옵션 모델
-│   └── AliasMapping.cs        # MVVM 바인딩용 매핑 정보 모델
+│   ├── AliasMapping.cs        # MVVM 바인딩용 매핑 정보 모델
+│   └── ViewMode.cs            # 보기 모드(자세히/섬네일S/M/L) 설정을 위한 열거형 [NEW]
 ├── ViewModels/
 │   ├── MainWindowViewModel.cs # 메인 레이아웃 및 윈도우 생성 이벤트 중계
 │   ├── SearchViewModel.cs     # 실시간 검색 뷰모델 (필드, 기본 속성 및 UI 바인딩 래퍼) [PARTIAL]
@@ -75,6 +77,8 @@ D:\3_Code\3_Apps\43_Search-Edit\Everything검색기\src\EverythingFastAlias\
 │   ├── EverythingBridge.cs    # Everything 엔진 상태 점검 및 검색 질의 래핑
 │   ├── Win32ClipboardHelper.cs # 파일 클립보드 복사/잘라내기 네이티브 래퍼
 │   ├── ShellContextMenu.cs    # COM 인터페이스 마샬링 기반 윈도우 네이티브 우클릭 메뉴 팝업
+│   ├── ShellIconHelper.cs     # 시스템 기본 폴더/파일 아이콘 캐시 헬퍼 [NEW]
+│   ├── ShellThumbnailHelper.cs # IShellItemImageFactory FFI 기반 썸네일 고화질 추출기 [NEW]
 │   └── TrayIconHelper.cs      # System.Windows.Forms.NotifyIcon 기반 시스템 트레이 아이콘 전담
 └── Services/
     ├── QueryTransformer.cs    # 동의어 치환 및 Everything 공식 문법 최종 변환 서비스
@@ -89,27 +93,51 @@ D:\3_Code\3_Apps\43_Search-Edit\Everything검색기\src\EverythingFastAlias\
 
 #### Models (데이터 도메인)
 
-- **`SearchResultItem.cs`**: Everything SDK로부터 수신한 개별 파일/폴더 정보(이름, 경로, 크기, 수정일 등)를 저장하는 모델.
+- **`SearchResultItem.cs`**: Everything SDK로부터 수신한 개별 파일/폴더 정보(이름, 경로, 크기, 수정일 등)를 저장하며, 비동기 지연 로딩 썸네일 속성 탑재.
 - **`SearchOptions.cs`**: 정규식, 대소문자, 전체단어, 미디어 필터 등 9가지 검색 스위치 옵션 상태값 보유.
+- **`ViewMode.cs`**: 보기 형태(자세히/섬네일S/M/L) 설정을 위한 도메인 열거형.
 
 #### ViewModels (비즈니스 로직 및 상태 관리)
 
 - **`MainWindowViewModel.cs`**: 메인 화면의 레이아웃 상태(리사이저, 모달 활성화) 제어 및 전역 Command 매핑.
 - **`SearchViewModel.cs` (Partial)**: 검색 키워드 바인딩, 미디어/크기 옵션 전이 제어 등 UI 전용 래퍼 속성을 보유하는 메인 뷰모델 선언부.
 - **`SearchViewModel.Search.cs` (Partial)**: 비동기 백그라운드 검색 실행(Task.Run), 디바운싱 타이머 제어, 결과 정렬(SortResults) 등 검색 연동 핵심 로직 전담.
-- **`SearchViewModel.Settings.cs` (Partial)**: 검색 필터 및 타겟 드라이브 설정값의 SQLite 영속성 관리(Load/SaveSettings), PC의 물리 고정 드라이브 감지 및 초기화(Reset) 전담.
+- **`SearchViewModel.Settings.cs` (Partial)**: 검색 필터, 타겟 드라이브 및 보기 옵션(ViewMode) 설정값의 SQLite 영속성 관리(Load/SaveSettings), PC의 물리 고정 드라이브 감지 및 초기화(Reset) 전담.
 - **`AliasManagerViewModel.cs`**: SQLite와 연동되어 매핑 테이블의 실시간 추가/수정/삭제 관리 및 엑셀 대용량 임포트 제어.
 
 #### Views (UI 마크업 레이어)
 
-- **`ResultGridView.xaml`**: `VirtualizingStackPanel` 및 `VirtualizingPanel.IsVirtualizing="True"`를 활성화하여 대용량 행 렌더링 최적화. 컬럼 드래그 순서 변경(Reorder) 및 정렬 방향 화살표 탑재.
-- **`LeftSidebarView.xaml`**: 아코디언 형태의 고도화된 조건 필터들과 다중 선택 가능한 프리셋 미디어 칩 배치.
+- **`ResultGridView.xaml`**: `VirtualizingWrapPanel` 및 `VirtualizingPanel.IsVirtualizing="True"`를 결합하여 썸네일 바둑판 가상 스크롤 렌더링 최적화. 컬럼 드래그 순서 변경(Reorder), 정렬 방향 화살표 탑재, F2 인라인 이름변경 지원.
+- **`LeftSidebarView.xaml`**: 아코디언 형태의 조건 필터들과 다중 선택 프리셋 미디어 칩, 보기 옵션 전환 라디오 버튼 그룹 및 상단 초기화 버튼 배치.
 
 #### Native & Services (네이티브 FFI 및 가공 서비스)
 
 - **`EverythingSdk.cs`**: `wchar_t*` Unicode API 함수(`Everything_SetSearchW` 등) 정의.
 - **`ShellContextMenu.cs`**: 파일들의 전체 경로 목록을 윈도우 OS의 `IContextMenu` 및 `SHGetContextMenu` API에 연동하여 네이티브 우클릭 메뉴 팝업 트리거.
-- **`QueryTransformer.cs`**: 입력어 분석 후 중괄호가 아닌 부등호 `< >`와 OR 연산자(`|`)를 기반으로 동의어들을 가공하여 Everything 규격 문자열로 완성하는 변환기.
+- **`ShellIconHelper.cs`**: 시스템 기본 파일 및 폴더 아이콘 추출 및 Freeze 메모리 캐시 전담.
+- **`ShellThumbnailHelper.cs`**: `IShellItemImageFactory` 기반의 파일 썸네일 비동기 디스크 추출 및 GDI 메모리 환수 전담.
+- **`QueryTransformer.cs`**: 입력어 분석 후 중괄호가 아닌 부등호 `< >`와 OR 연산자(`|`)를 기반으로 동의어들을 가공하여 Everything 공식 문법 최종 변환 서비스.
+
+#### 📂 기술 도메인별 세부 지식 자산 링크 (Knowledge Bases)
+
+### 🔗 [Everything SDK & Windows Shell Integration](file:///d:/3_Code/3_Apps/43_Search-Edit/Everything%EA%B2%80%EC%83%89%EA%B8%B0/docs/memories/everything_sdk.md)
+
+Everything SDK 연동, 바인딩 마샬링, 대용량 FFI 쿼리 단축 및 Windows Context Menu 연동과 관련된 모든 전문 지식이 요약되어 있습니다.
+
+- `wchar_t*` 기반 Unicode API 사용 규칙
+- `BOOL` 마샬링 크래시 방지 및 `Everything_GetLastError` 진입점 바인딩
+- 수십만 건 대량 쿼리 및 빈 검색어 단락 회로(Short-circuit) 최적화
+- `IContextMenu2/3` Owner Draw 메시지 후킹 및 서브메뉴 렌더링 해결
+
+### 🔗 [WPF & Code Architecture Guidelines](file:///d:/3_Code/3_Apps/43_Search-Edit/Everything%EA%B2%80%EC%83%89%EA%B8%B0/docs/memories/wpf_coding_guidelines.md)
+
+WPF 프레임워크 제어, UI 컴포넌트 커스터마이징, 빌드 충돌 해결 및 대용량 연관어 매핑 검색과 관련된 코딩 레벨의 노하우가 수록되어 있습니다.
+
+- ModernWpf 테마 로딩 예외 방지 및 XAML 호환 해결법
+- Windows Forms FFI 명칭 충돌(global using) 차단
+- 다중 창 기동 시 트레이 아이콘 생명주기 관리
+- 다중 선택 드래그 앤 드롭과 더블클릭 이벤트 간섭 해소 기법
+- ObservableCollection 렌더링 병목 및 대용량 사전(Regex) O(1) 캐싱 최적화
 
 ### 3.3. 기술 아키텍처
 

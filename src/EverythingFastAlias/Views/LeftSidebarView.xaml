@@ -11,6 +11,15 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <modern:SimpleStackPanel Margin="15" Spacing="20">
             
+            <!-- SECTION A: 최상단 조건 초기화 바 -->
+            <Button Content="조건 초기화" Command="{Binding ResetCommand}" 
+                    HorizontalAlignment="Stretch" Height="40" 
+                    Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+                    Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                    FontWeight="SemiBold" BorderThickness="1"/>
+
+            <Separator Margin="0,5,0,5"/>
+
             <!-- SECTION A-Drive: 검색 대상 드라이브 -->
             <modern:SimpleStackPanel Spacing="8">
                 <TextBlock Text="검색 대상 드라이브" FontWeight="SemiBold" FontSize="13" 
@@ -48,16 +57,23 @@
                 </Grid>
             </modern:SimpleStackPanel>
 
-            <!-- SECTION E: 토글 옵션 그룹 (Grid 2x2) -->
+            <!-- SECTION F: 보기 옵션 -->
             <modern:SimpleStackPanel Spacing="8">
-                <TextBlock Text="검색 엔진 옵션" FontWeight="SemiBold" FontSize="13"
+                <TextBlock Text="보기 옵션" FontWeight="SemiBold" FontSize="13"
                            Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
-                <UniformGrid Columns="2" Rows="2">
-                    <CheckBox Content="대소문자 구분" IsChecked="{Binding Options.MatchCase}" Margin="2,2,2,2" FontSize="11"/>
-                    <CheckBox Content="전체 단어 일치" IsChecked="{Binding Options.MatchWholeWord}" Margin="2,2,2,2" FontSize="11"/>
-                    <CheckBox Content="정규식 검색" IsChecked="{Binding Options.UseRegex}" Margin="2,2,2,2" FontSize="11"/>
-                    <CheckBox Content="휴지통 포함" IsChecked="{Binding Options.IncludeRecycleBin}" Margin="2,2,2,2" FontSize="11"/>
-                </UniformGrid>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <RadioButton Grid.Column="0" Content="자세히" IsChecked="{Binding ViewModeDetails}" Height="32" FontSize="11"/>
+                    <RadioButton Grid.Column="1" Content="섬네일S" IsChecked="{Binding ViewModeThumbnailS}" Height="32" FontSize="11"/>
+                    <RadioButton Grid.Column="2" Content="섬네일M" IsChecked="{Binding ViewModeThumbnailM}" Height="32" FontSize="11"/>
+                    <RadioButton Grid.Column="3" Content="섬네일L" IsChecked="{Binding ViewModeThumbnailL}" Height="32" FontSize="11"/>
+                </Grid>
             </modern:SimpleStackPanel>
 
             <!-- SECTION C: 프리셋 미디어 필터 -->
@@ -111,14 +127,19 @@
                 </Grid>
             </modern:SimpleStackPanel>
 
-            <Separator Margin="0,10,0,10"/>
+            <Separator Margin="0,5,0,5"/>
 
-            <!-- SECTION A: 하단 조건 초기화 바 -->
-            <Button Content="조건 초기화" Command="{Binding ResetCommand}" 
-                    HorizontalAlignment="Stretch" Height="40" 
-                    Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
-                    Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-                    FontWeight="SemiBold" BorderThickness="1"/>
+            <!-- SECTION E: 토글 옵션 그룹 (Grid 2x2 - 검색 엔진 옵션) -->
+            <modern:SimpleStackPanel Spacing="8">
+                <TextBlock Text="검색 엔진 옵션" FontWeight="SemiBold" FontSize="13"
+                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                <UniformGrid Columns="2" Rows="2">
+                    <CheckBox Content="대소문자 구분" IsChecked="{Binding Options.MatchCase}" Margin="2,2,2,2" FontSize="11"/>
+                    <CheckBox Content="전체 단어 일치" IsChecked="{Binding Options.MatchWholeWord}" Margin="2,2,2,2" FontSize="11"/>
+                    <CheckBox Content="정규식 검색" IsChecked="{Binding Options.UseRegex}" Margin="2,2,2,2" FontSize="11"/>
+                    <CheckBox Content="휴지통 포함" IsChecked="{Binding Options.IncludeRecycleBin}" Margin="2,2,2,2" FontSize="11"/>
+                </UniformGrid>
+            </modern:SimpleStackPanel>
             
         </modern:SimpleStackPanel>
     </ScrollViewer>

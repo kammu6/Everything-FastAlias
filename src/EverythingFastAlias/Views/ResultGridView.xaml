@@ -4,16 +4,97 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:models="clr-namespace:EverythingFastAlias.Models"
+             xmlns:vwp="clr-namespace:WpfToolkit.Controls;assembly=VirtualizingWrapPanel"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
 
+    <UserControl.Resources>
+        <!-- 1. GridView를 리소스로 선언 (Details 모드용) -->
+        <GridView x:Key="DetailsGridView" x:Shared="False" AllowsColumnReorder="True">
+            <GridViewColumn Header="이름" Width="250">
+                <GridViewColumn.CellTemplate>
+                    <DataTemplate>
+                        <Grid>
+                            <!-- 일반 표시: TextBlock -->
+                            <TextBlock Text="{Binding Name}"
+                                       Visibility="{Binding IsNotEditing,
+                                           Converter={StaticResource BoolToVisConverter}}"
+                                       VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis"/>
+
+                            <!-- 편집 중: TextBox (IsEditing=True 일 때만 표시) -->
+                            <TextBox x:Name="RenameBox"
+                                     Text="{Binding EditingName, UpdateSourceTrigger=PropertyChanged}"
+                                     Visibility="{Binding IsEditing,
+                                         Converter={StaticResource BoolToVisConverter}}"
+                                     VerticalAlignment="Center"
+                                     BorderThickness="1"
+                                     Padding="2,0"
+                                     KeyDown="RenameBox_KeyDown"
+                                     LostFocus="RenameBox_LostFocus"
+                                     Loaded="RenameBox_Loaded"/>
+                        </Grid>
+                    </DataTemplate>
+                </GridViewColumn.CellTemplate>
+            </GridViewColumn>
+
+            <GridViewColumn Header="경로"        DisplayMemberBinding="{Binding Path}"                Width="350"/>
+            <GridViewColumn Header="수정한 날짜" DisplayMemberBinding="{Binding DisplayModifiedDate}" Width="150"/>
+            <GridViewColumn Header="크기"        DisplayMemberBinding="{Binding DisplaySize}"         Width="100"/>
+            <GridViewColumn Header="확장자"      DisplayMemberBinding="{Binding Extension}"           Width="80"/>
+        </GridView>
+
+        <!-- 2. 썸네일용 DataTemplate -->
+        <DataTemplate x:Key="ThumbnailItemTemplate">
+            <Grid Width="{Binding DataContext.ThumbnailItemWidth, RelativeSource={RelativeSource AncestorType=ListView}}"
+                  Height="{Binding DataContext.ThumbnailItemHeight, RelativeSource={RelativeSource AncestorType=ListView}}"
+                  Margin="4">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- 썸네일 이미지 -->
+                <Image Grid.Row="0" Source="{Binding Thumbnail}"
+                       Width="{Binding DataContext.ThumbnailImageSize, RelativeSource={RelativeSource AncestorType=ListView}}"
+                       Height="{Binding DataContext.ThumbnailImageSize, RelativeSource={RelativeSource AncestorType=ListView}}"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                       Stretch="Uniform"/>
+
+                <!-- 파일명 및 F2 인라인 편집 텍스트박스 -->
+                <Grid Grid.Row="1" Margin="2">
+                    <TextBlock Text="{Binding Name}"
+                               Visibility="{Binding IsNotEditing, Converter={StaticResource BoolToVisConverter}}"
+                               HorizontalAlignment="Center" TextAlignment="Center"
+                               TextWrapping="Wrap" MaxHeight="32" FontSize="11"
+                               TextTrimming="CharacterEllipsis"
+                               ToolTip="{Binding FullPath}"/>
+                    <TextBox Text="{Binding EditingName, UpdateSourceTrigger=PropertyChanged}"
+                             Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisConverter}}"
+                             HorizontalAlignment="Stretch" TextAlignment="Center" FontSize="11"
+                             KeyDown="RenameBox_KeyDown" LostFocus="RenameBox_LostFocus" Loaded="RenameBox_Loaded"/>
+                </Grid>
+            </Grid>
+        </DataTemplate>
+
+        <!-- 3. 썸네일용 ItemsPanelTemplate -->
+        <ItemsPanelTemplate x:Key="ThumbnailItemsPanel">
+            <vwp:VirtualizingWrapPanel Orientation="Horizontal"/>
+        </ItemsPanelTemplate>
+
+        <!-- 4. 자세히용 ItemsPanelTemplate -->
+        <ItemsPanelTemplate x:Key="DetailsItemsPanel">
+            <VirtualizingStackPanel/>
+        </ItemsPanelTemplate>
+    </UserControl.Resources>
+
     <Grid Background="{DynamicResource SystemControlBackgroundAltHighBrush}">
-        
         <!-- Virtualizing ListView -->
         <ListView x:Name="ResultsListView" 
                   ItemsSource="{Binding Results}"
                   VirtualizingPanel.IsVirtualizing="True"
                   VirtualizingPanel.VirtualizationMode="Recycling"
+                  VirtualizingPanel.ScrollUnit="Pixel"
                   ScrollViewer.CanContentScroll="True"
                   SelectionMode="Extended"
                   BorderThickness="0"
@@ -25,53 +106,67 @@
             
             <ListView.ItemContainerStyle>
                 <Style TargetType="ListViewItem">
+                    <!-- 기본 Details 뷰 스타일 설정 -->
                     <Setter Property="Height" Value="28"/>
                     <Setter Property="VerticalContentAlignment" Value="Center"/>
                     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                     <EventSetter Event="PreviewMouseLeftButtonDown" Handler="ListViewItem_PreviewMouseLeftButtonDown"/>
                     <EventSetter Event="PreviewMouseLeftButtonUp" Handler="ListViewItem_PreviewMouseLeftButtonUp"/>
                     <EventSetter Event="MouseMove" Handler="ListViewItem_MouseMove"/>
+
+                    <!-- 썸네일 모드일 때 컨테이너 크기 및 레이아웃 재지정 -->
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding DataContext.ViewMode, RelativeSource={RelativeSource AncestorType=ListView}}" Value="ThumbnailS">
+                            <Setter Property="Height" Value="Auto"/>
+                            <Setter Property="Width" Value="Auto"/>
+                            <Setter Property="Margin" Value="2"/>
+                            <Setter Property="Padding" Value="0"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding DataContext.ViewMode, RelativeSource={RelativeSource AncestorType=ListView}}" Value="ThumbnailM">
+                            <Setter Property="Height" Value="Auto"/>
+                            <Setter Property="Width" Value="Auto"/>
+                            <Setter Property="Margin" Value="2"/>
+                            <Setter Property="Padding" Value="0"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding DataContext.ViewMode, RelativeSource={RelativeSource AncestorType=ListView}}" Value="ThumbnailL">
+                            <Setter Property="Height" Value="Auto"/>
+                            <Setter Property="Width" Value="Auto"/>
+                            <Setter Property="Margin" Value="2"/>
+                            <Setter Property="Padding" Value="0"/>
+                        </DataTrigger>
+                    </Style.Triggers>
                 </Style>
             </ListView.ItemContainerStyle>
 
-            <ListView.View>
-                <GridView x:Name="ResultsGridView" AllowsColumnReorder="True">
+            <ListView.Style>
+                <Style TargetType="ListView">
+                    <!-- 기본 Details 모드일 때 -->
+                    <Setter Property="View" Value="{StaticResource DetailsGridView}"/>
+                    <Setter Property="ItemTemplate" Value="{x:Null}"/>
+                    <Setter Property="ItemsPanel" Value="{StaticResource DetailsItemsPanel}"/>
 
-                    <!-- 이름 컬럼: F2 인라인 이름변경 지원 -->
-                    <GridViewColumn Header="이름" Width="250">
-                        <GridViewColumn.CellTemplate>
-                            <DataTemplate>
-                                <Grid>
-                                    <!-- 일반 표시: TextBlock -->
-                                    <TextBlock Text="{Binding Name}"
-                                               Visibility="{Binding IsNotEditing,
-                                                   Converter={StaticResource BoolToVisConverter}}"
-                                               VerticalAlignment="Center"
-                                               TextTrimming="CharacterEllipsis"/>
-
-                                    <!-- 편집 중: TextBox (IsEditing=True 일 때만 표시) -->
-                                    <TextBox x:Name="RenameBox"
-                                             Text="{Binding EditingName, UpdateSourceTrigger=PropertyChanged}"
-                                             Visibility="{Binding IsEditing,
-                                                 Converter={StaticResource BoolToVisConverter}}"
-                                             VerticalAlignment="Center"
-                                             BorderThickness="1"
-                                             Padding="2,0"
-                                             KeyDown="RenameBox_KeyDown"
-                                             LostFocus="RenameBox_LostFocus"
-                                             Loaded="RenameBox_Loaded"/>
-                                </Grid>
-                            </DataTemplate>
-                        </GridViewColumn.CellTemplate>
-                    </GridViewColumn>
-
-                    <GridViewColumn Header="경로"        DisplayMemberBinding="{Binding Path}"                Width="350"/>
-                    <GridViewColumn Header="수정한 날짜" DisplayMemberBinding="{Binding DisplayModifiedDate}" Width="150"/>
-                    <GridViewColumn Header="크기"        DisplayMemberBinding="{Binding DisplaySize}"         Width="100"/>
-                    <GridViewColumn Header="확장자"      DisplayMemberBinding="{Binding Extension}"           Width="80"/>
-                </GridView>
-            </ListView.View>
-            
+                    <Style.Triggers>
+                        <!-- 썸네일S 모드 -->
+                        <DataTrigger Binding="{Binding ViewMode}" Value="ThumbnailS">
+                            <Setter Property="View" Value="{x:Null}"/>
+                            <Setter Property="ItemTemplate" Value="{StaticResource ThumbnailItemTemplate}"/>
+                            <Setter Property="ItemsPanel" Value="{StaticResource ThumbnailItemsPanel}"/>
+                        </DataTrigger>
+                        <!-- 썸네일M 모드 -->
+                        <DataTrigger Binding="{Binding ViewMode}" Value="ThumbnailM">
+                            <Setter Property="View" Value="{x:Null}"/>
+                            <Setter Property="ItemTemplate" Value="{StaticResource ThumbnailItemTemplate}"/>
+                            <Setter Property="ItemsPanel" Value="{StaticResource ThumbnailItemsPanel}"/>
+                        </DataTrigger>
+                        <!-- 썸네일L 모드 -->
+                        <DataTrigger Binding="{Binding ViewMode}" Value="ThumbnailL">
+                            <Setter Property="View" Value="{x:Null}"/>
+                            <Setter Property="ItemTemplate" Value="{StaticResource ThumbnailItemTemplate}"/>
+                            <Setter Property="ItemsPanel" Value="{StaticResource ThumbnailItemsPanel}"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </ListView.Style>
         </ListView>
     </Grid>
 </UserControl>
