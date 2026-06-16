@@ -10,6 +10,8 @@ using System.Windows.Input;
 using EverythingFastAlias.Models;
 using EverythingFastAlias.Native;
 using EverythingFastAlias.ViewModels;
+using System.Windows.Media;
+using System.Windows.Threading;
 
 using UserControl = System.Windows.Controls.UserControl;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
@@ -20,10 +22,21 @@ namespace EverythingFastAlias.Views
 {
     public partial class ResultGridView : UserControl
     {
+        // ─────────────────────────────────────────────────────────────────
+        // 상태 머신 (State Machine)
+        // 세 가지 상태를 명확히 분리하여 이벤트 간 교착을 원천 차단합니다.
+        //   Idle    : 기본 대기 상태. 드래그/더블클릭/F2 모두 허용.
+        //   Dragging: DoDragDrop 실행 중. LostFocus 무시, Editing 진입 차단.
+        //   Editing : F2 이름변경 모드. 드래그 시작 완전 차단.
+        // ─────────────────────────────────────────────────────────────────
+        private enum ViewState { Idle, Dragging, Editing }
+        private ViewState _viewState = ViewState.Idle;
+
         private Point _startPoint;
-        private bool _isDragging;
         private SearchResultItem? _editingItem;
         private ListViewItem? _clickedItem;
+        // ESC/커밋 후 포커스 복원 시 RequestBringIntoView 자동 스크롤 억제 플래그
+        private bool _suppressBringIntoView;
 
         public ResultGridView()
         {
@@ -34,40 +47,33 @@ namespace EverythingFastAlias.Views
 
         private void ListViewItem_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            // [Guard] 편집 모드 중: 드래그/선택 로직 완전 차단.
+            // TextBox가 독점적으로 마우스 이벤트를 처리하도록 이벤트 전파를 허용합니다.
+            if (_viewState == ViewState.Editing)
+            {
+                _clickedItem = null;
+                return;
+            }
+
+            // 더블클릭: 기본 연결 프로그램으로 파일 열기
+            // (PreviewMouseLeftButtonDown에서 처리해야 e.Handled=true 이후에도 동작 보장)
             if (e.ClickCount == 2)
             {
                 if (sender is ListViewItem item && item.DataContext is SearchResultItem searchItem)
                 {
-                    var path = searchItem.FullPath;
-                    if (File.Exists(path) || Directory.Exists(path))
-                    {
-                        try
-                        {
-                            var startInfo = new ProcessStartInfo
-                            {
-                                FileName = path,
-                                UseShellExecute = true
-                            };
-                            Process.Start(startInfo);
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show($"파일 실행 실패: {ex.Message}", "에러", MessageBoxButton.OK, MessageBoxImage.Error);
-                        }
-                    }
-                    e.Handled = true;
-                    return;
+                    OpenFile(searchItem.FullPath);
                 }
+                e.Handled = true;
+                return;
             }
 
-            // 드래그를 시작할 마우스 좌표 기록
+            // 드래그 시작 좌표 기록
             _startPoint = e.GetPosition(null);
             _clickedItem = null;
 
             if (sender is ListViewItem item2)
             {
-                // 클릭한 아이템이 이미 선택되어 있다면
-                // 드래그가 이루어질 수 있도록 즉시 선택이 해제되는 것을 방지합니다.
+                // 이미 선택된 아이템 클릭 시: 즉시 선택 해제를 막아 드래그가 가능하도록 지연 처리
                 if (item2.IsSelected)
                 {
                     _clickedItem = item2;
@@ -78,19 +84,23 @@ namespace EverythingFastAlias.Views
 
         private void ListViewItem_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
+            // [Guard] 편집 모드 중에는 선택 로직 개입 금지
+            if (_viewState == ViewState.Editing)
+            {
+                _clickedItem = null;
+                return;
+            }
+
             if (_clickedItem != null)
             {
-                // 드래그 동작을 안 한 상태에서 마우스를 뗀 경우 수동 선택 처리
+                // 드래그를 하지 않고 마우스를 뗀 경우: 수동 선택 처리
                 if ((Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Shift)) == 0)
                 {
                     ResultsListView.SelectedItem = _clickedItem.DataContext;
                 }
-                else
+                else if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
                 {
-                    if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
-                    {
-                        _clickedItem.IsSelected = !_clickedItem.IsSelected;
-                    }
+                    _clickedItem.IsSelected = !_clickedItem.IsSelected;
                 }
                 _clickedItem.Focus();
                 _clickedItem = null;
@@ -99,37 +109,41 @@ namespace EverythingFastAlias.Views
 
         private void ListViewItem_MouseMove(object sender, MouseEventArgs e)
         {
-            if (e.LeftButton == MouseButtonState.Pressed && !_isDragging)
+            // [Guard] Idle 상태가 아니면 드래그 감지 완전 차단
+            // - Editing 상태: 텍스트 커서 이동을 드래그로 잘못 인식 방지
+            // - Dragging 상태: 중복 DoDragDrop 호출 방지
+            if (_viewState != ViewState.Idle) return;
+
+            if (e.LeftButton == MouseButtonState.Pressed)
             {
                 Point position = e.GetPosition(null);
 
-                // 마우스 클릭 시 흔들림으로 인한 드래그 오동작 방지 임계치 비교
+                // 시스템 임계치를 초과하는 마우스 이동이 있을 때만 드래그 시작
                 if (Math.Abs(position.X - _startPoint.X) > SystemParameters.MinimumHorizontalDragDistance ||
                     Math.Abs(position.Y - _startPoint.Y) > SystemParameters.MinimumVerticalDragDistance)
                 {
-                    StartDrag(e);
+                    StartDrag();
                 }
             }
         }
 
-        private void StartDrag(MouseEventArgs e)
+        private void StartDrag()
         {
-            _isDragging = true;
+            var selectedItems = ResultsListView.SelectedItems.Cast<SearchResultItem>().ToList();
+            if (selectedItems.Count == 0) return;
+
+            // 상태 전환: Idle → Dragging
+            _viewState = ViewState.Dragging;
             _clickedItem = null;
+
             try
             {
-                var selectedItems = ResultsListView.SelectedItems.Cast<SearchResultItem>().ToList();
-                if (selectedItems.Count > 0)
-                {
-                    // 선택 항목들의 전체 경로 수집
-                    var paths = selectedItems.Select(item => item.FullPath).ToArray();
+                var paths = selectedItems.Select(item => item.FullPath).ToArray();
+                var dataObject = new DataObject(DataFormats.FileDrop, paths);
 
-                    // Windows FileDrop 포맷 데이터 패킷 생성
-                    var dataObject = new DataObject(DataFormats.FileDrop, paths);
-
-                    // 드래그 아웃 실행
-                    DragDrop.DoDragDrop(ResultsListView, dataObject, DragDropEffects.Copy | DragDropEffects.Move);
-                }
+                // DoDragDrop은 동기 블로킹 메서드입니다.
+                // Dragging 상태 보호 덕분에 LostFocus가 발생해도 이름변경 모드로 잘못 전환되지 않습니다.
+                DragDrop.DoDragDrop(ResultsListView, dataObject, DragDropEffects.Copy | DragDropEffects.Move);
             }
             catch (Exception ex)
             {
@@ -137,7 +151,8 @@ namespace EverythingFastAlias.Views
             }
             finally
             {
-                _isDragging = false;
+                // 상태 복원: Dragging → Idle
+                _viewState = ViewState.Idle;
             }
         }
 
@@ -151,8 +166,7 @@ namespace EverythingFastAlias.Views
             if (selectedItems.Count == 0) return;
 
             var paths = selectedItems.Select(item => item.FullPath).ToList();
-            
-            // WPF Window 및 HWND 핸들을 찾아 네이티브 IContextMenu 호출
+
             var parentWindow = Window.GetWindow(this);
             if (parentWindow != null)
             {
@@ -163,29 +177,8 @@ namespace EverythingFastAlias.Views
 
         private void ResultsListView_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
-            var selectedItems = ResultsListView.SelectedItems.Cast<SearchResultItem>().ToList();
-            if (selectedItems.Count == 0) return;
-
-            foreach (var item in selectedItems)
-            {
-                var path = item.FullPath;
-                if (File.Exists(path) || Directory.Exists(path))
-                {
-                    try
-                    {
-                        var startInfo = new ProcessStartInfo
-                        {
-                            FileName = path,
-                            UseShellExecute = true // 기본 연결프로그램으로 실행 보장
-                        };
-                        Process.Start(startInfo);
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"파일 실행 실패: {ex.Message}", "에러", MessageBoxButton.OK, MessageBoxImage.Error);
-                    }
-                }
-            }
+            // ListViewItem_PreviewMouseLeftButtonDown에서 더블클릭을 이미 처리했으므로
+            // 이곳에서 재처리하지 않습니다. (중복 실행 방지)
         }
 
         #endregion
@@ -194,13 +187,13 @@ namespace EverythingFastAlias.Views
 
         private void StartRename(SearchResultItem target)
         {
-            // 1. 기존에 다른 항목이 편집 중이었다면 확실하게 취소
+            // 기존에 다른 항목이 편집 중이었다면 먼저 취소
             if (_editingItem != null && _editingItem != target)
             {
                 CancelRename(_editingItem);
             }
 
-            // 2. 가상화 환경 대비하여 잔여 편집 플래그 일괄 강제 클리어
+            // 가상화 환경 대비: 화면 밖 아이템의 IsEditing 잔여 플래그 일괄 초기화
             if (ResultsListView.ItemsSource is System.Collections.IEnumerable items)
             {
                 foreach (var obj in items)
@@ -213,6 +206,8 @@ namespace EverythingFastAlias.Views
                 }
             }
 
+            // 상태 전환: Idle → Editing
+            _viewState = ViewState.Editing;
             _editingItem = target;
             target.EditingName = target.Name;
             target.IsEditing = true;
@@ -220,11 +215,19 @@ namespace EverythingFastAlias.Views
 
         private void RenameBox_Loaded(object sender, RoutedEventArgs e)
         {
-            if (sender is TextBox tb)
+            if (sender is not TextBox tb) return;
+
+            // TextBox가 XAML 렌더링 트리에 완전히 삽입된 후 포커스를 강제 획득합니다.
+            // DispatcherPriority.Loaded: 레이아웃 및 렌더링 완료 후 실행 보장.
+            tb.Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() =>
             {
+                // Keyboard.Focus: 키보드 입력 포커스 (실제 타이핑 수신)
+                // tb.Focus(): WPF 논리 포커스 (UI 하이라이트)
+                // 두 가지를 모두 설정해야 TextBox에 커서가 완전히 활성화됩니다.
+                Keyboard.Focus(tb);
                 tb.Focus();
                 tb.SelectAll();
-            }
+            }));
         }
 
         private void RenameBox_KeyDown(object sender, KeyEventArgs e)
@@ -236,48 +239,48 @@ namespace EverythingFastAlias.Views
                 e.Handled = true;
                 string newName = tb.Text.Trim();
                 if (string.IsNullOrEmpty(newName) || newName == item.Name)
-                {
                     CancelRename(item);
-                }
                 else
-                {
-                    CommitRename(item, tb.Text);
-                }
+                    CommitRename(item, newName);
             }
             else if (e.Key == Key.Escape)
             {
                 e.Handled = true;
+                // CancelRename 전에 참조 저장 (Cancel 후 _editingItem은 null이 됨)
+                var target = item;
                 CancelRename(item);
+                RestoreFocusToItem(target);
             }
         }
 
         private void RenameBox_LostFocus(object sender, RoutedEventArgs e)
         {
+            // [Guard] Dragging 상태에서 발생하는 LostFocus는 무시합니다.
+            // DoDragDrop 실행 중 내부 메시지 루프에서 LostFocus가 올라오는 경우를 차단합니다.
+            if (_viewState == ViewState.Dragging) return;
+
             if (sender is TextBox tb && tb.DataContext is SearchResultItem item && item.IsEditing)
             {
                 string newName = tb.Text.Trim();
                 if (string.IsNullOrEmpty(newName) || newName == item.Name)
-                {
                     CancelRename(item);
-                }
                 else
-                {
-                    CommitRename(item, tb.Text);
-                }
+                    CommitRename(item, newName);
             }
         }
 
         private void CommitRename(SearchResultItem item, string newBaseName)
         {
             newBaseName = newBaseName.Trim();
-            if (_editingItem == item)
-            {
-                _editingItem = null;
-            }
+
+            // 상태 초기화 먼저 (파일 I/O 도중 다른 이벤트가 재진입하지 못하도록)
+            if (_editingItem == item) _editingItem = null;
             item.IsEditing = false;
 
-            if (string.IsNullOrEmpty(newBaseName) || newBaseName == item.Name)
-                return;
+            // 상태 복원: Editing → Idle
+            if (_viewState == ViewState.Editing) _viewState = ViewState.Idle;
+
+            if (string.IsNullOrEmpty(newBaseName) || newBaseName == item.Name) return;
 
             try
             {
@@ -289,34 +292,52 @@ namespace EverythingFastAlias.Views
                 else
                     File.Move(oldPath, newPath);
 
-                // 모델 갱신 (INotifyPropertyChanged 연동)
+                // 모델 갱신
                 item.Name = newBaseName;
                 item.Extension = item.IsFolder ? string.Empty : System.IO.Path.GetExtension(newBaseName);
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"이름 변경 실패: {ex.Message}", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
-                // 실패 시 EditingName 원복
                 item.EditingName = item.Name;
             }
         }
 
         private void CancelRename(SearchResultItem item)
         {
-            if (_editingItem == item)
-            {
-                _editingItem = null;
-            }
+            if (_editingItem == item) _editingItem = null;
             item.EditingName = item.Name;
             item.IsEditing = false;
+
+            // 상태 복원: Editing → Idle
+            if (_viewState == ViewState.Editing) _viewState = ViewState.Idle;
         }
 
         #endregion
 
-        #region 단축키 (클립보드 Copy/Cut 및 Enter 파일 실행) 구현
+        #region 단축키 (클립보드 Copy/Cut, F2 이름변경, Enter 파일 실행) 구현
 
         private void ResultsListView_KeyDown(object sender, KeyEventArgs e)
         {
+            // [Guard] 편집 상태: TextBox 포커스 획득 타이밍 경합과 무관하게 ESC를 확실히 처리.
+            // TextBox.KeyDown에서 e.Handled=true를 설정하면 여기에 도달하지 않지만,
+            // TextBox가 포커스를 아직 받지 못한 상태에서 ESC가 눌린 경우 여기서 catch.
+            if (_viewState == ViewState.Editing)
+            {
+                if (e.Key == Key.Escape)
+                {
+                    e.Handled = true;
+                    var editItem = _editingItem;
+                    if (editItem != null)
+                    {
+                        CancelRename(editItem);
+                        RestoreFocusToItem(editItem);
+                    }
+                }
+                // 편집 중에는 방향키 내비게이션 등 모든 ListView 단축키 차단
+                return;
+            }
+
             var selectedItems = ResultsListView.SelectedItems.Cast<SearchResultItem>().ToList();
             if (selectedItems.Count == 0) return;
 
@@ -326,30 +347,18 @@ namespace EverythingFastAlias.Views
             if (e.Key == Key.C && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
             {
                 e.Handled = true;
-                try
-                {
-                    Win32ClipboardHelper.CopyFilesToClipboard(paths, isCut: false);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(ex.Message, "오류", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+                try { Win32ClipboardHelper.CopyFilesToClipboard(paths, isCut: false); }
+                catch (Exception ex) { MessageBox.Show(ex.Message, "오류", MessageBoxButton.OK, MessageBoxImage.Error); }
             }
             // 2. 잘라내기 (Ctrl + X)
             else if (e.Key == Key.X && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
             {
                 e.Handled = true;
-                try
-                {
-                    Win32ClipboardHelper.CopyFilesToClipboard(paths, isCut: true);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(ex.Message, "오류", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+                try { Win32ClipboardHelper.CopyFilesToClipboard(paths, isCut: true); }
+                catch (Exception ex) { MessageBox.Show(ex.Message, "오류", MessageBoxButton.OK, MessageBoxImage.Error); }
             }
-            // 3. F2 이름변경 (단일 선택 시에만)
-            else if (e.Key == Key.F2)
+            // 3. F2 이름변경 (단일 선택 시에만, Idle 상태에서만)
+            else if (e.Key == Key.F2 && _viewState == ViewState.Idle)
             {
                 e.Handled = true;
                 if (selectedItems.Count == 1)
@@ -357,29 +366,12 @@ namespace EverythingFastAlias.Views
                     StartRename(selectedItems[0]);
                 }
             }
-            // 4. 실행 (Enter)
-            else if (e.Key == Key.Enter)
+            // 4. 실행 (Enter) — 편집 중이 아닐 때만
+            else if (e.Key == Key.Enter && _viewState != ViewState.Editing)
             {
                 e.Handled = true;
                 foreach (var path in paths)
-                {
-                    if (File.Exists(path) || Directory.Exists(path))
-                    {
-                        try
-                        {
-                            var startInfo = new ProcessStartInfo
-                            {
-                                FileName = path,
-                                UseShellExecute = true // 연결 프로그램 자동 실행 보장
-                            };
-                            Process.Start(startInfo);
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show($"파일 실행 실패: {ex.Message}", "에러", MessageBoxButton.OK, MessageBoxImage.Error);
-                        }
-                    }
-                }
+                    OpenFile(path);
             }
         }
 
@@ -395,28 +387,84 @@ namespace EverythingFastAlias.Views
                 string? propertyName = binding?.Path?.Path;
 
                 if (string.IsNullOrEmpty(propertyName))
-                {
                     propertyName = header.Column.Header as string;
-                }
 
                 if (propertyName != null && DataContext is SearchViewModel vm)
-                {
                     vm.SortResults(propertyName);
-                }
             }
         }
 
         private void ResultsListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (DataContext is SearchViewModel vm)
-            {
                 vm.SelectedCount = ResultsListView.SelectedItems.Count;
-            }
 
+            // 편집 중인 항목이 선택 해제되면 편집 취소
             if (_editingItem != null && !ResultsListView.SelectedItems.Contains(_editingItem))
-            {
                 CancelRename(_editingItem);
+        }
+
+        #endregion
+
+        #region 헬퍼 메서드
+
+        /// <summary>
+        /// 편집/커밋 완료 후 해당 ListViewItem에 직접 포커스를 복원합니다.
+        /// ListView.Focus() 대신 이 메서드를 사용해야 하는 이유:
+        /// ListView.Focus()는 내부적으로 첫 번째 아이템에 포커스를 이동하고
+        /// ScrollIntoView를 발동시켜 스크롤이 맨 위로 올라가는 부작용이 있습니다.
+        /// </summary>
+        private void RestoreFocusToItem(SearchResultItem item)
+        {
+            // RequestBringIntoView 자동 스크롤을 일시 억제하여 포커스 복원 중 스크롤 점프 방지
+            _suppressBringIntoView = true;
+            Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() =>
+            {
+                try
+                {
+                    if (ResultsListView.ItemContainerGenerator.ContainerFromItem(item) is ListViewItem lvi)
+                        lvi.Focus();
+                    else
+                        // 가상화로 인해 컨테이너가 없는 경우 — 스크롤 억제 없이 ListView에 포커스
+                        ResultsListView.Focus();
+                }
+                finally
+                {
+                    _suppressBringIntoView = false;
+                }
+            }));
+        }
+
+        /// <summary>
+        /// ListView 아이템 포커스 이동 시 자동 스크롤(RequestBringIntoView)을 억제합니다.
+        /// XAML에서 ListView.RequestBringIntoView 이벤트와 연결됩니다.
+        /// </summary>
+        private void ResultsListView_RequestBringIntoView(object sender, RequestBringIntoViewEventArgs e)
+        {
+            if (_suppressBringIntoView)
+                e.Handled = true;
+        }
+
+        /// <summary>파일 또는 폴더를 기본 연결 프로그램으로 엽니다.</summary>
+        private static void OpenFile(string path)
+        {
+            if (!File.Exists(path) && !Directory.Exists(path)) return;
+            try
+            {
+                Process.Start(new ProcessStartInfo { FileName = path, UseShellExecute = true });
             }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"파일 실행 실패: {ex.Message}", "에러", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private static T? FindVisualParent<T>(DependencyObject child) where T : DependencyObject
+        {
+            DependencyObject parentObject = VisualTreeHelper.GetParent(child);
+            if (parentObject == null) return null;
+            if (parentObject is T parent) return parent;
+            return FindVisualParent<T>(parentObject);
         }
 
         #endregion

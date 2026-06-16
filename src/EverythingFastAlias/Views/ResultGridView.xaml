@@ -100,9 +100,9 @@
                   BorderThickness="0"
                   KeyDown="ResultsListView_KeyDown"
                   MouseRightButtonUp="ResultsListView_MouseRightButtonUp"
-                  MouseDoubleClick="ResultsListView_MouseDoubleClick"
                   SelectionChanged="ResultsListView_SelectionChanged"
-                  GridViewColumnHeader.Click="ResultsGridViewHeader_Click">
+                  GridViewColumnHeader.Click="ResultsGridViewHeader_Click"
+                  RequestBringIntoView="ResultsListView_RequestBringIntoView">
             
             <ListView.ItemContainerStyle>
                 <Style TargetType="ListViewItem">

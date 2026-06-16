@@ -15,3 +15,6 @@
   - [x] 빌드 무결성 검증 (dotnet build)
   - [x] 썸네일 비동기 렌더링 스크롤 성능 및 F2 변경 테스트
   - [x] 설정값 SQLite 로드/저장 복원 확인
+- [x] 추가 고도화: F2 인라인 편집 활성화 및 포커싱 버그 해결
+  - [x] Loaded 이벤트 시 Dispatcher.BeginInvoke를 통한 비동기 키보드 포커스 확보
+  - [x] PreviewMouseLeftButtonDown 내 TextBox 터치 시 이벤트 전파 가로채기(e.Handled=true) 조기 리턴 처리

@@ -16,6 +16,20 @@
 
 ## 🛠️ 최근 작업 기록 (2026-06-16)
 
+### [F2 인라인 이름변경 ViewState 상태 머신 재설계] — 2026-06-16 22:00
+- **문제**: F2 키 한 번 누르면 마우스 ban 아이콘 고착 + 앱 전체 먹통. ESC도 무응답.
+- **근본 원인**: `DoDragDrop`(동기 블로킹) 실행 중 내부 메시지 루프에서 TextBox의 `LostFocus`가 발화 → `CancelRename` 호출 → `IsEditing=false`. 그런데 DoDragDrop이 아직 UI 스레드를 점유 중이라 WPF 메시지 루프가 비정상 상태로 빠짐.
+- **해결 전략**: `ResultGridView.xaml.cs`에 `enum ViewState { Idle, Dragging, Editing }` 상태 머신 도입.
+  - **Editing 상태**: `ListViewItem_MouseMove`에서 드래그 감지를 원천 차단 (`_viewState != Idle`이면 즉시 return)
+  - **Dragging 상태**: `RenameBox_LostFocus`에서 처리 무시 (`_viewState == Dragging`이면 return)
+  - **포커스**: `RenameBox_Loaded`에서 `DispatcherPriority.Loaded` + `Keyboard.Focus(tb)` + `tb.Focus()` 병행
+  - **더블클릭**: `ListViewItem_PreviewMouseLeftButtonDown`에서 `e.ClickCount==2` 조기 감지 → `OpenFile()` 정적 헬퍼 호출 후 return (ListView.MouseDoubleClick 이벤트 제거)
+  - **ESC/LostFocus**: `CancelRename` 호출 후 `_viewState = Idle` 복원 + `ResultsListView.Focus()` 복귀
+- **XAML 변경**: `MouseDoubleClick="ResultsListView_MouseDoubleClick"` 이벤트 연결 제거 (중복 처리 방지)
+- **빌드 결과**: 경고 0개, 오류 0개 ✅
+
+
+
 - **DeepWiki Repositories 명세 문서화**: [overview.md](file:///d:/3_Code/3_Apps/43_Search-Edit/Everything%EA%B2%80%EC%83%89%EA%B8%B0/docs/memories/overview.md)에 등재된 WPF 데스크톱 런타임, ModernWPF, CommunityToolkit.Mvvm, Everything SDK, Microsoft.Data.Sqlite, ExcelDataReader, Lucide 등의 공식 GitHub 레포지토리 정보와 라이브러리 개요를 [deepwiki_repos.md](file:///d:/3_Code/3_Apps/43_Search-Edit/Everything%EA%B2%80%EC%83%89%EA%B8%B0/docs/memories/deepwiki_repos.md) 파일로 구축하여 자산화함.
 - **보기 옵션(자세히/섬네일S/M/L) 구현 및 썸네일 비동기 지연 로드 반영**:
   - `IShellItemImageFactory` COM 인터페이스를 사용한 Win32 썸네일 로더 및 `SHGetFileInfo`를 사용한 기본 아이콘 헬퍼를 추가하여 이미지/비디오 등의 썸네일을 디스크 I/O 레벨에서 추출.
@@ -25,4 +39,7 @@
   - 사용자의 보기 방식 크기 가독성을 위해 M 모드는 S의 2배(96px), L 모드는 S의 3배(144px) 수치로 썸네일 카드 가로세로 스케일을 균일 증가 매핑함.
   - `AppSettings` SQLite 로컬 영속화 계층에 `ViewMode` 컬럼을 엮어 앱이 재구동되어도 마지막 사용 보기 상태가 유지되도록 보존 기능을 반영함.
   - **[트러블슈팅] ListView 뷰 공유 충돌**: WPF의 `GridView`는 단일 인스턴스 제한이 있어 여러 뷰 상태 변경 중 공유 충돌(`InvalidOperationException`)을 유발함. 리소스 딕셔너리의 `GridView` 정의부에 `x:Shared="False"` 속성을 명시해 매번 새로운 독립 인스턴스를 반환하도록 구성하여 해결함.
+  - **[트러블슈팅] F2 이름변경 시 마우스/키보드 포커스 및 드래그 앤 드롭 락 해소**:
+    - **원인**: 드래그 앤 드롭 및 더블클릭 이벤트 충돌 방지를 위해 `ListViewItem_PreviewMouseLeftButtonDown` 내부에서 `e.Handled = true`로 마우스 메시지 전파를 완전 차단함으로써 하위 자식 요소인 `TextBox`까지 마우스 클릭이 전달되지 않아 커서 활성화가 불가능했음. 또한, TextBox를 탭하여 포커스가 들어갔을 때 마우스를 미세하게 움직이면 `ListViewItem_MouseMove`가 이전 마우스 클릭의 좌표(`_startPoint`)를 기준으로 파일 드래그 앤 드롭(`DragDrop.DoDragDrop`)을 오발하였으며, 동기식 드래그 세션이 마우스/키보드 입력을 독점해 금지(ban) 마우스 아이콘이 뜨며 앱이 교착 상태에 빠지게 됨.
+    - **해결**: `PreviewMouseLeftButtonDown`과 `ListViewItem_MouseMove` 시작 지점에서 마우스 발원지(`e.OriginalSource`)가 `TextBox` 자식인지 비주얼 트리 상에서 판별하여 TextBox 영역 내 마우스 동작 시 드래그 드롭 세션이나 가로채기가 타지 않고 즉시 조기 반환(`return;`)하도록 격리함. 또한, `TextBox.Loaded` 시 `Dispatcher.BeginInvoke(DispatcherPriority.Input, ...)` 지연 처리를 가미해 렌더링 완료 직후 포커스 획득 및 텍스트 전체 선택이 확실히 수행되도록 고도화함.
 
