@@ -32,7 +32,8 @@
                                      Padding="2,0"
                                      KeyDown="RenameBox_KeyDown"
                                      LostFocus="RenameBox_LostFocus"
-                                     Loaded="RenameBox_Loaded"/>
+                                     Loaded="RenameBox_Loaded"
+                                     IsVisibleChanged="RenameBox_IsVisibleChanged"/>
                         </Grid>
                     </DataTemplate>
                 </GridViewColumn.CellTemplate>
@@ -72,7 +73,8 @@
                     <TextBox Text="{Binding EditingName, UpdateSourceTrigger=PropertyChanged}"
                              Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisConverter}}"
                              HorizontalAlignment="Stretch" TextAlignment="Center" FontSize="11"
-                             KeyDown="RenameBox_KeyDown" LostFocus="RenameBox_LostFocus" Loaded="RenameBox_Loaded"/>
+                             KeyDown="RenameBox_KeyDown" LostFocus="RenameBox_LostFocus" Loaded="RenameBox_Loaded"
+                             IsVisibleChanged="RenameBox_IsVisibleChanged"/>
                 </Grid>
             </Grid>
         </DataTemplate>

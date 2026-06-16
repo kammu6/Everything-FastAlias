@@ -254,6 +254,19 @@ namespace EverythingFastAlias.Views
             }));
         }
 
+        private void RenameBox_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            if (sender is TextBox tb && tb.IsVisible)
+            {
+                tb.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Input, new Action(() =>
+                {
+                    Keyboard.Focus(tb);
+                    tb.Focus();
+                    tb.SelectAll();
+                }));
+            }
+        }
+
         private void RenameBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (sender is not TextBox tb || tb.DataContext is not SearchResultItem item) return;

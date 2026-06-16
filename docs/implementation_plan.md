@@ -20,6 +20,11 @@
 4. **정렬 기준 정보 영속화**:
    - 사용자가 결과 목록을 정렬한 기준(정렬 컬럼, 정렬 방향)을 SQLite 로컬 DB에 자동 저장.
    - 앱을 종료 후 재기동할 때, 로컬 DB로부터 정렬 기준 정보를 정상 복원하여 실시간 검색 시 이전 정렬 방식이 온전히 반영되도록 처리.
+5. **이름 변경 시 입력 커서 자동 깜박임 및 전체 선택**:
+   - F2 키를 입력해 개명 모드로 진입했을 때, 별도의 마우스 클릭 없이 편집용 TextBox가 즉각 키보드 포커스를 획득하고 입력 커서가 깜박이며 기존 파일명이 전체 선택된 상태로 대기하도록 처리.
+6. **빌드 배치 파일(bat) 비대화형 실행 및 exit code 개선**:
+   - `build-debug.bat` 및 `build-release.bat` 파일 실행 시 `--non-interactive` 인자가 전달되면 `pause` (키보드 대기)를 생략하고 즉시 정상 종료하도록 분기 처리.
+   - `dotnet build` 수행 결과로 발생한 `%ERRORLEVEL%`을 확보해 최종 `exit /b` 시 올바른 에러 코드를 반환하도록 설계.
 
 ---
 
@@ -44,6 +49,8 @@ d:\3_Code\3_Apps\43_Search-Edit\Everything검색기\
 │   └── memories/
 │       └── MEMORY.md
 │   └── implementation_plan.md    # [MODIFY] 본 계획서
+├── build-debug.bat               # [MODIFY] 비대화형 매개변수 대응 및 exit code 처리 추가
+├── build-release.bat             # [MODIFY] 비대화형 매개변수 대응 및 exit code 처리 추가
 └── src/
     └── EverythingFastAlias/
         ├── Native/
@@ -53,7 +60,8 @@ d:\3_Code\3_Apps\43_Search-Edit\Everything검색기\
         │   └── SearchViewModel.Settings.cs # [MODIFY] 정렬 기준 정보 SQLite 로드/저장 추가
         └── Views/
             ├── MainWindow.xaml        # [MODIFY] F5 새로고침 단축키 등록
-            ├── ResultGridView.xaml.cs # [MODIFY] 우클릭 판별, ContextMenu 동적 빌드, Delete 삭제 및 포커스 보존 로직 추가
+            ├── ResultGridView.xaml    # [MODIFY] 인라인 편집 TextBox에 IsVisibleChanged 이벤트 연동 추가
+            ├── ResultGridView.xaml.cs # [MODIFY] 우클릭 판별, ContextMenu 동적 빌드, Delete 삭제 포커스 보존 및 IsVisibleChanged 포커스 핸들러 추가
 ```
 
 ---

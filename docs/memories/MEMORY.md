@@ -25,6 +25,8 @@
   - Delete 키 입력 시 삭제 후 포커스를 가질 인접 아이템(`nextSelectedItem`)을 사전에 파악.
   - 성공적으로 디스크 삭제된 항목만 `Results` ObservableCollection에서 `Remove` 처리하고, `RestoreFocusToItem`을 통해 가상화 뷰 상태에서도 스크롤이 첫 줄로 튀지 않고 자연스럽게 다음 파일로 포커스가 계승되도록 구현.
 - **정렬 기준 영속화**: `SearchViewModel.Settings.cs` 및 `SearchViewModel.Search.cs`를 수정하여 사용자의 정렬 조건(`SortColumn`, `SortDirection`)이 변경될 때마다 SQLite 로컬 DB에 실시간 저장하고, 앱 재기동 시 복원하여 검색 결과에 자동으로 선반영되도록 조율.
+- **이름 변경 시 입력 커서 자동 활성화**: WPF 가상화 및 DataTemplate 내에서 TextBox의 Visibility가 Collapsed에서 Visible로 바뀔 때 `Loaded` 이벤트가 다시 호출되지 않아 포커스가 풀리던 현상을 해결하기 위해, `IsVisibleChanged` 이벤트를 연동하여 TextBox가 표시될 때마다 `DispatcherPriority.Input` 지연 실행을 통해 `Keyboard.Focus()` 및 `SelectAll()`이 확실하게 작동하도록 보완.
+- **빌드 배치 파일(bat) 비대화형 실행 개선**: `build-debug.bat` 및 `build-release.bat` 파일 실행 시 `--non-interactive` 매개변수를 넘기면 키보드 대기(`pause`)를 생략하고 즉각 종료하도록 하여 AI 에이전트의 무한 대기 루프를 해결. `dotnet build`의 ERRORLEVEL을 변수에 확보하여 호출 측에 성공 여부(exit code)를 정상 반환하도록 개선.
 - **빌드 결과**: 경고 0개, 오류 0개 ✅
 
 ### [F2 인라인 이름변경 ViewState 상태 머신 재설계] — 2026-06-16 22:00

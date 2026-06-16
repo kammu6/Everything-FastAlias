@@ -1,45 +1,33 @@
-# 임시 계획서: 정렬 기준(Sort Column & Direction) 영속화 개선
+# 임시 계획서: 빌드 배치 파일(bat) 비대화형(Non-Interactive) 모드 지원 및 exit code 전달 개선
 
-본 계획서는 파일 검색 결과의 정렬 기준(정렬 컬럼 및 정렬 방향) 정보를 SQLite 로컬 설정 데이터베이스에 영속적으로 저장하고 애플리케이션 시작 시 이를 복원하여, 사용자가 설정한 파일 정렬 뷰가 앱 재구동 후에도 유지되도록 하기 위한 추가 개선 설계서입니다.
+본 계획서는 디버그 및 릴리즈 빌드용 배치 파일(`build-debug.bat`, `build-release.bat`)이 AI 에이전트 등 자동화 도구에 의해 구동될 때, `pause`에 걸려 무한 대기하는 현상을 해결하고 빌드 성공 여부에 따른 올바른 `exit code`를 반환하도록 하기 위한 보완 설계서입니다.
 
 ---
 
 ## 1. 요구사항 (Requirements)
 
-- **정렬 조건 저장 및 로딩**:
-  - 결과 뷰의 정렬 기준이 변경될 때마다 정렬 컬럼(`SortColumn`) 및 정렬 방향(`SortDirection`) 정보를 SQLite 데이터베이스의 `AppSettings` 테이블에 저장.
-  - 앱 기동 시(`LoadSettings`), 저장된 정렬 기준 정보를 복원하여 이후 수행되는 모든 검색 결과에 해당 정렬 필터가 자동으로 선반영되도록 조율.
+- **비대화형 실행 지원**:
+  - 배치 파일 실행 시 `--non-interactive` 인자가 전달되면 `pause` (키보드 대기) 명령을 건너뛰고 즉시 종료 처리.
+- **올바른 exit code (ERRORLEVEL) 반환**:
+  - `dotnet build` 수행 후 생성된 에러 레벨(`%ERRORLEVEL%`)을 환경 변수로 확보하여 최종 `exit /b` 시 이를 정확하게 반환.
+  - 이를 통해 자동화 도구 및 AI 에이전트가 빌드의 실제 성공 여부를 감지할 수 있도록 보완.
 
 ---
 
 ## 2. 상세 구현 계획 (Implementation Plan)
 
-### 단계 1: 설정 저장 및 복원 반영 (`ViewModels/SearchViewModel.Settings.cs` [MODIFY])
-1. `LoadSettings()` 메소드 내부에 아래 항목 추가:
-   - `SortColumn` 값 읽기 (기본값: `"이름"`):
-     `SortColumn = db.GetSetting("SortColumn", "이름");`
-   - `SortDirection` 값 읽기 및 파싱 (기본값: `"Ascending"`):
-     `var sortDirStr = db.GetSetting("SortDirection", "Ascending");`
-     `if (Enum.TryParse<System.ComponentModel.ListSortDirection>(sortDirStr, out var dir)) SortDirection = dir;`
-2. `SaveSettings()` 메소드 내부에 아래 항목 추가:
-   - `SortColumn` 값 저장:
-     `db.SaveSetting("SortColumn", SortColumn);`
-   - `SortDirection` 값 저장 (문자열로 직렬화):
-     `db.SaveSetting("SortDirection", SortDirection.ToString());`
+### 단계 1: build-debug.bat 수정 (`build-debug.bat` [MODIFY])
+- `dotnet build` 실행 후 `set BUILD_ERR=%ERRORLEVEL%` 로 빌드 결과 저장.
+- 인자 `%1`이 `"--non-interactive"` 일 경우 `pause` 없이 `exit /b %BUILD_ERR%` 로 즉각 리턴 종료.
+- 일반 실행 시에는 기존처럼 `pause` 후 `exit /b %BUILD_ERR%` 반환.
 
-### 단계 2: 정렬 즉각 저장 트리거 반영 (`ViewModels/SearchViewModel.Search.cs` [MODIFY])
-1. `SortResults(string columnName)` 메소드에서 정렬 방향 및 기준 계산이 끝나고 `ApplySorting()`을 호출한 직후, `SaveSettings()`를 명시적으로 트리거하여 DB에 영속화하도록 변경.
+### 단계 2: build-release.bat 수정 (`build-release.bat` [MODIFY])
+- 위 단계 1과 동일한 `exit code` 제어 및 `--non-interactive` 조건 분기 반영.
 
 ---
 
 ## 3. 검증 계획 (Verification Plan)
 
-### 수동 검증
-1. 앱 구동 후 정렬 기준을 "크기 / 내림차순"으로 클릭하여 정렬 방식을 변경.
-2. 애플리케이션을 종료했다가 다시 구동.
-3. 임의의 검색어를 입력하고 엔터를 눌러 검색이 완료되었을 때, 정렬 표시 및 정렬 순서가 이전 기동 시 적용했던 "크기 / 내림차순" 기준으로 부드럽게 자동 정렬되는지 확인.
-
----
-
-## 4. 지식 자산화 계획 (Capitalization Plan)
-- 수동 검증 완료 후, 본 임시 계획의 변경 세부사항과 자산 정보를 `./docs/memories/MEMORY.md` 및 메인 계획서(`implementation_plan.md`), 워크스루(`walkthrough.md`)에 병합 업데이트.
+### 수동 및 자동 검증
+1. `--non-interactive` 인자 없이 수동으로 배치 파일을 실행하여, 빌드 종료 후 `pause` 상태에서 키보드 대기가 정상적으로 뜨는지 확인.
+2. 에이전트 쉘 명령어로 `cmd /c build-debug.bat --non-interactive`를 실행하여 무한 루프에 걸리지 않고 빌드 출력 로그가 표시된 뒤 즉시 프롬프트가 반환(자동 종료)되는지 검증.
