@@ -60,7 +60,7 @@ namespace EverythingFastAlias.ViewModels
                 if (SetProperty(ref _excludedWords, value))
                 {
                     Options.ExcludedWords = value;
-                    TriggerSearchOnly();
+                    SaveSettings(); // 옵션만 저장. 검색은 Enter 키에서만.
                 }
             }
         }
@@ -74,7 +74,7 @@ namespace EverythingFastAlias.ViewModels
                 if (SetProperty(ref _folderPaths, value))
                 {
                     Options.FolderPaths = value;
-                    TriggerSearchOnly();
+                    SaveSettings();
                 }
             }
         }
@@ -88,7 +88,7 @@ namespace EverythingFastAlias.ViewModels
                 if (SetProperty(ref _customExtensions, value))
                 {
                     Options.CustomExtensions = value;
-                    TriggerSearchOnly();
+                    SaveSettings();
                 }
             }
         }
@@ -102,7 +102,7 @@ namespace EverythingFastAlias.ViewModels
                 if (SetProperty(ref _minSize, value))
                 {
                     Options.MinSize = value;
-                    TriggerSearchOnly();
+                    SaveSettings();
                     OnPropertyChanged(nameof(MinSizeText));
                 }
             }
@@ -117,7 +117,7 @@ namespace EverythingFastAlias.ViewModels
                 if (SetProperty(ref _maxSize, value))
                 {
                     Options.MaxSize = value;
-                    TriggerSearchOnly();
+                    SaveSettings();
                     OnPropertyChanged(nameof(MaxSizeText));
                 }
             }
@@ -157,7 +157,7 @@ namespace EverythingFastAlias.ViewModels
                 if (value)
                 {
                     Options.Scope = SearchScope.All;
-                    TriggerSearchOnly();
+                    SaveSettings();
                     NotifyScopeProperties();
                 }
             }
@@ -171,7 +171,7 @@ namespace EverythingFastAlias.ViewModels
                 if (value)
                 {
                     Options.Scope = SearchScope.File;
-                    TriggerSearchOnly();
+                    SaveSettings();
                     NotifyScopeProperties();
                 }
             }
@@ -185,7 +185,7 @@ namespace EverythingFastAlias.ViewModels
                 if (value)
                 {
                     Options.Scope = SearchScope.Path;
-                    TriggerSearchOnly();
+                    SaveSettings();
                     NotifyScopeProperties();
                 }
             }
@@ -233,7 +233,7 @@ namespace EverythingFastAlias.ViewModels
                 {
                     Options.MinSizeUnit = SizeUnit.KB;
                     Options.MaxSizeUnit = SizeUnit.KB;
-                    TriggerSearchOnly();
+                    SaveSettings();
                     NotifySizeUnitProperties();
                 }
             }
@@ -248,7 +248,7 @@ namespace EverythingFastAlias.ViewModels
                 {
                     Options.MinSizeUnit = SizeUnit.MB;
                     Options.MaxSizeUnit = SizeUnit.MB;
-                    TriggerSearchOnly();
+                    SaveSettings();
                     NotifySizeUnitProperties();
                 }
             }
@@ -263,7 +263,7 @@ namespace EverythingFastAlias.ViewModels
                 {
                     Options.MinSizeUnit = SizeUnit.GB;
                     Options.MaxSizeUnit = SizeUnit.GB;
-                    TriggerSearchOnly();
+                    SaveSettings();
                     NotifySizeUnitProperties();
                 }
             }
@@ -284,12 +284,11 @@ namespace EverythingFastAlias.ViewModels
             {
                 if (value)
                 {
-                    // 폴더 선택 상태 보존 후 나머지 초기화
                     bool folderWasActive = Options.MediaPresets.Contains("폴더");
                     Options.MediaPresets.Clear();
                     Options.MediaPresets.Add("전체");
                     if (folderWasActive) Options.MediaPresets.Add("폴더");
-                    TriggerSearchOnly();
+                    SaveSettings();
                     NotifyMediaProperties();
                 }
             }
@@ -303,7 +302,6 @@ namespace EverythingFastAlias.ViewModels
             {
                 if (value)
                 {
-                    // 폴더 ON: 확장자 필터는 모두 해제, 전체 상태는 유지
                     bool allWasActive = Options.MediaPresets.Contains("전체") || Options.MediaPresets.Count == 0;
                     Options.MediaPresets.Clear();
                     if (allWasActive) Options.MediaPresets.Add("전체");
@@ -313,7 +311,7 @@ namespace EverythingFastAlias.ViewModels
                 {
                     Options.MediaPresets.Remove("폴더");
                 }
-                TriggerSearchOnly();
+                SaveSettings();
                 NotifyMediaProperties();
             }
         }
@@ -364,7 +362,6 @@ namespace EverythingFastAlias.ViewModels
         {
             if (isChecked)
             {
-                // 확장자 필터 ON: 폴더·전체 해제, 해당 필터만 추가
                 Options.MediaPresets.Remove("전체");
                 Options.MediaPresets.Remove("폴더");
                 Options.MediaPresets.Add(preset);
@@ -373,7 +370,7 @@ namespace EverythingFastAlias.ViewModels
             {
                 Options.MediaPresets.Remove(preset);
             }
-            TriggerSearchOnly();
+            SaveSettings();
             NotifyMediaProperties();
         }
 

@@ -125,7 +125,7 @@ namespace EverythingFastAlias.ViewModels
                 }
 
                 UpdateTargetDrivesFromList();
-                TriggerSearchOnly();
+                SaveSettings(); // 드라이브 변경은 저장만. 검색은 Enter 키에서만.
             }
         }
 
