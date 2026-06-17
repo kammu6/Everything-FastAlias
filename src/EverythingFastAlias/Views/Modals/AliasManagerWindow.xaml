@@ -86,7 +86,8 @@
                     </DataGridTemplateColumn.CellTemplate>
                     <DataGridTemplateColumn.CellEditingTemplate>
                         <DataTemplate>
-                            <TextBox Text="{Binding Keyword, UpdateSourceTrigger=PropertyChanged}" Padding="2" VerticalAlignment="Center"/>
+                            <TextBox Text="{Binding Keyword, UpdateSourceTrigger=PropertyChanged}" Padding="2" VerticalAlignment="Center"
+                                     Loaded="TextBox_Loaded" GotFocus="TextBox_GotFocus"/>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellEditingTemplate>
                 </DataGridTemplateColumn>
@@ -102,7 +103,8 @@
                     </DataGridTemplateColumn.CellTemplate>
                     <DataGridTemplateColumn.CellEditingTemplate>
                         <DataTemplate>
-                            <TextBox Text="{Binding Words, UpdateSourceTrigger=PropertyChanged}" Padding="2" VerticalAlignment="Center"/>
+                            <TextBox Text="{Binding Words, UpdateSourceTrigger=PropertyChanged}" Padding="2" VerticalAlignment="Center"
+                                     Loaded="TextBox_Loaded" GotFocus="TextBox_GotFocus"/>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellEditingTemplate>
                 </DataGridTemplateColumn>

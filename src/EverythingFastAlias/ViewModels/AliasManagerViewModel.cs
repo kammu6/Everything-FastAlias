@@ -86,6 +86,7 @@ namespace EverythingFastAlias.ViewModels
         private readonly System.Collections.Generic.List<AliasMapping> _matchedItems = new();
 
         public event Action<AliasMapping>? RequestScrollIntoView;
+        public event Action<AliasMapping>? RequestEditMapping;
 
         public ICommand LoadCommand { get; }
         public ICommand AddCommand { get; }
@@ -138,10 +139,11 @@ namespace EverythingFastAlias.ViewModels
         private void AddMapping()
         {
             var newMapping = new AliasMapping("새키워드", "동의어1;동의어2");
-            Mappings.Add(newMapping);
+            Mappings.Insert(0, newMapping);
             SelectedMapping = newMapping;
             StatusForeground = System.Windows.Media.Brushes.DimGray;
             StatusMessage = "새 행을 추가했습니다. 저장 버튼을 눌러 확정하세요.";
+            RequestEditMapping?.Invoke(newMapping);
         }
  
         private void ClearAllMappings()
@@ -220,9 +222,23 @@ namespace EverythingFastAlias.ViewModels
                         return;
                     }
                 }
+                var selectedKeyword = SelectedMapping?.Keyword;
+
                 var syncData = Mappings.Select(m => (m.Keyword, m.Words));
                 DatabaseService.Instance.SaveAllSync(syncData);
-                PerformSearch();
+                
+                LoadMappings(); // 리프레시 및 캐싱 강제 동기화
+                
+                if (!string.IsNullOrEmpty(selectedKeyword))
+                {
+                    var target = Mappings.FirstOrDefault(m => m.Keyword == selectedKeyword);
+                    if (target != null)
+                    {
+                        SelectedMapping = target;
+                        RequestScrollIntoView?.Invoke(target);
+                    }
+                }
+
                 StatusForeground = System.Windows.Media.Brushes.ForestGreen;
                 StatusMessage = $"[저장 완료 - {DateTime.Now:HH:mm:ss}] 모든 수정사항이 데이터베이스 및 캐시에 저장 및 동기화되었습니다.";
             }
