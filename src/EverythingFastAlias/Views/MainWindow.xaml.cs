@@ -1,5 +1,7 @@
 using System;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 using EverythingFastAlias.Native;
 using EverythingFastAlias.ViewModels;
 using EverythingFastAlias.Views.Modals;
@@ -189,6 +191,36 @@ namespace EverythingFastAlias.Views
             else
             {
                 DestroyTrayIcon();
+            }
+        }
+
+        private void QueryText_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is TextBlock tb && !string.IsNullOrEmpty(tb.Text))
+            {
+                string text = tb.Text;
+                string prefix = "[Everything 쿼리]: ";
+                string suffixMarker = " | 매핑 규칙:";
+
+                string queryToCopy = text;
+                if (text.StartsWith(prefix))
+                {
+                    queryToCopy = text.Substring(prefix.Length);
+                    int suffixIndex = queryToCopy.LastIndexOf(suffixMarker);
+                    if (suffixIndex >= 0)
+                    {
+                        queryToCopy = queryToCopy.Substring(0, suffixIndex);
+                    }
+                }
+
+                try
+                {
+                    Clipboard.SetText(queryToCopy.Trim());
+                }
+                catch (Exception)
+                {
+                    // 클립보드 예외 무시
+                }
             }
         }
     }

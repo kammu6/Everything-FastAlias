@@ -50,7 +50,7 @@
                         <TextBlock Text="• * : 직전 패턴의 0회 이상 반복 (예: ab*c)" TextWrapping="Wrap"/>
                         <TextBlock Text="• + : 직전 패턴의 1회 이상 반복 (예: ab+c)" TextWrapping="Wrap"/>
                         <TextBlock Text="• [ ] : 문자 집합 중 하나 매칭 (예: [a-z]는 영문 소문자)" TextWrapping="Wrap"/>
-                        <TextBlock Text="• d\ : 숫자 매칭 (예: d{4}는 4자리 숫자)" TextWrapping="Wrap"/>
+                        <TextBlock Text="• \d : 숫자 매칭 (예: \d{4}는 4자리 숫자)" TextWrapping="Wrap"/>
                         
                         <Separator Margin="0,10,0,10"/>
                         <TextBlock Text="※ 주의: 정규식 검색 옵션을 활성화하거나 검색어 앞에 regex: 접두어를 붙이면 정규식 문법이 적용됩니다." 
@@ -75,10 +75,13 @@
                         <TextBlock Text="• 수동 그룹화 결합: &lt;사과 | 바나나&gt; 와 같이 그룹 기호(&lt; &gt;) 안에서도 동의어 치환이 정상 동작합니다." TextWrapping="Wrap" Margin="10,0,0,0"/>
                         <TextBlock Text="• 제외 조건 결합: !사과 와 같이 느낌표(!)를 붙이면 해당 키워드와 모든 동의어가 검색에서 일괄 제외됩니다." TextWrapping="Wrap" Margin="10,0,0,0"/>
                         
+                        <TextBlock Text="제외단어(Exclusion) 다중 입력 가이드" FontSize="16" FontWeight="Bold"/>
+                        <TextBlock Text="• 제외하고 싶은 여러 단어들을 입력할 때는 꺾쇠 괄호(&lt; &gt;)나 파이프(|)를 직접 입력하지 마시고, 단순히 세미콜론(;) 또는 공백으로 나열해 주세요. (예: tmp;temp)" TextWrapping="Wrap"/>
+                        <TextBlock Text="  - 프로그램 내부에서 개별 단어들을 각각 ! 연산자로 변환 및 조립하여 안전하게 다중 제외 처리를 수행합니다." TextWrapping="Wrap" Foreground="Gray"/>
+                        
                         <Separator Margin="0,10,0,10"/>
                         
                         <TextBlock Text="단축키 팁" FontSize="16" FontWeight="Bold"/>
-                        <TextBlock Text="• ESC : 검색어 및 필터 조건 모두 초기화" TextWrapping="Wrap"/>
                         <TextBlock Text="• Ctrl + C : 선택한 파일들을 네이티브 파일 객체로 복사 (외부에 붙여넣기 가능)" TextWrapping="Wrap"/>
                         <TextBlock Text="• Ctrl + X : 선택한 파일들을 네이티브 파일 객체로 잘라내기" TextWrapping="Wrap"/>
                         <TextBlock Text="• F1 : 본 도움말 창 호출" TextWrapping="Wrap"/>
