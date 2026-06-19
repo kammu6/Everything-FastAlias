@@ -1,19 +1,13 @@
 # 작업 진행 상황 (Task Tracker)
 
-## 이전 완료 작업 (Alias Manager 고도화)
-- [x] AliasManagerViewModel.cs 수정 (이벤트 신설, Insert(0) 변경, 저장 성공 시 로드 및 선택 상태 복원)
-- [x] AliasManagerWindow.xaml 수정 (TextBox Loaded 및 GotFocus 이벤트 핸들러 바인딩)
-- [x] AliasManagerWindow.xaml.cs 수정 (이벤트 구독 및 DataGrid.BeginEdit 호출, TextBox 포커스 및 SelectAll 구현)
-- [x] 빌드 및 컴파일 검증
-- [x] MEMORY.md 업데이트
+## 이전 완료 작업
+- [x] 상태창 쿼리 복사 & 제외 조건 원인 분석 & 도움말 개편
+- [x] Alias Manager 고도화
 
-## 신규 작업 (상태창 쿼리 클립보드 복사 및 제외 단어 원인 분석)
-- [x] MainWindow.xaml 수정 (StatusMessage TextBlock에 Cursor="Hand", ToolTip, MouseLeftButtonDown 이벤트 추가)
-- [x] MainWindow.xaml.cs 수정 (QueryText_MouseLeftButtonDown 구현하여 쿼리만 추출 후 클립보드 복사)
+## 신규 작업 (외부 파일 드롭 시 내부 폴더 복사/이동)
+- [x] Win32FileOperationHelper.cs 생성 (SHFileOperation FFI 기반 복사/이동 지원)
+- [x] ResultGridView.xaml 수정 (ListView에 AllowDrop, DragOver, Drop 이벤트 연결)
+- [x] ResultGridView.xaml.cs 수정 (DragOver, Drop 핸들러 및 GetDragDropEffect 구현)
 - [x] 빌드 및 컴파일 검증
-- [x] MEMORY.md 업데이트
-
-## 신규 작업 (도움말 메뉴 개선 및 예외 조건 가이드 추가)
-- [x] HelpWindow.xaml 수정 (정규식 오타 수정, 제외 단어 다중 입력 가이드 팁 추가, ESC 미구현 단축키 제거)
-- [x] 빌드 및 컴파일 검증
+- [x] overview.md 업데이트 (신설 파일 구조 명세 반영)
 - [x] MEMORY.md 업데이트

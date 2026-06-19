@@ -821,6 +821,137 @@ namespace EverythingFastAlias.Views
             e.Handled = true;
         }
 
+        private void ResultsListView_DragOver(object sender, DragEventArgs e)
+        {
+            if (_viewState != ViewState.Idle)
+            {
+                e.Effects = DragDropEffects.None;
+                e.Handled = true;
+                return;
+            }
+
+            if (!e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                e.Effects = DragDropEffects.None;
+                e.Handled = true;
+                return;
+            }
+
+            var hitTestResult = VisualTreeHelper.HitTest(ResultsListView, e.GetPosition(ResultsListView));
+            var visual = hitTestResult?.VisualHit;
+            ListViewItem? lvi = null;
+            if (visual != null)
+            {
+                lvi = FindVisualParent<ListViewItem>(visual);
+            }
+
+            if (lvi != null && lvi.DataContext is SearchResultItem targetItem && targetItem.IsFolder)
+            {
+                e.Effects = GetDragDropEffect(e, targetItem.FullPath);
+            }
+            else
+            {
+                e.Effects = DragDropEffects.None;
+            }
+            e.Handled = true;
+        }
+
+        private void ResultsListView_Drop(object sender, DragEventArgs e)
+        {
+            if (_viewState != ViewState.Idle)
+            {
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Data.GetData(DataFormats.FileDrop) is string[] files && files.Length > 0)
+            {
+                var hitTestResult = VisualTreeHelper.HitTest(ResultsListView, e.GetPosition(ResultsListView));
+                var visual = hitTestResult?.VisualHit;
+                ListViewItem? lvi = null;
+                if (visual != null)
+                {
+                    lvi = FindVisualParent<ListViewItem>(visual);
+                }
+
+                if (lvi != null && lvi.DataContext is SearchResultItem targetItem && targetItem.IsFolder)
+                {
+                    string targetFolder = targetItem.FullPath;
+                    DragDropEffects effect = GetDragDropEffect(e, targetFolder);
+
+                    if (effect == DragDropEffects.Copy || effect == DragDropEffects.Move)
+                    {
+                        bool isMove = effect == DragDropEffects.Move;
+                        
+                        Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+                        {
+                            try
+                            {
+                                bool success = Win32FileOperationHelper.CopyOrMoveFiles(files, targetFolder, isMove);
+                                if (success)
+                                {
+                                    if (DataContext is SearchViewModel searchVM)
+                                    {
+                                        searchVM.ExecuteSearch();
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                MessageBox.Show($"파일 작업 중 오류가 발생했습니다:\n{ex.Message}", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
+                            }
+                        }));
+                    }
+                }
+            }
+            e.Handled = true;
+        }
+
+        private DragDropEffects GetDragDropEffect(DragEventArgs e, string targetFolderPath)
+        {
+            bool isCtrlPressed = (e.KeyStates & DragDropKeyStates.ControlKey) == DragDropKeyStates.ControlKey;
+            bool isShiftPressed = (e.KeyStates & DragDropKeyStates.ShiftKey) == DragDropKeyStates.ShiftKey;
+
+            if (isCtrlPressed && isShiftPressed)
+            {
+                return DragDropEffects.None;
+            }
+            if (isCtrlPressed)
+            {
+                return DragDropEffects.Copy;
+            }
+            if (isShiftPressed)
+            {
+                return DragDropEffects.Move;
+            }
+
+            if (e.Data.GetData(DataFormats.FileDrop) is string[] files && files.Length > 0)
+            {
+                string sourceFile = files[0];
+                try
+                {
+                    string sourceDrive = Path.GetPathRoot(sourceFile) ?? "";
+                    string targetDrive = Path.GetPathRoot(targetFolderPath) ?? "";
+
+                    if (!string.IsNullOrEmpty(sourceDrive) && !string.IsNullOrEmpty(targetDrive) &&
+                        sourceDrive.Equals(targetDrive, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return DragDropEffects.Move;
+                    }
+                    else
+                    {
+                        return DragDropEffects.Copy;
+                    }
+                }
+                catch
+                {
+                    return DragDropEffects.Copy;
+                }
+            }
+
+            return DragDropEffects.Copy;
+        }
+
         #endregion
 
         #endregion

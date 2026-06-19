@@ -21,6 +21,8 @@
 - **상태창 쿼리 복사 기능**: `MainWindow.xaml`의 `StatusMessage` TextBlock에 `Cursor="Hand"`와 복사 안내 `ToolTip`을 부여하고, `MouseLeftButtonDown` 이벤트를 바인딩. 클릭 시 `[Everything 쿼리]: ` 접두사와 매핑 규칙 접미사를 분리한 순수 Everything 쿼리 텍스트만을 정교하게 파싱해 클립보드에 복사되도록 구현(팝업창 없음).
 - **제외 조건 다중 검색 가이드 수립**: 제외단어 입력란에서 `|`(OR)와 `< >`(그룹화)를 직접 입력할 시 내부 토큰화 로직과 충돌하는 원인을 분석하고, 세미콜론`;` 또는 공백을 이용해 단어를 나열(예: `[02_;03_`)할 때 `!"[02_"` `!"03_"` 형태로 AND 제외 쿼리가 자동 조립되는 메커니즘을 규명함.
 - **도움말(HelpWindow) 개편**: `HelpWindow.xaml` 내 정규식 탭의 오타(`d\` -> `\d`)를 교정하고, 사용자의 혼동을 방지하기 위한 제외단어 다중 입력 가이드 팁을 추가하였으며, 미구현된 ESC 단축키 설명을 제거하여 도움말 명세의 신뢰도를 확보함.
+- **외부 파일 폴더 드롭 복사/이동 (Drop-in)**: `ResultsListView`에 `AllowDrop="True"`와 `DragOver`/`Drop` 이벤트를 매핑. 드래그 오버 및 드롭 시 마우스 하위의 `ListViewItem`을 `VisualTreeHelper.HitTest`로 낚아채어 `IsFolder` 속성이 `true`인 경우에만 접수. `Ctrl` 복사, `Shift` 이동을 판별하며 키 입력이 없을 시 드라이브 대조법(같은 드라이브는 이동, 타 드라이브는 복사)을 적용해 표준 탐색기 경험을 복제함.
+- **윈도우 표준 진행률 연동**: `Native/Win32FileOperationHelper.cs`를 신설하여 `SHFileOperation` API를 래핑. `FOF_ALLOWUNDO` 플래그를 결합하여 대용량 전송창 및 이름 중복 충돌창을 OS 기본 기능으로 제공하고, 파일 전송 성공 시 `searchVM.ExecuteSearch()`를 비동기 호출해 리스트를 최신화함.
 
 ## 🛠️ 최근 작업 기록 (2026-06-17)
 
