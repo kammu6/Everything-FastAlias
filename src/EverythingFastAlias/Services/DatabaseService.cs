@@ -23,7 +23,7 @@ namespace EverythingFastAlias.Services
         {
             var baseDir = AppDomain.CurrentDomain.BaseDirectory;
             _dbPath = Path.Combine(baseDir, "fastalias.db");
-            _connectionString = $"Data Source={_dbPath}";
+            _connectionString = $"Data Source={_dbPath};Default Timeout=5";
             InitializeDatabase();
             LoadMappingsToCache();
         }
@@ -358,6 +358,46 @@ namespace EverythingFastAlias.Services
             catch
             {
                 // 설정 저장 중 예외는 조용히 무시하여 크래시 방지
+            }
+        }
+
+        public void SaveSettingsBulk(Dictionary<string, string> settings)
+        {
+            if (settings == null || settings.Count == 0) return;
+            try
+            {
+                using var connection = new SqliteConnection(_connectionString);
+                connection.Open();
+                using var transaction = connection.BeginTransaction();
+                try
+                {
+                    var insertQuery = @"
+                        INSERT INTO AppSettings (SettingKey, SettingValue) 
+                        VALUES ($key, $value)
+                        ON CONFLICT(SettingKey) DO UPDATE SET SettingValue = excluded.SettingValue;";
+
+                    using var command = new SqliteCommand(insertQuery, connection, transaction);
+                    var keyParam = command.Parameters.Add("$key", SqliteType.Text);
+                    var valueParam = command.Parameters.Add("$value", SqliteType.Text);
+
+                    foreach (var kvp in settings)
+                    {
+                        keyParam.Value = kvp.Key;
+                        valueParam.Value = kvp.Value ?? "";
+                        command.ExecuteNonQuery();
+                    }
+
+                    transaction.Commit();
+                }
+                catch
+                {
+                    transaction.Rollback();
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"설정 일괄 저장 실패: {ex.Message}");
             }
         }
     }

@@ -37,59 +37,95 @@
 
 ### 3.1. 폴더 및 파일 트리 구조
 
+<!-- START_TREE -->
 ```text
-D:\3_Code\3_Apps\43_Search-Edit\Everything검색기\
-├── .gitignore
-├── docs/
-├── .codegraph/
-└── src/
-    └── EverythingFastAlias/
-```
+📂 Everything검색기
+├── 📁 docs/
+│   ├── 📁 archives/
+│   ├── 📁 Everything Offical Manual/
+│   ├── 📁 EverythingDLL/
+│   └── 📁 memories/
+│       ├── 📁 backup/
+│       ├── 📄 app_audit_report.md
+│       ├── 📄 deepwiki_repos.md
+│       ├── 📄 everything_sdk.md
+│       ├── 📄 MEMORY.md
+│       ├── 📄 overview.md
+│       └── 📄 wpf_coding_guidelines.md
+├── 📁 scripts/
+│   └── 📄 update_overview_tree.js
+├── 📁 src/
+│   ├── 📁 EverythingFastAlias/
+│   │   ├── 📁 Assets/
+│   │   │   ├── 📁 dll/
+│   │   │   │   └── 📄 Everything64.dll
+│   │   │   └── 📄 app_icon.ico
+│   │   ├── 📁 Config/
+│   │   │   ├── 📄 AppConstants.cs # IPC 및 시스템 제어용 상수
+│   │   │   ├── 📄 RangeObservableCollection.cs
+│   │   │   └── 📄 UIConstants.cs # UI 크기 및 기본 핫키 설정
+│   │   ├── 📁 Converters/
+│   │   │   ├── 📄 BoolToVisibilityConverter.cs # Bool → Visibility 전역 변환 서비스
+│   │   │   └── 📄 HighlightBehavior.cs
+│   │   ├── 📁 Models/
+│   │   │   ├── 📄 AliasMapping.cs # MVVM 바인딩용 매핑 정보 모델
+│   │   │   ├── 📄 DriveOptionItem.cs
+│   │   │   ├── 📄 SearchOptions.cs # 9가지 검색 조건 옵션 모델
+│   │   │   ├── 📄 SearchResultItem.cs # 검색 행 데이터 모델 ( display size 및 날짜 자동 가공 )
+│   │   │   └── 📄 ViewMode.cs   # 보기 모드(자세히/섬네일S/M/L) 설정을 위한 열거형 [NEW]
+│   │   ├── 📁 Native/
+│   │   │   ├── 📄 EverythingBridge.cs # Everything 엔진 상태 점검 및 검색 질의 래핑
+│   │   │   ├── 📄 EverythingSdk.cs # kernel32.dll LoadLibrary 기반 FFI 및 P/Invoke
+│   │   │   ├── 📄 ShellContextMenu.cs # COM 인터페이스 마샬링 기반 윈도우 네이티브 우클릭 메뉴 팝업
+│   │   │   ├── 📄 ShellIconHelper.cs # 시스템 기본 폴더/파일 아이콘 캐시 헬퍼 [NEW]
+│   │   │   ├── 📄 ShellThumbnailHelper.cs # IShellItemImageFactory FFI 기반 썸네일 고화질 추출기 [NEW]
+│   │   │   ├── 📄 TrayIconHelper.cs # System.Windows.Forms.NotifyIcon 기반 시스템 트레이 아이콘 전담
+│   │   │   ├── 📄 Win32ClipboardHelper.cs # 파일 클립보드 복사/잘라내기 네이티브 래퍼
+│   │   │   ├── 📄 Win32FileOperationHelper.cs # SHFileOperation FFI 기반 복사/이동 헬퍼 [NEW]
+│   │   │   └── 📄 Win32RecycleBinHelper.cs # SHFileOperation FFI 기반 휴지통 삭제 헬퍼 [NEW]
+│   │   ├── 📁 Properties/
+│   │   │   └── 📁 PublishProfiles/
+│   │   ├── 📁 Services/
+│   │   │   ├── 📄 AutoStartService.cs # 시작프로그램 자동 실행 등록/해제 관리 서비스
+│   │   │   ├── 📄 DatabaseService.cs # SQLite 연결 싱글톤 및 Bulk Save 트랜잭션 구문
+│   │   │   ├── 📄 ExcelService.cs # ExcelDataReader 기반 고속 파싱
+│   │   │   └── 📄 QueryTransformer.cs # 동의어 치환 및 Everything 공식 문법 최종 변환 서비스
+│   │   ├── 📁 ViewModels/
+│   │   │   ├── 📄 AliasManagerViewModel.cs # 매핑 데이터 CRUD 및 엑셀 파싱 조율
+│   │   │   ├── 📄 MainWindowViewModel.cs # 메인 레이아웃 및 윈도우 생성 이벤트 중계
+│   │   │   ├── 📄 SearchViewModel.cs # 실시간 검색 뷰모델 (필드, 기본 속성 및 UI 바인딩 래퍼) [PARTIAL]
+│   │   │   ├── 📄 SearchViewModel.Search.cs # 실시간 검색 실행 및 결과 정렬 로직 [PARTIAL]
+│   │   │   └── 📄 SearchViewModel.Settings.cs # 사용자 설정 저장/로드 및 드라이브 초기화 로직 [PARTIAL]
+│   │   ├── 📁 Views/
+│   │   │   ├── 📁 Components/
+│   │   │   ├── 📁 Modals/
+│   │   │   │   ├── 📄 AliasManagerWindow.xaml
+│   │   │   │   ├── 📄 AliasManagerWindow.xaml.cs
+│   │   │   │   ├── 📄 HelpWindow.xaml
+│   │   │   │   └── 📄 HelpWindow.xaml.cs
+│   │   │   ├── 📄 LeftSidebarView.xaml # 좌측 스마트 컨트롤 패널 (UniformGrid, WrapPanel)
+│   │   │   ├── 📄 LeftSidebarView.xaml.cs # 크기 필터 리셋 트리거
+│   │   │   ├── 📄 MainWindow.xaml # 메인 윈도우 UI (3:7 Grid Splitter)
+│   │   │   ├── 📄 MainWindow.xaml.cs # 모달 호출 및 엔진 미구동 감지 시 자동 시작 핸들러
+│   │   │   ├── 📄 ResultGridView.xaml # 우측 파일 데이터 가상화 리스트뷰
+│   │   │   └── 📄 ResultGridView.xaml.cs # Drag-out 마운트, 네이티브 ContextMenu 팝업, Ctrl+C/X 단축키 감지
+│   │   ├── 📄 App.xaml          # ModernWpfUI 테마 리소스 병합
+│   │   ├── 📄 App.xaml.cs
+│   │   ├── 📄 AssemblyInfo.cs
+│   │   └── 📄 EverythingFastAlias.csproj # NuGet 패키지 및 Native DLL 복사 빌드 규칙 지정
+│   ├── 📁 EverythingFastAlias.Tests/
+│   │   ├── 📄 EverythingFastAlias.Tests.csproj
+│   │   ├── 📄 MSTestSettings.cs
+│   │   └── 📄 QueryTransformerTest.cs
+│   ├── 📄 EverythingFastAlias.slnx
+│   └── 📄 test_transform.cs
+└── 📁 tests/
 
-```text
-D:\3_Code\3_Apps\43_Search-Edit\Everything검색기\src\EverythingFastAlias\
-├── App.xaml                   # ModernWpfUI 테마 리소스 병합
-├── App.xaml.cs
-├── EverythingFastAlias.csproj # NuGet 패키지 및 Native DLL 복사 빌드 규칙 지정
-├── Config/
-│   ├── AppConstants.cs        # IPC 및 시스템 제어용 상수
-│   └── UIConstants.cs         # UI 크기 및 기본 핫키 설정
-├── Models/
-│   ├── SearchResultItem.cs    # 검색 행 데이터 모델 ( display size 및 날짜 자동 가공 )
-│   ├── SearchOptions.cs       # 9가지 검색 조건 옵션 모델
-│   ├── AliasMapping.cs        # MVVM 바인딩용 매핑 정보 모델
-│   └── ViewMode.cs            # 보기 모드(자세히/섬네일S/M/L) 설정을 위한 열거형 [NEW]
-├── ViewModels/
-│   ├── MainWindowViewModel.cs # 메인 레이아웃 및 윈도우 생성 이벤트 중계
-│   ├── SearchViewModel.cs     # 실시간 검색 뷰모델 (필드, 기본 속성 및 UI 바인딩 래퍼) [PARTIAL]
-│   ├── SearchViewModel.Search.cs # 실시간 검색 실행 및 결과 정렬 로직 [PARTIAL]
-│   ├── SearchViewModel.Settings.cs # 사용자 설정 저장/로드 및 드라이브 초기화 로직 [PARTIAL]
-│   └── AliasManagerViewModel.cs # 매핑 데이터 CRUD 및 엑셀 파싱 조율
-├── Views/
-│   ├── MainWindow.xaml        # 메인 윈도우 UI (3:7 Grid Splitter)
-│   ├── MainWindow.xaml.cs     # 모달 호출 및 엔진 미구동 감지 시 자동 시작 핸들러
-│   ├── LeftSidebarView.xaml   # 좌측 스마트 컨트롤 패널 (UniformGrid, WrapPanel)
-│   ├── LeftSidebarView.xaml.cs # 크기 필터 리셋 트리거
-│   ├── ResultGridView.xaml    # 우측 파일 데이터 가상화 리스트뷰
-│   └── ResultGridView.xaml.cs # Drag-out 마운트, 네이티브 ContextMenu 팝업, Ctrl+C/X 단축키 감지
-├── Native/
-│   ├── EverythingSdk.cs       # kernel32.dll LoadLibrary 기반 FFI 및 P/Invoke
-│   ├── EverythingBridge.cs    # Everything 엔진 상태 점검 및 검색 질의 래핑
-│   ├── Win32ClipboardHelper.cs # 파일 클립보드 복사/잘라내기 네이티브 래퍼
-│   ├── Win32RecycleBinHelper.cs # SHFileOperation FFI 기반 휴지통 삭제 헬퍼 [NEW]
-│   ├── Win32FileOperationHelper.cs # SHFileOperation FFI 기반 복사/이동 헬퍼 [NEW]
-│   ├── ShellContextMenu.cs    # COM 인터페이스 마샬링 기반 윈도우 네이티브 우클릭 메뉴 팝업
-│   ├── ShellIconHelper.cs     # 시스템 기본 폴더/파일 아이콘 캐시 헬퍼 [NEW]
-│   ├── ShellThumbnailHelper.cs # IShellItemImageFactory FFI 기반 썸네일 고화질 추출기 [NEW]
-│   └── TrayIconHelper.cs      # System.Windows.Forms.NotifyIcon 기반 시스템 트레이 아이콘 전담
-└── Services/
-    ├── QueryTransformer.cs    # 동의어 치환 및 Everything 공식 문법 최종 변환 서비스
-    ├── ExcelService.cs        # ExcelDataReader 기반 고속 파싱
-    ├── DatabaseService.cs     # SQLite 연결 싱글톤 및 Bulk Save 트랜잭션 구문
-    └── AutoStartService.cs    # 시작프로그램 자동 실행 등록/해제 관리 서비스
-└── Converters/
-    └── BoolToVisibilityConverter.cs # Bool → Visibility 전역 변환 서비스
+
+# (Note) 에이전트의 토큰 절약을 위해 주요 폴더 구조와 memories 내 핵심 파일들만 선별하여 표시하고 있습니다.
+
 ```
+<!-- END_TREE -->
 
 ### 3.2. 폴더 및 파일 역할
 

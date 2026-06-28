@@ -60,7 +60,6 @@ namespace EverythingFastAlias.ViewModels
                 if (SetProperty(ref _excludedWords, value))
                 {
                     Options.ExcludedWords = value;
-                    SaveSettings(); // 옵션만 저장. 검색은 Enter 키에서만.
                 }
             }
         }
@@ -74,7 +73,6 @@ namespace EverythingFastAlias.ViewModels
                 if (SetProperty(ref _folderPaths, value))
                 {
                     Options.FolderPaths = value;
-                    SaveSettings();
                 }
             }
         }
@@ -88,7 +86,6 @@ namespace EverythingFastAlias.ViewModels
                 if (SetProperty(ref _customExtensions, value))
                 {
                     Options.CustomExtensions = value;
-                    SaveSettings();
                 }
             }
         }
@@ -102,7 +99,6 @@ namespace EverythingFastAlias.ViewModels
                 if (SetProperty(ref _minSize, value))
                 {
                     Options.MinSize = value;
-                    SaveSettings();
                     OnPropertyChanged(nameof(MinSizeText));
                 }
             }
@@ -117,7 +113,6 @@ namespace EverythingFastAlias.ViewModels
                 if (SetProperty(ref _maxSize, value))
                 {
                     Options.MaxSize = value;
-                    SaveSettings();
                     OnPropertyChanged(nameof(MaxSizeText));
                 }
             }
@@ -157,7 +152,6 @@ namespace EverythingFastAlias.ViewModels
                 if (value)
                 {
                     Options.Scope = SearchScope.All;
-                    SaveSettings();
                     NotifyScopeProperties();
                 }
             }
@@ -171,7 +165,6 @@ namespace EverythingFastAlias.ViewModels
                 if (value)
                 {
                     Options.Scope = SearchScope.File;
-                    SaveSettings();
                     NotifyScopeProperties();
                 }
             }
@@ -185,7 +178,6 @@ namespace EverythingFastAlias.ViewModels
                 if (value)
                 {
                     Options.Scope = SearchScope.Path;
-                    SaveSettings();
                     NotifyScopeProperties();
                 }
             }
@@ -233,7 +225,6 @@ namespace EverythingFastAlias.ViewModels
                 {
                     Options.MinSizeUnit = SizeUnit.KB;
                     Options.MaxSizeUnit = SizeUnit.KB;
-                    SaveSettings();
                     NotifySizeUnitProperties();
                 }
             }
@@ -248,7 +239,6 @@ namespace EverythingFastAlias.ViewModels
                 {
                     Options.MinSizeUnit = SizeUnit.MB;
                     Options.MaxSizeUnit = SizeUnit.MB;
-                    SaveSettings();
                     NotifySizeUnitProperties();
                 }
             }
@@ -263,7 +253,6 @@ namespace EverythingFastAlias.ViewModels
                 {
                     Options.MinSizeUnit = SizeUnit.GB;
                     Options.MaxSizeUnit = SizeUnit.GB;
-                    SaveSettings();
                     NotifySizeUnitProperties();
                 }
             }
@@ -288,7 +277,6 @@ namespace EverythingFastAlias.ViewModels
                     Options.MediaPresets.Clear();
                     Options.MediaPresets.Add("전체");
                     if (folderWasActive) Options.MediaPresets.Add("폴더");
-                    SaveSettings();
                     NotifyMediaProperties();
                 }
             }
@@ -311,7 +299,6 @@ namespace EverythingFastAlias.ViewModels
                 {
                     Options.MediaPresets.Remove("폴더");
                 }
-                SaveSettings();
                 NotifyMediaProperties();
             }
         }
@@ -370,7 +357,6 @@ namespace EverythingFastAlias.ViewModels
             {
                 Options.MediaPresets.Remove(preset);
             }
-            SaveSettings();
             NotifyMediaProperties();
         }
 
@@ -399,7 +385,6 @@ namespace EverythingFastAlias.ViewModels
                 if (SetProperty(ref _viewMode, value))
                 {
                     NotifyViewModeProperties();
-                    SaveSettings();
                 }
             }
         }

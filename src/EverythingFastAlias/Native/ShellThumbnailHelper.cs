@@ -51,10 +51,11 @@ namespace EverythingFastAlias.Native
         {
             if (string.IsNullOrWhiteSpace(filePath)) return null;
 
+            object? shellItem = null;
             try
             {
                 Guid iid = new Guid("bcc18b79-ba16-442f-80c4-8a59c30c463b");
-                SHCreateItemFromParsingName(filePath, IntPtr.Zero, iid, out object shellItem);
+                SHCreateItemFromParsingName(filePath, IntPtr.Zero, iid, out shellItem);
                 
                 if (shellItem is IShellItemImageFactory factory)
                 {
@@ -85,6 +86,13 @@ namespace EverythingFastAlias.Native
             catch
             {
                 // 디렉토리가 없거나, 썸네일 지원하지 않거나, 파일 접근이 불가능할 경우 등
+            }
+            finally
+            {
+                if (shellItem != null)
+                {
+                    Marshal.ReleaseComObject(shellItem);
+                }
             }
 
             return null;

@@ -1,4 +1,4 @@
-# Visual Studio / .NET Core / WPF Ignore Rules
+﻿# Visual Studio / .NET Core / WPF Ignore Rules
 ## Build outputs
 bin/
 obj/
@@ -63,3 +63,12 @@ fastalias.db
 fastalias.db-journal
 fastalias.db-wal
 fastalias.db-shm
+
+# Temp & Backup
+/.history/
+/temp/
+/docs/memories/backup/*
+!/docs/memories/backup/.gitkeep
+/docs/archives/*
+!/docs/archives/.gitkeep
+/zip-tree/

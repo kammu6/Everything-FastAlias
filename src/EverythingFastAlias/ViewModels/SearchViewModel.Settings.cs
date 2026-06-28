@@ -242,27 +242,31 @@ namespace EverythingFastAlias.ViewModels
             try
             {
                 var db = DatabaseService.Instance;
-
-                db.SaveSetting("UseFastAlias", Options.UseFastAlias ? "true" : "false");
-                db.SaveSetting("MatchCase", Options.MatchCase ? "true" : "false");
-                db.SaveSetting("MatchWholeWord", Options.MatchWholeWord ? "true" : "false");
-                db.SaveSetting("UseRegex", Options.UseRegex ? "true" : "false");
-                db.SaveSetting("IncludeRecycleBin", Options.IncludeRecycleBin ? "true" : "false");
-                db.SaveSetting("Scope", Options.Scope.ToString());
-                db.SaveSetting("MediaPresets", string.Join(",", Options.MediaPresets));
-                db.SaveSetting("CustomExtensions", Options.CustomExtensions);
-                db.SaveSetting("MinSize", Options.MinSize?.ToString() ?? "");
-                db.SaveSetting("MaxSize", Options.MaxSize?.ToString() ?? "");
-                db.SaveSetting("MinSizeUnit", Options.MinSizeUnit.ToString());
-                db.SaveSetting("MaxSizeUnit", Options.MaxSizeUnit.ToString());
-                db.SaveSetting("ExcludedWords", Options.ExcludedWords);
-                db.SaveSetting("FolderPaths", Options.FolderPaths);
-                db.SaveSetting("ViewMode", ViewMode.ToString());
-                db.SaveSetting("SortColumn", SortColumn);
-                db.SaveSetting("SortDirection", SortDirection.ToString());
-
                 var activeDrives = Drives.Where(d => d.IsChecked).Select(d => d.Name);
-                db.SaveSetting("TargetDrives", string.Join(",", activeDrives));
+
+                var settings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    { "UseFastAlias", Options.UseFastAlias ? "true" : "false" },
+                    { "MatchCase", Options.MatchCase ? "true" : "false" },
+                    { "MatchWholeWord", Options.MatchWholeWord ? "true" : "false" },
+                    { "UseRegex", Options.UseRegex ? "true" : "false" },
+                    { "IncludeRecycleBin", Options.IncludeRecycleBin ? "true" : "false" },
+                    { "Scope", Options.Scope.ToString() },
+                    { "MediaPresets", string.Join(",", Options.MediaPresets) },
+                    { "CustomExtensions", Options.CustomExtensions },
+                    { "MinSize", Options.MinSize?.ToString() ?? "" },
+                    { "MaxSize", Options.MaxSize?.ToString() ?? "" },
+                    { "MinSizeUnit", Options.MinSizeUnit.ToString() },
+                    { "MaxSizeUnit", Options.MaxSizeUnit.ToString() },
+                    { "ExcludedWords", Options.ExcludedWords },
+                    { "FolderPaths", Options.FolderPaths },
+                    { "ViewMode", ViewMode.ToString() },
+                    { "SortColumn", SortColumn },
+                    { "SortDirection", SortDirection.ToString() },
+                    { "TargetDrives", string.Join(",", activeDrives) }
+                };
+
+                db.SaveSettingsBulk(settings);
             }
             catch (Exception ex)
             {

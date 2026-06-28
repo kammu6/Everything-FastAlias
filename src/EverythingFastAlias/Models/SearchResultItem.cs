@@ -69,8 +69,12 @@ namespace EverythingFastAlias.Models
 
         // ── 썸네일 지연 로드 및 캐시 ──
         private static readonly SemaphoreSlim _thumbnailSemaphore = new SemaphoreSlim(4);
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, WeakReference<ImageSource>> _globalThumbnailCache = 
+            new(StringComparer.OrdinalIgnoreCase);
+
         private ImageSource? _thumbnail;
         private bool _thumbnailLoadingStarted;
+        private CancellationTokenSource? _thumbnailCts;
 
         public ImageSource? Thumbnail
         {
@@ -92,6 +96,10 @@ namespace EverythingFastAlias.Models
 
         public void ResetThumbnail()
         {
+            _thumbnailCts?.Cancel();
+            _thumbnailCts?.Dispose();
+            _thumbnailCts = null;
+
             _thumbnail = null;
             _thumbnailLoadingStarted = false;
             Notify(nameof(Thumbnail));
@@ -102,40 +110,77 @@ namespace EverythingFastAlias.Models
             string path = FullPath;
             bool isFolder = IsFolder;
 
+            // 1. 글로벌 캐시(WeakReference)에서 조회하여 즉시 반환
+            if (_globalThumbnailCache.TryGetValue(path, out var weakRef) && weakRef.TryGetTarget(out var cachedImg))
+            {
+                _thumbnail = cachedImg;
+                return;
+            }
+
+            // 2. 기존 실행 중인 비동기 Task 취소 및 신규 Cts 발행
+            _thumbnailCts?.Cancel();
+            _thumbnailCts?.Dispose();
+            _thumbnailCts = new CancellationTokenSource();
+            var token = _thumbnailCts.Token;
+
             Task.Run(async () =>
             {
-                await _thumbnailSemaphore.WaitAsync();
                 try
                 {
-                    ImageSource? img = null;
-                    if (File.Exists(path) || Directory.Exists(path))
-                    {
-                        // 썸네일은 최대 256 크기로 균일하게 긁어옵니다. (디스크 I/O 최적화 및 고화질 보장)
-                        img = ShellThumbnailHelper.GetThumbnail(path, 256);
-                    }
+                    token.ThrowIfCancellationRequested();
 
-                    if (img == null)
+                    await _thumbnailSemaphore.WaitAsync(token);
+                    try
                     {
-                        img = isFolder ? ShellIconHelper.FolderIcon : ShellIconHelper.FileIcon;
-                    }
+                        token.ThrowIfCancellationRequested();
 
-                    Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
+                        ImageSource? img = null;
+                        if (File.Exists(path) || Directory.Exists(path))
+                        {
+                            // 썸네일은 최대 256 크기로 균일하게 긁어옵니다. (디스크 I/O 최적화 및 고화질 보장)
+                            img = ShellThumbnailHelper.GetThumbnail(path, 256);
+                        }
+
+                        token.ThrowIfCancellationRequested();
+
+                        if (img == null)
+                        {
+                            img = isFolder ? ShellIconHelper.FolderIcon : ShellIconHelper.FileIcon;
+                        }
+                        else
+                        {
+                            // 캐시에 등록 (약한 참조)
+                            _globalThumbnailCache[path] = new WeakReference<ImageSource>(img);
+                        }
+
+                        Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
+                        {
+                            if (!token.IsCancellationRequested)
+                            {
+                                Thumbnail = img;
+                            }
+                        }));
+                    }
+                    finally
                     {
-                        Thumbnail = img;
-                    }));
+                        _thumbnailSemaphore.Release();
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    // 작업 취소됨. 조용히 리턴
                 }
                 catch
                 {
                     Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
                     {
-                        Thumbnail = isFolder ? ShellIconHelper.FolderIcon : ShellIconHelper.FileIcon;
+                        if (!token.IsCancellationRequested)
+                        {
+                            Thumbnail = isFolder ? ShellIconHelper.FolderIcon : ShellIconHelper.FileIcon;
+                        }
                     }));
                 }
-                finally
-                {
-                    _thumbnailSemaphore.Release();
-                }
-            });
+            }, token);
         }
     }
 }
