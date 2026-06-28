@@ -33,7 +33,7 @@ namespace EverythingFastAlias.Tests
 
             // 1. 단일 단어 치환
             var result = QueryTransformer.Transform("사과", options, _testMappings);
-            Assert.AreEqual("<사과|apple|🍎>", result);
+            Assert.AreEqual("<사과 | apple | 🍎>", result);
 
             // 2. 미등록 단어 유지
             var result2 = QueryTransformer.Transform("오렌지", options, _testMappings);
@@ -41,7 +41,7 @@ namespace EverythingFastAlias.Tests
 
             // 3. 복합 검색식 치환 (OR 및 공백)
             var result3 = QueryTransformer.Transform("사과 | 바나나", options, _testMappings);
-            Assert.AreEqual("<사과|apple|🍎> | <바나나|banana|🍌>", result3);
+            Assert.AreEqual("<사과 | apple | 🍎> | <바나나 | banana | 🍌>", result3);
         }
 
         [TestMethod]
@@ -139,11 +139,11 @@ namespace EverythingFastAlias.Tests
 
             // 1. 역방향 치환 (동의어 값인 'apple'로 검색 시)
             var result1 = QueryTransformer.Transform("apple", options, _testMappings);
-            Assert.AreEqual("<apple|사과|🍎>", result1);
+            Assert.AreEqual("<apple | 사과 | 🍎>", result1);
 
             // 2. 다른 동의어인 '🍎'로 검색 시
             var result2 = QueryTransformer.Transform("🍎", options, _testMappings);
-            Assert.AreEqual("<🍎|사과|apple>", result2);
+            Assert.AreEqual("<🍎 | 사과 | apple>", result2);
 
             // 3. 공백 포함 원본 키워드로 검색 시 양방향 치환 검증
             var result3 = QueryTransformer.Transform("Akari Asagiri", options, _testMappings);
@@ -156,6 +156,80 @@ namespace EverythingFastAlias.Tests
             Assert.IsTrue(result4.Contains("\"Akari Asayiri\"") || result4.Contains("Akari Asayiri"));
             StringAssert.Contains(result4, "\"Akari Asagiri\"");
             StringAssert.Contains(result4, "朝桐光");
+        }
+
+        [TestMethod]
+        public void Test_FolderPreset_Ignores_FileSizeFilter()
+        {
+            var options = new SearchOptions
+            {
+                UseFastAlias = false,
+                IncludeRecycleBin = true,
+                MediaPresets = new HashSet<string> { "폴더" },
+                MinSize = 10,
+                MinSizeUnit = SizeUnit.MB,
+                MaxSize = 100,
+                MaxSizeUnit = SizeUnit.GB
+            };
+
+            var result = QueryTransformer.Transform("BEST", options, _testMappings);
+            
+            // folder가 활성화되어 있으면 size 조건은 생략되어야 함
+            StringAssert.Contains(result, "folder:BEST");
+            Assert.IsFalse(result.Contains("size:"), "Size filter should be bypassed when Folder media preset is active.");
+        }
+
+        [TestMethod]
+        public void Test_UserSpecified_PathConstraint_NotWrappedByFolder()
+        {
+            var options = new SearchOptions
+            {
+                UseFastAlias = false,
+                IncludeRecycleBin = true,
+                MediaPresets = new HashSet<string> { "폴더" },
+                Scope = SearchScope.All
+            };
+
+            var result = QueryTransformer.Transform(@"BEST path:P:\1_이미지\$eropuru\", options, _testMappings);
+
+            // path:P:\... 는 그대로 보존되고 folder:가 씌워지지 않아야 함
+            StringAssert.Contains(result, @"path:P:\1_이미지\$eropuru\");
+            Assert.IsFalse(result.Contains(@"folder:path:P:\1_이미지\$eropuru\"));
+            
+            // 일반 단어 BEST는 올바르게 folder로 매핑되어야 함
+            StringAssert.Contains(result, "<folder:BEST | folder:path:BEST>");
+        }
+
+        [TestMethod]
+        public void Test_GeneralSearchWord_ScopeAndFolderWrapped()
+        {
+            var options = new SearchOptions
+            {
+                UseFastAlias = false,
+                IncludeRecycleBin = true,
+                MediaPresets = new HashSet<string> { "폴더" },
+                Scope = SearchScope.All
+            };
+
+            var result = QueryTransformer.Transform("BEST", options, _testMappings);
+            Assert.AreEqual("<folder:BEST | folder:path:BEST>", result);
+        }
+
+        [TestMethod]
+        public void Test_RegexOption_Applies_RegexModifier_To_GeneralWords()
+        {
+            var options = new SearchOptions
+            {
+                UseFastAlias = false,
+                IncludeRecycleBin = true,
+                UseRegex = true,
+                Scope = SearchScope.All,
+                MediaPresets = new HashSet<string> { "폴더" }
+            };
+
+            var result = QueryTransformer.Transform("1[2-9]分", options, _testMappings);
+            // regex 옵션이 켜져 있으면 일반 단어 토큰 앞에 regex: 가 자동으로 결합되어야 함
+            Assert.AreEqual("<folder:regex:1[2-9]分 | folder:path:regex:1[2-9]分>", result);
         }
 
     }

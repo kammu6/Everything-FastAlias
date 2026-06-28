@@ -116,7 +116,7 @@ namespace EverythingFastAlias.Native
                 // 2. 검색 옵션 주입
                 EverythingSdk.Everything_SetMatchCase(options.MatchCase);
                 EverythingSdk.Everything_SetMatchWholeWord(options.MatchWholeWord);
-                EverythingSdk.Everything_SetRegex(options.UseRegex);
+                EverythingSdk.Everything_SetRegex(false); // 정규식 스위치를 API에 직접 세팅하면 쿼리 텍스트 전체가 깨지므로 항상 false로 세팅
                 
                 // 3. 최대 조회 개수 설정
                 EverythingSdk.Everything_SetMax(EverythingFastAlias.Config.AppConstants.DllConfig.DefaultMaxResults);

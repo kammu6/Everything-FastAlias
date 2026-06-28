@@ -120,7 +120,7 @@ D:\3_Code\3_Apps\43_Search-Edit\Everything검색기\src\EverythingFastAlias\
 - **`Win32FileOperationHelper.cs`**: `SHFileOperation` API를 활용하여 외부 드롭 시 윈도우 표준 진행창을 노출하며 파일 복사/이동을 수행하는 전담 헬퍼. [NEW]
 - **`ShellIconHelper.cs`**: 시스템 기본 파일 및 폴더 아이콘 추출 및 Freeze 메모리 캐시 전담.
 - **`ShellThumbnailHelper.cs`**: `IShellItemImageFactory` 기반의 파일 썸네일 비동기 디스크 추출 및 GDI 메모리 환수 전담.
-- **`QueryTransformer.cs`**: 입력어 분석 후 중괄호가 아닌 부등호 `< >`와 OR 연산자(`|`)를 기반으로 동의어들을 가공하여 Everything 공식 문법 최종 변환 서비스.
+- **`QueryTransformer.cs`**: 입력어 분석 후 중괄호가 아닌 부등호 `< >`와 OR 연산자(`|`)를 기반으로 동의어들을 가공하고, 사용자가 입력한 고유 제약조건/드라이브를 보존하며, 정규식 옵션 시 개별 토큰에 regex: 수식어를 즉시 래핑하여 문법 충돌 없이 Everything 공식 문법으로 최종 변환하는 서비스.
 
 #### 📂 기술 도메인별 세부 지식 자산 링크 (Knowledge Bases)
 

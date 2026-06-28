@@ -14,6 +14,22 @@ namespace EverythingFastAlias.Services
             TimeSpan.FromMilliseconds(150)
         );
 
+        private static readonly HashSet<string> EverythingKeywords = new(StringComparer.OrdinalIgnoreCase)
+        {
+            // 변경자 (Modifiers)
+            "path", "parent", "folder", "file", "regex", "ascii", "noascii", 
+            "case", "nocase", "diacritics", "nodiacritics", "wfn", "nowfn", 
+            "wholefilename", "nowholefilename", "wholeword", "nowholeword", 
+            "wildcards", "nowildcards", "ww", "noww", "utf8",
+            // 함수 (Functions)
+            "ext", "size", "datemodified", "dm", "datecreated", "dc", "dateaccessed", 
+            "da", "daterun", "dr", "attrib", "attributes", "empty", "dupe", 
+            "child", "childcount", "childfilecount", "childfoldercount", "infolder", 
+            "parents", "len", "startwith", "endwith", "album", "artist", "comment", 
+            "genre", "title", "track", "type", "content", "ansicontent", "utf8content", 
+            "utf16content", "utf16becontent"
+        };
+
         public static string Transform(string rawQuery, SearchOptions options, Dictionary<string, List<string>> mappings)
         {
             // 1. FastAlias 동의어 치환 처리
@@ -33,6 +49,15 @@ namespace EverythingFastAlias.Services
 
             if (!string.IsNullOrEmpty(processedQuery))
             {
+                bool isFolderPreset = options.MediaPresets != null && options.MediaPresets.Contains("폴더");
+                string modifier = isFolderPreset ? "folder:" : "";
+                string regPrefix = options.UseRegex ? "regex:" : "";
+
+                string BuildTerm(string word, string mod, string rgp, string pathPrefix = "")
+                {
+                    return $"{mod}{pathPrefix}{rgp}{word}";
+                }
+
                 var matches = TokenRegex.Matches(processedQuery);
                 var queryParts = new List<string>();
 
@@ -59,20 +84,20 @@ namespace EverythingFastAlias.Services
                                 {
                                     if (options.Scope == SearchScope.Path)
                                     {
-                                        processedWords.Add($@"path:{w}");
+                                        processedWords.Add(BuildTerm(w, modifier, regPrefix, "path:"));
                                     }
                                     else if (options.Scope == SearchScope.All)
                                     {
-                                        processedWords.Add(w);
-                                        processedWords.Add($@"path:{w}");
+                                        processedWords.Add(BuildTerm(w, modifier, regPrefix));
+                                        processedWords.Add(BuildTerm(w, modifier, regPrefix, "path:"));
                                     }
                                     else
                                     {
-                                        processedWords.Add(w);
+                                        processedWords.Add(BuildTerm(w, modifier, regPrefix));
                                     }
                                 }
                             }
-                            string separator = (options.Scope == SearchScope.Path || options.Scope == SearchScope.All) ? " | " : "|";
+                            string separator = " | ";
                             queryParts.Add($"<{string.Join(separator, processedWords)}>");
                         }
                         else
@@ -85,15 +110,17 @@ namespace EverythingFastAlias.Services
                             {
                                 if (options.Scope == SearchScope.Path)
                                 {
-                                    queryParts.Add($@"path:{token}");
+                                    queryParts.Add(BuildTerm(token, modifier, regPrefix, "path:"));
                                 }
                                 else if (options.Scope == SearchScope.All)
                                 {
-                                    queryParts.Add($@"<{token} | path:{token}>");
+                                    string term1 = BuildTerm(token, modifier, regPrefix);
+                                    string term2 = BuildTerm(token, modifier, regPrefix, "path:");
+                                    queryParts.Add($"<{term1} | {term2}>");
                                 }
                                 else
                                 {
-                                    queryParts.Add(token);
+                                    queryParts.Add(BuildTerm(token, modifier, regPrefix));
                                 }
                             }
                         }
@@ -116,24 +143,16 @@ namespace EverythingFastAlias.Services
 
         private static string BuildOptionConstraints(string baseQuery, SearchOptions options)
         {
+            bool isFolderPreset = options.MediaPresets != null && options.MediaPresets.Contains("폴더");
+
             bool hasConstraints = !string.IsNullOrWhiteSpace(options.FolderPaths) ||
                                   !string.IsNullOrWhiteSpace(options.ExcludedWords) ||
                                   (options.MediaPresets != null && options.MediaPresets.Count > 0 && !options.MediaPresets.Contains("전체")) ||
                                   !string.IsNullOrWhiteSpace(options.CustomExtensions) ||
-                                  options.MinSize.HasValue ||
-                                  options.MaxSize.HasValue ||
+                                  (options.MinSize.HasValue && !isFolderPreset) ||
+                                  (options.MaxSize.HasValue && !isFolderPreset) ||
                                   !options.IncludeRecycleBin ||
                                   (options.TargetDrives != null && options.TargetDrives.Count > 0);
-
-            // folder: 수식어는 | (OR) 연산자를 만나면 스코프가 끊어진다.
-            // 따라서 folder: 프리셋이 활성화된 경우, 각 OR 항목에 개별적으로 folder: 를 부착해야 한다.
-            // 예: <folder:"마키 호조" | folder:"Maki Hojo" | folder:path:"마키 호조" | ...>
-            bool isFolderPreset = options.MediaPresets != null && options.MediaPresets.Contains("폴더");
-
-            if (isFolderPreset && !string.IsNullOrEmpty(baseQuery))
-            {
-                baseQuery = ApplyModifierToEachTerm(baseQuery, "folder:");
-            }
 
             var sb = new StringBuilder();
             if (!string.IsNullOrEmpty(baseQuery))
@@ -195,8 +214,6 @@ namespace EverythingFastAlias.Services
             }
 
             // 5. 미디어 프리셋 필터 적용 (다중 선택 가능)
-            // 주의: folder: 프리셋은 이미 위에서 baseQuery의 각 OR 항에 개별 부착 완료.
-            //       여기서는 ext: 기반 파일 타입 필터만 처리한다.
             var mediaQueries = new List<string>();
 
             if (options.MediaPresets != null && options.MediaPresets.Count > 0 && !options.MediaPresets.Contains("전체"))
@@ -256,13 +273,13 @@ namespace EverythingFastAlias.Services
                 sb.Append($"ext:{exts}");
             }
 
-            // 7. 파일 크기 필터 적용
-            if (options.MinSize.HasValue)
+            // 7. 파일 크기 필터 적용 (폴더 프리셋인 경우 무시)
+            if (options.MinSize.HasValue && !isFolderPreset)
             {
                 AppendSeparator(sb);
                 sb.Append($"size:>={options.MinSize.Value}{options.MinSizeUnit.ToString().ToLower()}");
             }
-            if (options.MaxSize.HasValue)
+            if (options.MaxSize.HasValue && !isFolderPreset)
             {
                 AppendSeparator(sb);
                 sb.Append($"size:<={options.MaxSize.Value}{options.MaxSizeUnit.ToString().ToLower()}");
@@ -408,135 +425,6 @@ namespace EverythingFastAlias.Services
             return true;
         }
 
-        /// <summary>
-        /// Everything의 수식어(folder:, file: 등)를 < > 그룹 내의 각 OR 항목에 개별 적용한다.
-        /// Everything 엔진에서 수식어 스코프는 | (OR) 연산자에서 끊어지므로,
-        /// 올바른 형태: <folder:A | folder:B>   (각 항목에 개별 적용)
-        /// 잘못된 형태: <folder:A | B>           (folder:가 A에만 적용됨)
-        /// </summary>
-        private static string ApplyModifierToEachTerm(string query, string modifier)
-        {
-            if (string.IsNullOrEmpty(query)) return query;
-
-            var matches = TokenRegex.Matches(query);
-            var resultParts = new List<string>();
-
-            foreach (Match match in matches)
-            {
-                string token = match.Value;
-                if (IsWordToken(token))
-                {
-                    bool isGroup = token.StartsWith("<") && token.EndsWith(">");
-                    if (isGroup)
-                    {
-                        string innerContent = token.Substring(1, token.Length - 2);
-                        var words = SplitGroupWords(innerContent);
-                        var modifiedWords = new List<string>();
-                        foreach (var w in words)
-                        {
-                            var trimmed = w.Trim();
-                            if (!string.IsNullOrEmpty(trimmed))
-                            {
-                                if (IsConstraintOrDrive(trimmed))
-                                {
-                                    // path:로 시작하지만 드라이브가 아닌 일반 검색어 경로인 경우 (예: path:"마키 호조")
-                                    // -> folder:path:"마키 호조" 와 같이 modifier가 결합되도록 허용
-                                    if (trimmed.StartsWith("path:", StringComparison.OrdinalIgnoreCase))
-                                    {
-                                        string pathVal = trimmed.Substring(5).Trim().Trim('"');
-                                        if (IsDriveLetter(pathVal))
-                                        {
-                                            modifiedWords.Add(trimmed); // 드라이브 제한이면 그냥 유지
-                                        }
-                                        else
-                                        {
-                                            if (!trimmed.StartsWith(modifier, StringComparison.OrdinalIgnoreCase))
-                                            {
-                                                modifiedWords.Add($"{modifier}{trimmed}");
-                                            }
-                                            else
-                                            {
-                                                modifiedWords.Add(trimmed);
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        // 그 외의 수식어(folder:, file:, ext: 등)나 드라이브 문자는 그대로 유지
-                                        modifiedWords.Add(trimmed);
-                                    }
-                                }
-                                else
-                                {
-                                    if (!trimmed.StartsWith(modifier, StringComparison.OrdinalIgnoreCase))
-                                    {
-                                        modifiedWords.Add($"{modifier}{trimmed}");
-                                    }
-                                    else
-                                    {
-                                        modifiedWords.Add(trimmed);
-                                    }
-                                }
-                            }
-                        }
-                        resultParts.Add($"<{string.Join(" | ", modifiedWords)}>");
-                    }
-                    else
-                    {
-                        if (IsConstraintOrDrive(token))
-                        {
-                            if (token.StartsWith("path:", StringComparison.OrdinalIgnoreCase))
-                            {
-                                string pathVal = token.Substring(5).Trim().Trim('"');
-                                if (!IsDriveLetter(pathVal))
-                                {
-                                    if (!token.StartsWith(modifier, StringComparison.OrdinalIgnoreCase))
-                                    {
-                                        resultParts.Add($"{modifier}{token}");
-                                    }
-                                    else
-                                    {
-                                        resultParts.Add(token);
-                                    }
-                                }
-                                else
-                                {
-                                    resultParts.Add(token);
-                                }
-                            }
-                            else
-                            {
-                                resultParts.Add(token);
-                            }
-                        }
-                        else
-                        {
-                            if (!token.StartsWith(modifier, StringComparison.OrdinalIgnoreCase))
-                            {
-                                resultParts.Add($"{modifier}{token}");
-                            }
-                            else
-                            {
-                                resultParts.Add(token);
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    resultParts.Add(token);
-                }
-            }
-
-            var sb = new StringBuilder();
-            for (int i = 0; i < resultParts.Count; i++)
-            {
-                AppendSeparator(sb);
-                sb.Append(resultParts[i]);
-            }
-            return sb.ToString().Trim();
-        }
-
         private static void AppendSeparator(StringBuilder sb)
         {
             if (sb.Length > 0 && sb[^1] != ' ')
@@ -562,58 +450,24 @@ namespace EverythingFastAlias.Services
             return result;
         }
 
-        private static bool IsSingleGroup(string query)
-        {
-            if (string.IsNullOrEmpty(query) || query.Length < 2) return false;
-            if (query[0] != '<' || query[query.Length - 1] != '>') return false;
-
-            int balance = 0;
-            for (int i = 0; i < query.Length - 1; i++)
-            {
-                if (query[i] == '<') balance++;
-                else if (query[i] == '>') balance--;
-
-                if (balance <= 0) return false;
-            }
-            return balance == 1;
-        }
-
-        private static bool IsSingleParenthesisGroup(string query)
-        {
-            if (string.IsNullOrEmpty(query) || query.Length < 2) return false;
-            if (query[0] != '(' || query[query.Length - 1] != ')') return false;
-
-            int balance = 0;
-            for (int i = 0; i < query.Length - 1; i++)
-            {
-                if (query[i] == '(') balance++;
-                else if (query[i] == ')') balance--;
-
-                if (balance <= 0) return false;
-            }
-            return balance == 1;
-        }
-
         private static bool IsConstraintOrDrive(string term)
         {
             if (string.IsNullOrEmpty(term)) return false;
 
             var trimmed = term.Trim().Trim('"');
 
-            // 1. 드라이브 문자 확인 (예: C:, D:, C:\, D:\)
-            if (trimmed.Length >= 2 && trimmed[1] == ':')
+            // 1. 드라이브 문자 및 네트워크 공유 경로 감지 (예: C:, D:\, \\server\share)
+            if (trimmed.StartsWith(@"\\") || (trimmed.Length >= 2 && trimmed[1] == ':'))
             {
-                if (trimmed.Length == 2 || (trimmed.Length == 3 && (trimmed[2] == '\\' || trimmed[2] == '/')))
-                {
-                    return true;
-                }
+                return true;
             }
 
-            // 2. Everything 수식어/함수 접두사 확인 (예: path:, parent:, folder:, file:, ext:, size:, attrib:)
-            string[] modifiers = { "path:", "parent:", "folder:", "file:", "ext:", "size:", "attrib:" };
-            foreach (var mod in modifiers)
+            // 2. Everything 수식어 및 함수 접두사 감지 (예: path:..., regex:...)
+            int colonIndex = trimmed.IndexOf(':');
+            if (colonIndex > 0)
             {
-                if (trimmed.StartsWith(mod, StringComparison.OrdinalIgnoreCase))
+                string prefix = trimmed.Substring(0, colonIndex);
+                if (EverythingKeywords.Contains(prefix))
                 {
                     return true;
                 }
