@@ -65,7 +65,31 @@ namespace EverythingFastAlias.Views
             {
                 if (sender is ListViewItem item && item.DataContext is SearchResultItem searchItem)
                 {
-                    OpenFile(searchItem.FullPath);
+                    // Details 뷰 모드에서 '경로' 컬럼 영역을 더블클릭한 경우 해당 폴더를 탐색기로 열기
+                    if (DataContext is SearchViewModel searchVm && searchVm.ViewMode == ViewMode.Details)
+                    {
+                        var clickPos = e.GetPosition(item);
+                        double nameColWidth = 250;
+                        double pathColWidth = 350;
+                        if (ResultsListView.View is GridView gv && gv.Columns.Count > 1)
+                        {
+                            nameColWidth = gv.Columns[0].ActualWidth;
+                            pathColWidth = gv.Columns[1].ActualWidth;
+                        }
+
+                        if (clickPos.X > nameColWidth && clickPos.X <= (nameColWidth + pathColWidth))
+                        {
+                            OpenFile(searchItem.Path);
+                        }
+                        else
+                        {
+                            OpenFile(searchItem.FullPath);
+                        }
+                    }
+                    else
+                    {
+                        OpenFile(searchItem.FullPath);
+                    }
                 }
                 e.Handled = true;
                 return;
@@ -697,6 +721,9 @@ namespace EverythingFastAlias.Views
         {
             // [Guard] 편집 모드 중에는 작동 불가
             if (_viewState == ViewState.Editing) return;
+
+            // 더블클릭인 경우 드래그 선택을 무시하고 ListViewItem의 PreviewMouseLeftButtonDown으로 이벤트가 전송되도록 리턴
+            if (e.ClickCount == 2) return;
 
             var dep = (DependencyObject)e.OriginalSource;
 

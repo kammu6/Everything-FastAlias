@@ -29,4 +29,6 @@
 - **2026-07-17 (크기 필터 및 자동 검색 버그 수정)**: 
   1. 조건 초기화(`ExecuteReset`) 시 백킹 필드만 초기화되고 `Options.MinSize` 및 `MaxSize`가 `null`로 할당되지 않아 쿼리에 필터가 잔존하던 버그 수정.
   2. "크기 초기화" 버튼 클릭 시 다른 옵션을 지정하기도 전에 자동으로 검색이 즉각 구동되던 `vm.ExecuteSearch()` 종속성을 `LeftSidebarView.xaml.cs`에서 제거하여 사용자 편의성 증대.
-
+- **2026-07-17 (경로 열 더블 클릭 시 폴더 열기 기능 추가)**: 
+  - [ResultGridView.xaml.cs](file:///d:/3_Code/3_Apps/43_Search-Edit/Everything검색기/src/EverythingFastAlias/Views/ResultGridView.xaml.cs)의 `ListViewItem_PreviewMouseLeftButtonDown` 더블 클릭 이벤트 분기 로직 고도화.
+  - `ViewMode.Details` 상태에서 마우스로 더블 클릭된 X 좌표가 '경로' 컬럼 영역(이름 너비 초과, 이름+경로 너비 이하)에 위치하면, 파일 대신 해당 파일의 상위 폴더 경로(`searchItem.Path`)를 윈도우 탐색기(`Process.Start`)로 열어주도록 구현 완료.
