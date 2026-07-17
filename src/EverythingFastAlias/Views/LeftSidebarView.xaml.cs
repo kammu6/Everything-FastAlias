@@ -20,7 +20,7 @@ namespace EverythingFastAlias.Views
                 vm.MaxSize = null;
                 vm.MinSizeText = string.Empty;
                 vm.MaxSizeText = string.Empty;
-                vm.ExecuteSearch();
+                // 크기 리셋 후 즉시 검색 방지
             }
         }
     }

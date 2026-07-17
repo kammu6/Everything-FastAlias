@@ -19,6 +19,8 @@ namespace EverythingFastAlias.ViewModels
             _customExtensions = string.Empty;
             _minSize = null;
             _maxSize = null;
+            Options.MinSize = null;
+            Options.MaxSize = null;
             _selectedCount = 0;
             _sortColumn = string.Empty;
             _sortDirection = System.ComponentModel.ListSortDirection.Ascending;
