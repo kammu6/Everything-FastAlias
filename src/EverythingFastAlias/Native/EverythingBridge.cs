@@ -103,6 +103,7 @@ namespace EverythingFastAlias.Native
                 return results;
             }
 
+
             lock (_engineLock)
             {
                 // 1. 요청 플래그 주입 (이름, 경로, 크기, 수정한 날짜)

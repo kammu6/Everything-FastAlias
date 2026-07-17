@@ -30,7 +30,7 @@ namespace EverythingFastAlias.Services
             "utf16content", "utf16becontent"
         };
 
-        public static string Transform(string rawQuery, SearchOptions options, Dictionary<string, List<string>> mappings)
+        public static string Transform(string rawQuery, SearchOptions options, Dictionary<string, HashSet<string>> mappings)
         {
             // 1단계: 검색어 및 별칭(Alias) 결합 (우선순위 1)
             string firstStageQuery = BuildFirstStageQuery(rawQuery, options, mappings);
@@ -280,7 +280,7 @@ namespace EverythingFastAlias.Services
             return result;
         }
 
-        private static string BuildFirstStageQuery(string rawQuery, SearchOptions options, Dictionary<string, List<string>> mappings)
+        private static string BuildFirstStageQuery(string rawQuery, SearchOptions options, Dictionary<string, HashSet<string>> mappings)
         {
             if (string.IsNullOrWhiteSpace(rawQuery)) return "";
 
@@ -317,41 +317,34 @@ namespace EverythingFastAlias.Services
                     continue;
                 }
 
-                // Alias 검출
+                // Alias 검출: Dictionary TryGetValue O(1) 직접 조회 (foreach O(n) 순회 제거)
                 string aliasKey = term;
                 bool isAlias = false;
-                List<string>? synonyms = null;
+                HashSet<string>? synonyms = null;
 
                 if (options.UseFastAlias && mappings != null)
                 {
-                    foreach (var kvp in mappings)
+                    if (mappings.TryGetValue(aliasKey, out var found))
                     {
-                        if (string.Equals(kvp.Key.Trim(), aliasKey, StringComparison.OrdinalIgnoreCase))
-                        {
-                            isAlias = true;
-                            synonyms = kvp.Value;
-                            break;
-                        }
+                        isAlias = true;
+                        synonyms = found;
                     }
                 }
 
                 if (isAlias)
                 {
                     var aliasParts = new List<string>();
-                    string origQuoted = term.StartsWith("\"") && term.EndsWith("\"") ? term : $"\"{term}\"";
-                    string origBody = origQuoted.Trim('"');
-
-                    string firstPart = BuildTermWithScope(origBody, modifier, regPrefix, scopePrefix, scopeSuffix, true);
-                    aliasParts.Add(firstPart);
-
                     if (synonyms != null)
                     {
                         foreach (var syn in synonyms)
                         {
-                            var trimmedSyn = syn.Trim().TrimEnd(';');
+                            var trimmedSyn = syn.Trim();
                             if (string.IsNullOrEmpty(trimmedSyn)) continue;
-                            
-                            string synPart = BuildTermWithScope(trimmedSyn, modifier, regPrefix, scopePrefix, scopeSuffix, true);
+
+                            bool isQuoted = trimmedSyn.StartsWith("\"") && trimmedSyn.EndsWith("\"");
+                            string body = isQuoted ? trimmedSyn.Substring(1, trimmedSyn.Length - 2) : trimmedSyn;
+
+                            string synPart = BuildTermWithScope(body, modifier, regPrefix, scopePrefix, scopeSuffix, isQuoted);
                             aliasParts.Add(synPart);
                         }
                     }

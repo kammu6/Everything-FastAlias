@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using EverythingFastAlias.Models;
 using EverythingFastAlias.Native;
@@ -171,15 +174,36 @@ namespace EverythingFastAlias.ViewModels
                 optionsCopy.MediaPresets.UnionWith(Options.MediaPresets);
                 optionsCopy.TargetDrives.UnionWith(Options.TargetDrives);
 
-                var mappings = DatabaseService.Instance.GetCacheSnapshot();
+                // ─── [PERF] 단계별 시간 측정 ────────────────────────────────
+                var perfLog = new StringBuilder();
+                var totalSw = Stopwatch.StartNew();
+
+                // Stage 0: alias cache snapshot 취득
+                var sw0 = Stopwatch.StartNew();
+                var mappings = DatabaseService.Instance.GetAliasGroupsCache().Groups;
+                sw0.Stop();
+                perfLog.AppendLine($"[PERF] Stage 0 - GetAliasGroupsCache: {sw0.ElapsedMilliseconds} ms  (규칙 수: {mappings.Count})");
 
                 string transformedQuery = string.Empty;
+                List<SearchResultItem> searchItems;
+
                 // FFI 통신 및 동의어 치환 가공은 백그라운드 스레드에서 전담하여 UI 스레드 블로킹 제거
-                var searchItems = await Task.Run(() =>
+                (transformedQuery, searchItems) = await Task.Run(() =>
                 {
+                    // Stage 1: QueryTransformer
+                    var sw1 = Stopwatch.StartNew();
                     string transformed = QueryTransformer.Transform(query, optionsCopy, mappings);
-                    transformedQuery = transformed;
-                    return EverythingBridge.Search(transformed, optionsCopy);
+                    sw1.Stop();
+                    perfLog.AppendLine($"[PERF] Stage 1 - QueryTransformer.Transform: {sw1.ElapsedMilliseconds} ms");
+                    perfLog.AppendLine($"[PERF]           transformed query: {transformed}");
+
+                    // Stage 2: Everything FFI (SetSearch + QueryW)
+                    var sw2 = Stopwatch.StartNew();
+                    var items = EverythingBridge.Search(transformed, optionsCopy);
+                    sw2.Stop();
+                    perfLog.AppendLine($"[PERF] Stage 2 - EverythingBridge.Search (FFI+마샬링): {sw2.ElapsedMilliseconds} ms  (결과 수: {items.Count})");
+
+                    return (transformed, items);
                 });
 
                 // 방어 코드 추가: 비동기 처리 도중 검색어가 변경되었거나 삭제된 경우 결과 폐기
@@ -188,10 +212,31 @@ namespace EverythingFastAlias.ViewModels
                     return;
                 }
 
-                // RangeObservableCollection의 ReplaceRange를 사용하여 단 한 번의 UI 갱신으로 대량 바인딩
+                // Stage 3: UI 바인딩 (ReplaceRange)
+                var sw3 = Stopwatch.StartNew();
                 Results.ReplaceRange(searchItems);
+                sw3.Stop();
+                perfLog.AppendLine($"[PERF] Stage 3 - Results.ReplaceRange (UI bind): {sw3.ElapsedMilliseconds} ms");
 
+                // Stage 4: 정렬
+                var sw4 = Stopwatch.StartNew();
                 ApplySorting();
+                sw4.Stop();
+                perfLog.AppendLine($"[PERF] Stage 4 - ApplySorting: {sw4.ElapsedMilliseconds} ms");
+
+                totalSw.Stop();
+                perfLog.AppendLine($"[PERF] ─── Total elapsed: {totalSw.ElapsedMilliseconds} ms ─────────────────────");
+
+                // 로그를 %APPDATA%\EverythingFastAlias\perf.log 에 누적 저장
+                try
+                {
+                    var logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "EverythingFastAlias");
+                    Directory.CreateDirectory(logDir);
+                    var logPath = Path.Combine(logDir, "perf.log");
+                    File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] query=\"{query}\"\n{perfLog}\n");
+                }
+                catch { /* 로그 실패 시 무시 */ }
+                // ──────────────────────────────────────────────────────────────
 
                 var ruleCount = mappings.Count;
                 StatusMessage = $"[Everything 쿼리]: {transformedQuery} | 매핑 규칙: {ruleCount}개";

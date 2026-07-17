@@ -104,12 +104,21 @@ namespace EverythingFastAlias.Services
                     tempCache = new Dictionary<string, List<string>>(_cache, StringComparer.OrdinalIgnoreCase);
                 }
 
+                // 1. 원본 키워드 블랙리스트 구성
+                var originalKeywords = new HashSet<string>(tempCache.Keys, StringComparer.OrdinalIgnoreCase);
+
+                // 2. 고유 단어별 소속 로우(Words 리스트) 매핑용 인덱스 준비
+                var wordToWordsLists = new Dictionary<string, List<List<string>>>(StringComparer.OrdinalIgnoreCase);
+
                 foreach (var kvp in tempCache)
                 {
                     var keyword = kvp.Key.Trim();
                     if (string.IsNullOrEmpty(keyword)) continue;
 
+                    // 로우 전체 멤버 수집 (Keyword + Words)
                     var rowElements = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { keyword };
+                    var wordsList = new List<string>();
+
                     if (kvp.Value != null)
                     {
                         foreach (var syn in kvp.Value)
@@ -118,22 +127,50 @@ namespace EverythingFastAlias.Services
                             if (!string.IsNullOrEmpty(trimmedSyn))
                             {
                                 rowElements.Add(trimmedSyn);
+                                wordsList.Add(trimmedSyn);
                             }
                         }
                     }
 
+                    // 모든 멤버에 대해 이 로우의 Words(동의어 풀) 목록을 등록
                     foreach (var member in rowElements)
                     {
-                        if (!newGroups.TryGetValue(member, out var existingGroup))
+                        if (!wordToWordsLists.TryGetValue(member, out var lists))
                         {
-                            existingGroup = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                            newGroups[member] = existingGroup;
+                            lists = new List<List<string>>();
+                            wordToWordsLists[member] = lists;
                         }
+                        lists.Add(wordsList);
+                    }
+                }
 
-                        foreach (var m in rowElements)
+                // 3. 단어별 최종 동적 합집합 계산 및 캐싱
+                foreach (var kvp in wordToWordsLists)
+                {
+                    var word = kvp.Key;
+                    var lists = kvp.Value;
+
+                    var unionSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var list in lists)
+                    {
+                        foreach (var w in list)
                         {
-                            existingGroup.Add(m);
+                            unionSet.Add(w);
                         }
+                    }
+
+                    // 원본 키워드(A, B 등)는 치환 목록에서 원천 배제 (Option B 핵심)
+                    unionSet.RemoveWhere(w => originalKeywords.Contains(w));
+
+                    // 입력 단어 자체가 일반 동의어라면 자기 자신은 치환 결과에 보존
+                    if (!originalKeywords.Contains(word))
+                    {
+                        unionSet.Add(word);
+                    }
+
+                    if (unionSet.Count > 0)
+                    {
+                        newGroups[word] = unionSet;
                     }
                 }
 
