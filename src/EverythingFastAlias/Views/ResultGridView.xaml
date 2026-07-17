@@ -94,6 +94,7 @@
         <!-- Virtualizing ListView -->
         <ListView x:Name="ResultsListView" 
                   ItemsSource="{Binding Results}"
+                  Padding="0,0,0,12"
                   VirtualizingPanel.IsVirtualizing="True"
                   VirtualizingPanel.VirtualizationMode="Recycling"
                   VirtualizingPanel.ScrollUnit="Pixel"

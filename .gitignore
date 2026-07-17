@@ -72,3 +72,4 @@ fastalias.db-shm
 /docs/archives/*
 !/docs/archives/.gitkeep
 /zip-tree/
+/tests/

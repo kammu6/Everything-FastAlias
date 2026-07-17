@@ -159,6 +159,7 @@ namespace EverythingFastAlias.ViewModels
                     IncludeRecycleBin = Options.IncludeRecycleBin,
                     Scope = Options.Scope,
                     FolderPaths = Options.FolderPaths,
+                    ExcludedPaths = Options.ExcludedPaths,
                     ExcludedWords = Options.ExcludedWords,
                     CustomExtensions = Options.CustomExtensions,
                     MinSize = Options.MinSize,

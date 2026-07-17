@@ -32,161 +32,35 @@ namespace EverythingFastAlias.Services
 
         public static string Transform(string rawQuery, SearchOptions options, Dictionary<string, List<string>> mappings)
         {
-            // 1. FastAlias 동의어 치환 처리
-            string processedQuery;
-            if (options.UseFastAlias && !string.IsNullOrWhiteSpace(rawQuery))
-            {
-                processedQuery = ReplaceAliases(rawQuery, mappings);
-            }
-            else
-            {
-                processedQuery = rawQuery ?? "";
-            }
-
-            processedQuery = processedQuery.Trim();
+            // 1단계: 검색어 및 별칭(Alias) 결합 (우선순위 1)
+            string firstStageQuery = BuildFirstStageQuery(rawQuery, options, mappings);
 
             var sb = new StringBuilder();
-
-            if (!string.IsNullOrEmpty(processedQuery))
+            if (!string.IsNullOrEmpty(firstStageQuery))
             {
-                bool isFolderPreset = options.MediaPresets != null && options.MediaPresets.Contains("폴더");
-                string modifier = isFolderPreset ? "folder:" : "";
-                string regPrefix = options.UseRegex ? "regex:" : "";
-
-                string BuildTerm(string word, string mod, string rgp, string pathPrefix = "")
-                {
-                    return $"{mod}{pathPrefix}{rgp}{word}";
-                }
-
-                var matches = TokenRegex.Matches(processedQuery);
-                var queryParts = new List<string>();
-
-                foreach (Match match in matches)
-                {
-                    string token = match.Value;
-                    if (IsWordToken(token))
-                    {
-                        bool isGroup = token.StartsWith("<") && token.EndsWith(">");
-
-                        if (isGroup)
-                        {
-                            string innerContent = token.Substring(1, token.Length - 2);
-                            var words = SplitGroupWords(innerContent);
-                            var processedWords = new List<string>();
-
-                            foreach (var w in words)
-                            {
-                                if (IsConstraintOrDrive(w))
-                                {
-                                    processedWords.Add(w);
-                                }
-                                else
-                                {
-                                    if (options.Scope == SearchScope.Path)
-                                    {
-                                        processedWords.Add(BuildTerm(w, modifier, regPrefix, "path:"));
-                                    }
-                                    else if (options.Scope == SearchScope.All)
-                                    {
-                                        processedWords.Add(BuildTerm(w, modifier, regPrefix));
-                                        processedWords.Add(BuildTerm(w, modifier, regPrefix, "path:"));
-                                    }
-                                    else
-                                    {
-                                        processedWords.Add(BuildTerm(w, modifier, regPrefix));
-                                    }
-                                }
-                            }
-                            string separator = " | ";
-                            queryParts.Add($"<{string.Join(separator, processedWords)}>");
-                        }
-                        else
-                        {
-                            if (IsConstraintOrDrive(token))
-                            {
-                                queryParts.Add(token);
-                            }
-                            else
-                            {
-                                if (options.Scope == SearchScope.Path)
-                                {
-                                    queryParts.Add(BuildTerm(token, modifier, regPrefix, "path:"));
-                                }
-                                else if (options.Scope == SearchScope.All)
-                                {
-                                    string term1 = BuildTerm(token, modifier, regPrefix);
-                                    string term2 = BuildTerm(token, modifier, regPrefix, "path:");
-                                    queryParts.Add($"<{term1} | {term2}>");
-                                }
-                                else
-                                {
-                                    queryParts.Add(BuildTerm(token, modifier, regPrefix));
-                                }
-                            }
-                        }
-                    }
-                    else
-                    {
-                        queryParts.Add(token);
-                    }
-                }
-
-                for (int i = 0; i < queryParts.Count; i++)
-                {
-                    AppendSeparator(sb);
-                    sb.Append(queryParts[i]);
-                }
+                sb.Append(firstStageQuery);
             }
 
-            return BuildOptionConstraints(sb.ToString().Trim(), options);
-        }
-
-        private static string BuildOptionConstraints(string baseQuery, SearchOptions options)
-        {
+            // 2단계: 지정경로(FolderPaths) 및 제외경로(ExcludedPaths) 추가 (공간적 제한/차단)
             bool isFolderPreset = options.MediaPresets != null && options.MediaPresets.Contains("폴더");
 
-            bool hasConstraints = !string.IsNullOrWhiteSpace(options.FolderPaths) ||
-                                  !string.IsNullOrWhiteSpace(options.ExcludedWords) ||
-                                  (options.MediaPresets != null && options.MediaPresets.Count > 0 && !options.MediaPresets.Contains("전체")) ||
-                                  !string.IsNullOrWhiteSpace(options.CustomExtensions) ||
-                                  (options.MinSize.HasValue && !isFolderPreset) ||
-                                  (options.MaxSize.HasValue && !isFolderPreset) ||
-                                  !options.IncludeRecycleBin ||
-                                  (options.TargetDrives != null && options.TargetDrives.Count > 0);
-
-            var sb = new StringBuilder();
-            if (!string.IsNullOrEmpty(baseQuery))
-            {
-                sb.Append(baseQuery);
-            }
-
-            // 3. 폴더 제약 조건 및 재귀 탐색 제어
+            // 지정경로 (FolderPaths)
             if (!string.IsNullOrWhiteSpace(options.FolderPaths))
             {
-                AppendSeparator(sb);
-                
-                var paths = options.FolderPaths.Split(new[] { ';', '|' }, StringSplitOptions.RemoveEmptyEntries);
+                var paths = options.FolderPaths.Split(new[] { ',', ';', '|' }, StringSplitOptions.RemoveEmptyEntries);
                 var pathQueries = new List<string>();
-
                 foreach (var path in paths)
                 {
                     var trimmedPath = path.Trim().Trim('"');
                     if (string.IsNullOrEmpty(trimmedPath)) continue;
 
-                    if (options.RecursiveSearch)
-                    {
-                        // 재귀 탐색 ON: path:"경로"
-                        pathQueries.Add($@"path:""{trimmedPath}""");
-                    }
-                    else
-                    {
-                        // 직계 하위만 탐색 OFF: parent:"경로"
-                        pathQueries.Add($@"parent:""{trimmedPath}""");
-                    }
+                    string folderConstraint = options.RecursiveSearch ? $"<path:<{trimmedPath}>>" : $"<parent:<{trimmedPath}>>";
+                    pathQueries.Add(folderConstraint);
                 }
 
                 if (pathQueries.Count > 0)
                 {
+                    AppendSeparator(sb);
                     if (pathQueries.Count == 1)
                     {
                         sb.Append(pathQueries[0]);
@@ -198,101 +72,63 @@ namespace EverythingFastAlias.Services
                 }
             }
 
-            // 4. 단어 제외 조건 적용
+            // 제외경로 (ExcludedPaths)
+            if (!string.IsNullOrWhiteSpace(options.ExcludedPaths))
+            {
+                var paths = options.ExcludedPaths.Split(new[] { ',', ';', '|' }, StringSplitOptions.RemoveEmptyEntries);
+                var pathQueries = new List<string>();
+                foreach (var path in paths)
+                {
+                    var trimmedPath = path.Trim().Trim('"');
+                    if (string.IsNullOrEmpty(trimmedPath)) continue;
+
+                    string folderConstraint = options.RecursiveSearch ? $"<path:!<{trimmedPath}>>" : $"<parent:!<{trimmedPath}>>";
+                    pathQueries.Add(folderConstraint);
+                }
+
+                if (pathQueries.Count > 0)
+                {
+                    AppendSeparator(sb);
+                    if (pathQueries.Count == 1)
+                    {
+                        sb.Append(pathQueries[0]);
+                    }
+                    else
+                    {
+                        sb.Append($"<{string.Join(" | ", pathQueries)}>");
+                    }
+                }
+            }
+
+            // 3단계: 제외단어(ExcludedWords) 추가 (최종 정제 1)
             if (!string.IsNullOrWhiteSpace(options.ExcludedWords))
             {
-                var excluded = options.ExcludedWords.Split(new[] { ',', ';', ' ', '|' }, StringSplitOptions.RemoveEmptyEntries);
+                var excluded = options.ExcludedWords.Split(new[] { ',', ';', '|' }, StringSplitOptions.RemoveEmptyEntries);
+                var excludedQueries = new List<string>();
                 foreach (var word in excluded)
                 {
                     var trimmed = word.Trim();
                     if (!string.IsNullOrEmpty(trimmed))
                     {
-                        AppendSeparator(sb);
-                        sb.Append($"!\"{trimmed}\"");
+                        excludedQueries.Add($"!<{trimmed}>");
                     }
                 }
-            }
 
-            // 5. 미디어 프리셋 필터 적용 (다중 선택 가능)
-            var mediaQueries = new List<string>();
-
-            if (options.MediaPresets != null && options.MediaPresets.Count > 0 && !options.MediaPresets.Contains("전체"))
-            {
-                foreach (var preset in options.MediaPresets)
+                if (excludedQueries.Count > 0)
                 {
-                    switch (preset)
+                    AppendSeparator(sb);
+                    if (excludedQueries.Count == 1)
                     {
-                        case "영상":
-                            mediaQueries.Add("ext:mp4;mkv;avi;wmv;flv;mov;webm;m3u8;ts");
-                            break;
-                        case "음악":
-                            mediaQueries.Add("ext:mp3;wav;flac;ogg;wma;m4a;aac");
-                            break;
-                        case "사진":
-                            mediaQueries.Add("ext:jpg;jpeg;jfif;png;gif;bmp;webp;tiff;psd;ai;svg");
-                            break;
-                        case "문서":
-                            mediaQueries.Add("ext:pdf;txt;hwp;hwpx;doc;docx;xls;xlsx;ppt;pptx;rtf");
-                            break;
-                        case "실행":
-                            mediaQueries.Add("ext:exe;bat;cmd;msi;lnk;scr;sh;pyw");
-                            break;
-                        case "압축":
-                            mediaQueries.Add("ext:zip;7z;rar;tar;gz;bz2;iso;alz;egg");
-                            break;
-                        case "코드":
-                            mediaQueries.Add("ext:ts;tsx;js;jsx;json;java;py;pyw;cpp;c;h;cs;html;css;go;rs;sh;md;yml;yaml");
-                            break;
+                        sb.Append(excludedQueries[0]);
+                    }
+                    else
+                    {
+                        sb.Append($"<{string.Join(" | ", excludedQueries)}>");
                     }
                 }
             }
 
-            if (mediaQueries.Count > 0)
-            {
-                AppendSeparator(sb);
-                if (!isFolderPreset)
-                {
-                    sb.Append("file: ");
-                }
-                
-                if (mediaQueries.Count == 1)
-                {
-                    sb.Append(mediaQueries[0]);
-                }
-                else
-                {
-                    sb.Append($"<{string.Join(" | ", mediaQueries)}>");
-                }
-            }
-
-            // 6. 커스텀 확장자 필터 적용
-            if (!string.IsNullOrWhiteSpace(options.CustomExtensions))
-            {
-                AppendSeparator(sb);
-                var exts = Regex.Replace(options.CustomExtensions, @"\s*[,;]\s*", ";").Trim(';');
-                sb.Append($"ext:{exts}");
-            }
-
-            // 7. 파일 크기 필터 적용 (폴더 프리셋인 경우 무시)
-            if (options.MinSize.HasValue && !isFolderPreset)
-            {
-                AppendSeparator(sb);
-                sb.Append($"size:>={options.MinSize.Value}{options.MinSizeUnit.ToString().ToLower()}");
-            }
-            if (options.MaxSize.HasValue && !isFolderPreset)
-            {
-                AppendSeparator(sb);
-                sb.Append($"size:<={options.MaxSize.Value}{options.MaxSizeUnit.ToString().ToLower()}");
-            }
-
-            // 8. 휴지통(Recycle Bin) 포함 제어
-            if (!options.IncludeRecycleBin)
-            {
-                AppendSeparator(sb);
-                sb.Append("!$Recycle.Bin");
-            }
-
-            // 9. 검색 대상 로컬 드라이브 필터 적용
+            // 4단계: 타겟 드라이브 필터 추가 (공간적 제한 2)
             if (options.TargetDrives != null && options.TargetDrives.Count > 0)
             {
                 var driveQueries = new List<string>();
@@ -308,111 +144,279 @@ namespace EverythingFastAlias.Services
                 }
             }
 
+            // 5단계: 미디어 및 파일 크기 필터 결합 (물리적 필터링)
+            var filterParts = new List<string>();
+
+            // 미디어 프리셋 필터
+            if (options.MediaPresets != null && options.MediaPresets.Count > 0 && !options.MediaPresets.Contains("전체"))
+            {
+                foreach (var preset in options.MediaPresets)
+                {
+                    string? extPattern = null;
+                    switch (preset)
+                    {
+                        case "영상":
+                            extPattern = "mp4;mkv;avi;wmv;flv;mov;webm;m3u8;ts";
+                            break;
+                        case "음악":
+                            extPattern = "mp3;wav;flac;ogg;wma;m4a;aac";
+                            break;
+                        case "사진":
+                            extPattern = "jpg;jpeg;jfif;png;gif;bmp;webp;tiff;psd;ai;svg";
+                            break;
+                        case "문서":
+                            extPattern = "pdf;txt;hwp;hwpx;doc;docx;xls;xlsx;ppt;pptx;rtf";
+                            break;
+                        case "실행":
+                            extPattern = "exe;bat;cmd;msi;lnk;scr;sh;pyw";
+                            break;
+                        case "압축":
+                            extPattern = "zip;7z;rar;tar;gz;bz2;iso;alz;egg";
+                            break;
+                        case "코드":
+                            extPattern = "ts;tsx;js;jsx;json;java;py;pyw;cpp;c;h;cs;html;css;go;rs;sh;md;yml;yaml";
+                            break;
+                    }
+
+                    if (extPattern != null)
+                    {
+                        if (!isFolderPreset)
+                        {
+                            filterParts.Add($"<file:<ext:{extPattern}>>");
+                        }
+                        else
+                        {
+                            filterParts.Add($"<ext:{extPattern}>");
+                        }
+                    }
+                }
+            }
+
+            // 커스텀 확장자 필터
+            if (!string.IsNullOrWhiteSpace(options.CustomExtensions))
+            {
+                var exts = Regex.Replace(options.CustomExtensions, @"\s*[,;]\s*", ";").Trim(';');
+                if (!string.IsNullOrEmpty(exts))
+                {
+                    if (!isFolderPreset)
+                    {
+                        filterParts.Add($"<file:<ext:{exts}>>");
+                    }
+                    else
+                    {
+                        filterParts.Add($"<ext:{exts}>");
+                    }
+                }
+            }
+
+            // 확장자 필터 결합
+            if (filterParts.Count > 0)
+            {
+                AppendSeparator(sb);
+                if (filterParts.Count == 1)
+                {
+                    sb.Append(filterParts[0]);
+                }
+                else
+                {
+                    sb.Append($"<{string.Join(" | ", filterParts)}>");
+                }
+            }
+
+            // 파일 크기 필터 적용 (폴더 프리셋인 경우 무시)
+            if (!isFolderPreset)
+            {
+                if (options.MinSize.HasValue)
+                {
+                    AppendSeparator(sb);
+                    sb.Append($"<size:>={options.MinSize.Value}{options.MinSizeUnit.ToString().ToLower()}>");
+                }
+                if (options.MaxSize.HasValue)
+                {
+                    AppendSeparator(sb);
+                    sb.Append($"<size:<={options.MaxSize.Value}{options.MaxSizeUnit.ToString().ToLower()}>");
+                }
+            }
+
+            // 6단계: 휴지통 및 시스템 폴더 제외 (최종 정제 2)
+            if (!options.IncludeRecycleBin)
+            {
+                AppendSeparator(sb);
+                sb.Append("<!$Recycle.Bin>");
+            }
+
             return sb.ToString().Trim();
         }
 
-        private static string ReplaceAliases(string query, Dictionary<string, List<string>> mappings)
+        private static List<string> SplitByTopLevelPipe(string query)
         {
-            if (string.IsNullOrWhiteSpace(query)) return query;
+            var result = new List<string>();
+            if (string.IsNullOrEmpty(query)) return result;
 
-            Dictionary<string, HashSet<string>> aliasGroups;
-            List<string> sortedKeys;
-
-            var globalCache = DatabaseService.Instance.GetAliasGroupsCache();
-            var dbCacheSnapshot = DatabaseService.Instance.GetCacheSnapshot();
-
-            if (mappings != null && mappings.Count > 0 && mappings.Count != dbCacheSnapshot.Count)
+            var sb = new StringBuilder();
+            bool inQuotes = false;
+            for (int i = 0; i < query.Length; i++)
             {
-                var localGroups = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
-                foreach (var kvp in mappings)
+                char c = query[i];
+                if (c == '"')
                 {
-                    var keyword = kvp.Key.Trim();
-                    if (string.IsNullOrEmpty(keyword)) continue;
+                    inQuotes = !inQuotes;
+                    sb.Append(c);
+                }
+                else if (c == '|' && !inQuotes)
+                {
+                    result.Add(sb.ToString().Trim());
+                    sb.Clear();
+                }
+                else
+                {
+                    sb.Append(c);
+                }
+            }
+            if (sb.Length > 0)
+            {
+                result.Add(sb.ToString().Trim());
+            }
+            return result;
+        }
 
-                    var rowElements = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { keyword };
-                    if (kvp.Value != null)
-                    {
-                        foreach (var syn in kvp.Value)
-                        {
-                            var trimmedSyn = syn.Trim().TrimEnd(';');
-                            if (!string.IsNullOrEmpty(trimmedSyn))
-                            {
-                                rowElements.Add(trimmedSyn);
-                            }
-                        }
-                    }
+        private static string BuildFirstStageQuery(string rawQuery, SearchOptions options, Dictionary<string, List<string>> mappings)
+        {
+            if (string.IsNullOrWhiteSpace(rawQuery)) return "";
 
-                    foreach (var member in rowElements)
+            bool isFolderPreset = options.MediaPresets != null && options.MediaPresets.Contains("폴더");
+            string modifier = isFolderPreset ? "folder:" : "";
+            string regPrefix = options.UseRegex ? "regex:" : "";
+
+            string scopePrefix = "";
+            string scopeSuffix = "";
+            if (options.Scope == SearchScope.Path)
+            {
+                scopePrefix = "path:";
+                scopeSuffix = "\\";
+            }
+            else if (options.Scope == SearchScope.File) // nopath
+            {
+                scopePrefix = "";
+            }
+            else // SearchScope.All
+            {
+                scopePrefix = "path:";
+            }
+
+            var terms = SplitByTopLevelPipe(rawQuery);
+            var processedTerms = new List<string>();
+
+            foreach (var term in terms)
+            {
+                if (string.IsNullOrWhiteSpace(term)) continue;
+
+                if (IsConstraintOrDrive(term))
+                {
+                    processedTerms.Add(term);
+                    continue;
+                }
+
+                // Alias 검출
+                string aliasKey = term;
+                bool isAlias = false;
+                List<string>? synonyms = null;
+
+                if (options.UseFastAlias && mappings != null)
+                {
+                    foreach (var kvp in mappings)
                     {
-                        if (!localGroups.TryGetValue(member, out var existingGroup))
+                        if (string.Equals(kvp.Key.Trim(), aliasKey, StringComparison.OrdinalIgnoreCase))
                         {
-                            existingGroup = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                            localGroups[member] = existingGroup;
-                        }
-                        foreach (var m in rowElements)
-                        {
-                            existingGroup.Add(m);
+                            isAlias = true;
+                            synonyms = kvp.Value;
+                            break;
                         }
                     }
                 }
-                aliasGroups = localGroups;
-                sortedKeys = new List<string>(aliasGroups.Keys);
-                sortedKeys.Sort((a, b) => b.Length.CompareTo(a.Length));
+
+                if (isAlias)
+                {
+                    var aliasParts = new List<string>();
+                    string origQuoted = term.StartsWith("\"") && term.EndsWith("\"") ? term : $"\"{term}\"";
+                    string origBody = origQuoted.Trim('"');
+
+                    string firstPart = BuildTermWithScope(origBody, modifier, regPrefix, scopePrefix, scopeSuffix, true);
+                    aliasParts.Add(firstPart);
+
+                    if (synonyms != null)
+                    {
+                        foreach (var syn in synonyms)
+                        {
+                            var trimmedSyn = syn.Trim().TrimEnd(';');
+                            if (string.IsNullOrEmpty(trimmedSyn)) continue;
+                            
+                            string synPart = BuildTermWithScope(trimmedSyn, modifier, regPrefix, scopePrefix, scopeSuffix, true);
+                            aliasParts.Add(synPart);
+                        }
+                    }
+
+                    processedTerms.Add($"<{string.Join(" | ", aliasParts)}>");
+                }
+                else if (term.StartsWith("!"))
+                {
+                    string negContent = term.Substring(1).Trim();
+                    
+                    if (negContent.StartsWith("\"") && negContent.EndsWith("\""))
+                    {
+                        string result = $"<{modifier}{scopePrefix}!<{negContent}>>";
+                        processedTerms.Add(result);
+                    }
+                    else if (negContent.Contains(" "))
+                    {
+                        int spaceIndex = negContent.IndexOf(' ');
+                        string firstWord = negContent.Substring(0, spaceIndex);
+                        string remaining = negContent.Substring(spaceIndex + 1).Trim();
+
+                        string part1 = $"{modifier}{scopePrefix}!<{firstWord}>";
+                        string part2 = $"{modifier}{scopePrefix} <{remaining}>";
+
+                        processedTerms.Add($"<{part1} | {part2}>");
+                    }
+                    else
+                    {
+                        processedTerms.Add($"<{modifier}{scopePrefix}!<{negContent}>>");
+                    }
+                }
+                else
+                {
+                    bool isQuoted = term.StartsWith("\"") && term.EndsWith("\"");
+                    string termBody = isQuoted ? term.Substring(1, term.Length - 2) : term;
+
+                    if (options.Scope == SearchScope.All)
+                    {
+                        string processedTerm = BuildTermWithScope(termBody, modifier, regPrefix, "path:", scopeSuffix, isQuoted);
+                        processedTerms.Add(processedTerm);
+                    }
+                    else
+                    {
+                        string processedTerm = BuildTermWithScope(termBody, modifier, regPrefix, scopePrefix, scopeSuffix, isQuoted);
+                        processedTerms.Add(processedTerm);
+                    }
+                }
+            }
+
+            if (processedTerms.Count == 0) return "";
+            if (processedTerms.Count == 1) return processedTerms[0];
+
+            return $"<{string.Join(" | ", processedTerms)}>";
+        }
+
+        private static string BuildTermWithScope(string word, string modifier, string regPrefix, string scopePrefix, string scopeSuffix, bool isQuoted)
+        {
+            if (isQuoted)
+            {
+                return $"<{modifier}{scopePrefix}{regPrefix}\"{word}{scopeSuffix}\">";
             }
             else
             {
-                aliasGroups = globalCache.Groups;
-                sortedKeys = globalCache.SortedKeys;
+                return $"<{modifier}{scopePrefix}{regPrefix}<{word}{scopeSuffix}>>";
             }
-
-            if (aliasGroups == null || sortedKeys == null || sortedKeys.Count == 0)
-            {
-                return query;
-            }
-
-            string processed = query;
-            var tempReplacements = new List<string>();
-            string placeholderKey = Guid.NewGuid().ToString("N");
-
-            foreach (var key in sortedKeys)
-            {
-                if (processed.IndexOf(key, StringComparison.OrdinalIgnoreCase) < 0)
-                    continue;
-
-                if (!aliasGroups.TryGetValue(key, out var synonyms) || synonyms == null || synonyms.Count <= 1)
-                    continue;
-
-                string escapedKey = Regex.Escape(key);
-                string pattern = $@"(?<=^|[\s|&()!<>])" + escapedKey + @"(?=$|[\s|&()!<>])";
-
-                var list = new List<string>(synonyms);
-                list.Remove(key);
-                list.Insert(0, key);
-
-                for (int i = 0; i < list.Count; i++)
-                {
-                    if (list[i].Contains(" ") && !list[i].StartsWith("\""))
-                    {
-                        list[i] = $"\"{list[i]}\"";
-                    }
-                }
-
-                string replacementValue = $"<{string.Join("|", list)}>";
-
-                processed = Regex.Replace(processed, pattern, m =>
-                {
-                    string placeholder = $"__ALIAS_{placeholderKey}_{tempReplacements.Count}__";
-                    tempReplacements.Add(replacementValue);
-                    return placeholder;
-                }, RegexOptions.IgnoreCase);
-            }
-
-            for (int i = 0; i < tempReplacements.Count; i++)
-            {
-                processed = processed.Replace($"__ALIAS_{placeholderKey}_{i}__", tempReplacements[i]);
-            }
-
-            return processed;
         }
 
         private static bool IsWordToken(string token)

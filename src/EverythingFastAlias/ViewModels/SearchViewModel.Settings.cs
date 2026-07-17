@@ -15,6 +15,7 @@ namespace EverythingFastAlias.ViewModels
             _searchQuery = string.Empty;
             _excludedWords = string.Empty;
             _folderPaths = string.Empty;
+            _excludedPaths = string.Empty;
             _customExtensions = string.Empty;
             _minSize = null;
             _maxSize = null;
@@ -30,6 +31,7 @@ namespace EverythingFastAlias.ViewModels
             Options.Scope = SearchScope.File;
             Options.MediaPresets.Clear();
             Options.RecursiveSearch = true;
+            Options.ExcludedPaths = string.Empty;
 
             // 드라이브 선택 리셋 (기본 전체 활성화)
             _isUpdatingDrives = true;
@@ -44,6 +46,7 @@ namespace EverythingFastAlias.ViewModels
             OnPropertyChanged(nameof(SearchQuery));
             OnPropertyChanged(nameof(ExcludedWords));
             OnPropertyChanged(nameof(FolderPaths));
+            OnPropertyChanged(nameof(ExcludedPaths));
             OnPropertyChanged(nameof(CustomExtensions));
             OnPropertyChanged(nameof(MinSizeText));
             OnPropertyChanged(nameof(MaxSizeText));
@@ -204,9 +207,13 @@ namespace EverythingFastAlias.ViewModels
                 _folderPaths = db.GetSetting("FolderPaths", "");
                 Options.FolderPaths = _folderPaths;
 
+                _excludedPaths = db.GetSetting("ExcludedPaths", "");
+                Options.ExcludedPaths = _excludedPaths;
+
                 OnPropertyChanged(nameof(SearchQuery));
                 OnPropertyChanged(nameof(ExcludedWords));
                 OnPropertyChanged(nameof(FolderPaths));
+                OnPropertyChanged(nameof(ExcludedPaths));
                 OnPropertyChanged(nameof(CustomExtensions));
                 OnPropertyChanged(nameof(MinSizeText));
                 OnPropertyChanged(nameof(MaxSizeText));
@@ -260,6 +267,7 @@ namespace EverythingFastAlias.ViewModels
                     { "MaxSizeUnit", Options.MaxSizeUnit.ToString() },
                     { "ExcludedWords", Options.ExcludedWords },
                     { "FolderPaths", Options.FolderPaths },
+                    { "ExcludedPaths", Options.ExcludedPaths },
                     { "ViewMode", ViewMode.ToString() },
                     { "SortColumn", SortColumn },
                     { "SortDirection", SortDirection.ToString() },

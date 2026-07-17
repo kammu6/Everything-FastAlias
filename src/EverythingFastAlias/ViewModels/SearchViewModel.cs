@@ -77,6 +77,19 @@ namespace EverythingFastAlias.ViewModels
             }
         }
 
+        private string _excludedPaths = string.Empty;
+        public string ExcludedPaths
+        {
+            get => _excludedPaths;
+            set
+            {
+                if (SetProperty(ref _excludedPaths, value))
+                {
+                    Options.ExcludedPaths = value;
+                }
+            }
+        }
+
         private string _customExtensions = string.Empty;
         public string CustomExtensions
         {

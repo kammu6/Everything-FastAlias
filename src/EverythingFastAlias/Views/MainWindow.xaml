@@ -147,6 +147,8 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="6"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="6"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="56"/> <!-- 라벨 고정 폭 -->
@@ -202,6 +204,14 @@
                     <TextBox Grid.Row="4" Grid.Column="1" FontSize="12" Padding="8,5,8,5"
                              modern:ControlHelper.PlaceholderText="검색 경로 지정 (예: C:\Folder1;D:\Folder2)"
                              Text="{Binding SearchVM.FolderPaths, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <!-- Row 6: 제외경로 -->
+                    <TextBlock Grid.Row="6" Grid.Column="0"
+                               Text="제외경로" FontWeight="SemiBold" FontSize="11"
+                               VerticalAlignment="Center" Foreground="DimGray" Margin="0,0,6,0"/>
+                    <TextBox Grid.Row="6" Grid.Column="1" FontSize="12" Padding="8,5,8,5"
+                             modern:ControlHelper.PlaceholderText="제외할 경로 (예: C:\Folder1;D:\Folder2)"
+                             Text="{Binding SearchVM.ExcludedPaths, UpdateSourceTrigger=PropertyChanged}"/>
                 </Grid>
             </Grid>
         </Border>

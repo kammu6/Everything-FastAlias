@@ -48,6 +48,9 @@ namespace EverythingFastAlias.Models
         // 폴더 경로 입력창 (특정 경로 내 탐색)
         public string FolderPaths { get; set; } = string.Empty;
 
+        // 폴더 경로 제외 필드 (최종 쿼리에서 !path:"경로" 자동 제외)
+        public string ExcludedPaths { get; set; } = string.Empty;
+
         // 하위 폴더 재귀 포함 여부
         public bool RecursiveSearch { get; set; } = true;
 
