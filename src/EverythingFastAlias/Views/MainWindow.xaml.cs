@@ -11,7 +11,6 @@ namespace EverythingFastAlias.Views
     public partial class MainWindow : Window
     {
         private MainWindowViewModel? VM => DataContext as MainWindowViewModel;
-        private TrayIconHelper? _trayIcon;
         private bool _isClosingForReal = false;
 
         public MainWindow()
@@ -34,7 +33,53 @@ namespace EverythingFastAlias.Views
                 // 3. 옵션패널 표시 여부 복원
                 var showSidebar = EverythingFastAlias.Services.DatabaseService.Instance.GetSetting("ShowOptionPanel", "true") == "true";
                 SidebarToggleSwitch.IsOn = showSidebar;
+
+                // 4. 앱 시작 시 창 표시 상태 제어 (자동 기동 vs 수동 기동)
+                ApplyInitialWindowState();
             }
+        }
+
+        private static bool IsAutoStartLaunch()
+        {
+            string[] args = Environment.GetCommandLineArgs();
+            foreach (string arg in args)
+            {
+                if (string.Equals(arg, "/autostart", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(arg, "--autostart", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private void ApplyInitialWindowState()
+        {
+            bool isAutoStart = IsAutoStartLaunch();
+            if (isAutoStart)
+            {
+                if (VM != null && VM.IsMinimizeToTrayEnabled)
+                {
+                    if (TrayIconManager.TryCreateTrayIcon())
+                    {
+                        this.Hide();
+                        return;
+                    }
+                    else
+                    {
+                        this.WindowState = WindowState.Minimized;
+                        return;
+                    }
+                }
+                else
+                {
+                    this.WindowState = WindowState.Minimized;
+                    return;
+                }
+            }
+
+            this.WindowState = WindowState.Normal;
+            this.Activate();
         }
 
         private void OpenAliasManager()
@@ -146,7 +191,7 @@ namespace EverythingFastAlias.Views
         private void MenuExit_Click(object sender, RoutedEventArgs e)
         {
             _isClosingForReal = true;
-            _trayIcon?.Dispose();
+            TrayIconManager.RemoveTrayIcon();
             Application.Current.Shutdown();
         }
 
@@ -156,41 +201,30 @@ namespace EverythingFastAlias.Views
             newWindow.Show();
         }
 
-        public void DestroyTrayIcon()
-        {
-            _trayIcon?.Dispose();
-            _trayIcon = null;
-        }
-
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            // 나 외에 다른 MainWindow가 실행 중인지 검사
-            int otherMainWindowCount = 0;
-            foreach (Window win in Application.Current.Windows)
+            if (_isClosingForReal)
             {
-                if (win is MainWindow && win != this)
-                {
-                    otherMainWindowCount++;
-                }
+                TrayIconManager.RemoveTrayIcon();
+                return;
             }
 
-            // 트레이 최소화가 활성화되어 있고, 내가 마지막 남은 1개의 창인 경우에만 트레이로 숨김
-            if (VM != null && VM.IsMinimizeToTrayEnabled && !_isClosingForReal && otherMainWindowCount == 0)
+            // 트레이 최소화 옵션이 활성화되어 있고 사용자가 창을 닫은 경우
+            if (VM != null && VM.IsMinimizeToTrayEnabled)
             {
-                e.Cancel = true;
-
-                // 트레이로 최소화되는 시점에 동적으로 트레이 아이콘 생성
-                if (_trayIcon == null)
+                // 이미 트레이 아이콘이 등록되어 있는지(소유권 선점) 시도
+                bool createdNew = TrayIconManager.TryCreateTrayIcon();
+                if (createdNew)
                 {
-                    _trayIcon = new TrayIconHelper(this);
+                    // 트레이 아이콘 선점 성공: 이 창을 트레이로 숨김
+                    e.Cancel = true;
+                    this.Hide();
+                    TrayIconManager.ShowBalloonTip(2000, "Everything FastAlias", "프로그램이 백그라운드 트레이로 최소화되었습니다.", System.Windows.Forms.ToolTipIcon.Info);
                 }
-
-                this.Hide();
-                _trayIcon.ShowBalloonTip(2000, "Everything FastAlias", "프로그램이 백그라운드 트레이로 최소화되었습니다.", System.Windows.Forms.ToolTipIcon.Info);
-            }
-            else
-            {
-                DestroyTrayIcon();
+                else
+                {
+                    // 이미 시스템 트레이 아이콘이 존재하므로 트레이 OFF로 간주하고 창을 정상적으로 닫음 (종료)
+                }
             }
         }
 

@@ -32,3 +32,22 @@
 - **2026-07-17 (경로 열 더블 클릭 시 폴더 열기 기능 추가)**: 
   - [ResultGridView.xaml.cs](file:///d:/3_Code/3_Apps/43_Search-Edit/Everything검색기/src/EverythingFastAlias/Views/ResultGridView.xaml.cs)의 `ListViewItem_PreviewMouseLeftButtonDown` 더블 클릭 이벤트 분기 로직 고도화.
   - `ViewMode.Details` 상태에서 마우스로 더블 클릭된 X 좌표가 '경로' 컬럼 영역(이름 너비 초과, 이름+경로 너비 이하)에 위치하면, 파일 대신 해당 파일의 상위 폴더 경로(`searchItem.Path`)를 윈도우 탐색기(`Process.Start`)로 열어주도록 구현 완료.
+- **2026-07-25 (시작프로그램 기동 시 트레이/최소화 및 수동 실행 시 기본 크기 활성화 구분)**:
+  - [AutoStartService.cs](file:///d:/3_Code/3_Apps/43_Search-Edit/Everything검색기/src/EverythingFastAlias/Services/AutoStartService.cs)의 레지스트리 등록 경로에 `/autostart` 매개변수 추가 (`"AppPath.exe" /autostart`).
+  - [MainWindow.xaml.cs](file:///d:/3_Code/3_Apps/43_Search-Edit/Everything검색기/src/EverythingFastAlias/Views/MainWindow.xaml.cs)의 `Window_Loaded` 시점에 `IsAutoStartLaunch()` 검사:
+    - 시작프로그램 자동 실행인 경우: `IsMinimizeToTrayEnabled` ON이면 화면 숨김(`Hide()`) 및 트레이 등록, OFF이면 최소화(`WindowState.Minimized`) 상태 구동.
+    - 수동 실행인 경우(아이콘 클릭 또는 트레이 종료 후 다시 켠 경우): 기본 창 크기(`WindowState.Normal`)로 화면에 구동.
+- **2026-07-25 (다중 창 중복 개방 시 시스템 트레이 단일화 리팩토링)**:
+  - 기존 인스턴스별 `TrayIconHelper` 생성을 [TrayIconManager.cs](file:///d:/3_Code/3_Apps/43_Search-Edit/Everything검색기/src/EverythingFastAlias/Native/TrayIconHelper.cs) static 전역 싱글톤 매니저 구조로 전면 교체.
+  - 앱 창을 여러 개 열더라도 트레이 아이콘은 전역에서 **최대 1개만** 유지되도록 보장 (`EnsureCreated()`).
+  - 트레이 아이콘 "열기" 또는 더블클릭 시 숨겨진 모든 `MainWindow`를 복원(`RestoreAllWindows()`)하고 트레이 아이콘을 해제/제거함.
+- **2026-07-25 (다중 프로세스 실행 허용 + 전역 트레이 선점형 단일 트레이 아이콘 패턴 적용)**:
+  - 사용자의 요구사항에 따라 `App.xaml.cs`의 프로세스 단위 Mutex 제한을 전면 제거하여 **동시에 2개 이상의 앱 프로세스가 자유롭게 다중 실행**될 수 있도록 복원.
+  - 전역 `Mutex` (`Global\EverythingFastAlias_TrayMutex`) 기반의 **트레이 선점형 모델**(`TrayIconManager.TryCreateTrayIcon()`)을 [TrayIconHelper.cs](file:///d:/3_Code/3_Apps/43_Search-Edit/Everything검색기/src/EverythingFastAlias/Native/TrayIconHelper.cs) 및 [MainWindow.xaml.cs](file:///d:/3_Code/3_Apps/43_Search-Edit/Everything검색기/src/EverythingFastAlias/Views/MainWindow.xaml.cs)에 도입.
+  - 다중 앱 실행 상태에서 닫기(X) 버튼 클릭 시:
+    - **첫 번째로 닫히는 앱**: 트레이 Mutex를 선점하고 **트레이 아이콘 1개를 노출하며 백그라운드로 숨김(Hide)**.
+    - **나중에 닫히는 앱**: 이미 시스템에 트레이 아이콘 선점자가 존재하므로 **트레이가 OFF된 것으로 간주하여 트레이 아이콘을 중복 생성하지 않고 창을 정상 종료(Close)**함.
+
+
+
+

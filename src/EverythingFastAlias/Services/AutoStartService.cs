@@ -18,7 +18,7 @@ namespace EverythingFastAlias.Services
                     string appPath = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName ?? "";
                     if (!string.IsNullOrEmpty(appPath))
                     {
-                        key.SetValue(AppName, $"\"{appPath}\"");
+                        key.SetValue(AppName, $"\"{appPath}\" /autostart");
                     }
                 }
             }
