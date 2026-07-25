@@ -18,7 +18,7 @@ namespace EverythingFastAlias.Services
                     string appPath = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName ?? "";
                     if (!string.IsNullOrEmpty(appPath))
                     {
-                        key.SetValue(AppName, $"\"{appPath}\"");
+                        key.SetValue(AppName, $"\"{appPath}\" /autostart");
                     }
                 }
             }
@@ -51,7 +51,16 @@ namespace EverythingFastAlias.Services
                 using RegistryKey? key = Registry.CurrentUser.OpenSubKey(RunKey, false);
                 if (key != null)
                 {
-                    return key.GetValue(AppName) != null;
+                    string? val = key.GetValue(AppName) as string;
+                    if (val != null)
+                    {
+                        // 기존 레지스트리 값에 /autostart 인자가 포함되어 있지 않다면 즉시 최신 형태로 등록 보정
+                        if (!val.Contains("/autostart", StringComparison.OrdinalIgnoreCase))
+                        {
+                            Register();
+                        }
+                        return true;
+                    }
                 }
             }
             catch (Exception ex)

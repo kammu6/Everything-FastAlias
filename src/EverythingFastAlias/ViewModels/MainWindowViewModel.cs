@@ -69,6 +69,10 @@ namespace EverythingFastAlias.ViewModels
             _isMinimizeToTrayEnabled = bool.TryParse(traySetting, out bool trayVal) ? trayVal : true;
 
             _isAutoStartEnabled = AutoStartService.IsRegistered();
+            if (_isAutoStartEnabled)
+            {
+                AutoStartService.Register();
+            }
             DatabaseService.Instance.SaveSetting("IsAutoStartEnabled", _isAutoStartEnabled.ToString());
         }
 

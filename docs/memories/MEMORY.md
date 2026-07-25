@@ -1,34 +1,145 @@
-# Agent Memory Log
+# Agent Memory Log (d:\3_Code\3_Apps\43_Search-Edit\Everything검색기)
 
-이 문서는 AI 에이전트의 작업 원칙 및 핵심 운영 지침을 정의하는 공간입니다. 복잡한 플랫폼별 트러블슈팅 지식은 관련 개발 문서로 분리하고, 본 파일에는 핵심 행동 강령과 지침 링크만을 압축 요약하여 100줄 이내로 콤팩트하게 관리합니다.
+이 문서는 프로젝트 운영 도중 에이전트가 획득한 지식을 자산화하고, 이전 세션과 다음 세션 간의 Context를 끊김 없이 이어주기 위한 메모리 로그입니다.
 
----
+## 규칙
+- **과거 메모리**: `/docs/memories/backup/` 디렉토리에 이전 세션의 MEMORY 및 과거 memories 백업이 존재합니다. 필요 시 참조하십시오.
+- **Append-only**: 기존 기록을 임의 삭제하지 않고, 새로운 기록은 항상 최하단에 추가합니다. `memory_log.py` 스크립트를 사용하면 안전하게 Append-only 방식으로 기록을 추가할 수 있습니다.
+```powershell
+  # PowerShell Here-String stdin mode (1-Step Recommended: 100% safe for special chars, quotes & multiline)
+  @'
+  {
+    "title": "Title here...",
+    "context": "Context & Goal here...",
+    "solution": "Verified Solution here...",
+    "anti_patterns": "Anti-Patterns & Root Cause here..."
+  }
+  '@ | python scripts/dev_tools/memory_log.py --stdin
+```
 
-## 📌 핵심 운영 지침 (Core Guidelines)
+## 범례
+🎯 = 콘텍스트 (Context & Goal)
+✅ = 확정된 해결 솔루션 (Final Success Path)
+❌ = 차단된 우회로 및 안티패턴 (Failed Attempts & Anti-Patterns - 필수)
 
-1. **신뢰성 95% 우선**: 단일 턴에 모든 해결책을 적용하려는 무모함을 지양합니다. 불확실한 요소가 존재할 경우, 다수의 턴에 걸쳐 정보를 수집하고 점진적으로 계획을 수립 및 검증합니다.
-2. **아키텍처 3대 원칙**: 각 모듈의 명확한 역할 분리(SoC), 중복 코드 최소화(DRY), 그리고 하나의 파일에는 하나의 클래스만을 명시하는 원칙(One-Class-Per-File)을 철저히 준수합니다.
-3. **IsArtifact: false 준수**: 세션 종료 시 소멸되는 시스템 아티팩트(`IsArtifact: true`)의 사용을 엄격히 배제하고, 작성 및 수정이 필요한 모든 산출물은 `./docs/` 아래의 물리 마크다운 문서로 기록합니다.
-4. **UTF-8 표준 인코딩**: 작업 대상 텍스트 및 마크다운 파일은 `UTF-8` 인코딩 표준을 기본으로 채택하여, 에이전트 도구 간의 파싱 호환 오류를 예방합니다.
-5. **프로젝트 기틀 기록**: 기술 스택 전면 전환 결정(WPF 데스크톱 어플리케이션 채택) 및 쉘 통합 명세 등 초기 결정 사항은 [overview.md](file:///d:/3_Code/3_Apps/43_Search-Edit/Everything검색기/docs/memories/overview.md)를 참고하십시오.
-6. **워크스루 제한**: 사용자의 명시적인 별도 지시가 있기 전까지는 `walkthrough.md` 문서(작업 완료 보고서)를 신규 생성하거나 수정하지 않습니다.
+## 로그  
+```예시
+### YYYY-MM-DD (주제 및 핵심 현상 요약)
+- 🎯
+  - [문제가 발생한 환경, 재현 시나리오, 개발 목표 또는 구체적인 에러 코드/메시지 명시]
+- ✅
+  - **구체적 해결책:** [어떤 코딩 변경, 빌드 옵션, 라이브러리 교체를 통해 해결했는지 기술]
+  - **동작 원리:** [이 방법이 왜 정상 작동하는지에 대한 기술적 메커니즘 설명]
+- ❌
+  - _시도했던 접근:_ [성공하기 전, 혹은 트러블슈팅 과정에서 시도했던 잘못되거나 실패한 접근 방식]
+  - _실패 원인 분석:_ [왜 이 방법이 통하지 않았는지, 어떤 사이드 이펙트나 컴파일 에러가 터졌는지 기술]
+  - _차단 효과:_ [이 기록을 통해 다음 세션의 에이전트가 방지할 수 있는 불필요한 시도/리소스 낭비 정의]
+```
 
----
+### 2026-08-22 (FastAlias 대용량 동의어(Words) CSV 정제 및 다국어 필터링 규칙 (연도 패턴, 1글자 노이즈, 10자 초과 일어))
 
-## 🛠️ 최근 작업 기록 (시간 순 정렬)
+- 🎯
+  - FastAlias 매핑 사전 내보내기 CSV(FastAlias_Export_260820.csv)에서 잘못 파싱된 연도 표기(예: Suzu-1997, 【2018年】), 1글자 노이즈, 10자 초과 긴 일본어 문장/비디오 제목을 O(1) 메모리 스트리밍으로 정제하고 검증하는 요구사항.
 
-- **2026-06-16 (WPF 인터랙션 & 쉘 통합)**: WPF 이름 변경 ViewState 도입, Rubber Band 다중 선택 구현, F5 새로고침 단축키 추가, 네이티브 휴지통 삭제 및 복사 진행창 연동 완료 ➔ [wpf_coding_guidelines.md](file:///d:/3_Code/3_Apps/43_Search-Edit/Everything%EA%B2%80%EC%83%89%EA%B8%B0/docs/memories/wpf_coding_guidelines.md) 이관 완료.
-- **2026-06-17 (Alias Manager 고도화)**: Alias Manager 행 추가 최상단 삽입, GotFocus 자동 포커싱 및 SelectAll 비동기 렌더링, 정렬 기준 SQLite 로컬 DB 연동 완료 ➔ [wpf_coding_guidelines.md](file:///d:/3_Code/3_Apps/43_Search-Edit/Everything%EA%B2%80%EC%83%89%EA%B8%B0/docs/memories/wpf_coding_guidelines.md) 이관 완료.
-- **2026-06-20 (상태창 복사 & 제외 조건)**: 상태창 원시 Everything 쿼리 클립보드 복사 기능 및 세미콜론`;` 구분자 기반의 AND 제외 쿼리 자동 조립 규칙 완료 ➔ [everything_sdk.md](file:///d:/3_Code/3_Apps/43_Search-Edit/Everything%EA%B2%80%EC%83%89%EA%B8%B0/docs/memories/everything_sdk.md) 이관 완료.
-- **2026-06-29 (정규식 API 왜곡 우회 & 사전 조립)**: Everything 정규식 검색 활성화 시 전체 쿼리가 정규식화 되어 깨지는 부작용을 방지하기 위해 SDK `SetRegex`는 비활성화하고 쿼리 파서 단에서 일반 검색 단어들에만 개별 `regex:` 수식어를 씌우는 우회 기법 적용, 그리고 사전 토큰 조립(Pre-compilation) 및 폴더 프리셋 시 사이즈 필터 생략 리팩토링 완료 ➔ [everything_sdk.md](file:///d:/3_Code/3_Apps/43_Search-Edit/Everything%EA%B2%80%EC%83%89%EA%B8%B0/docs/memories/everything_sdk.md) 이관 및 글로벌 [everything-sdk](file:///D:/3_Code/3_Apps/31_Principle/12_Skills/01_적용/gemini/everything-sdk/SKILL.md) 공용 스킬 자산화 완료.
-- **2026-06-29 (SQLite 쓰기 & 썸네일 가상화 성능 최적화)**: 옵션 세터의 `SaveSettings()` 중복 호출을 소거하고, `SaveSettingsBulk` SQLite 트랜잭션 처리를 구축하여 텍스트 타이핑 시의 UI 스레드 동결 현상을 해결함. `WeakReference` 글로벌 썸네일 캐시 및 `CancellationToken` 스레드 작업 취소 메커니즘을 적용해 스크롤 I/O 부하와 메모리 누수를 극대화 차단함. `IShellItemImageFactory` COM 객체 사용 즉시 `ReleaseComObject` 적용. **추가적으로 SQLite의 동시성 락 충돌 방지를 위해 연결 문자열에 `Default Timeout=5`를 반영하고, Excel 엑스포트/임포트 시 한글 깨짐 예방을 위해 CSV fallback 인코딩을 `CP949(EUC-KR)`로 개선함** ➔ [everything_sdk.md](file:///d:/3_Code/3_Apps/43_Search-Edit/Everything%EA%B2%80%EC%83%89%EA%B8%B0/docs/memories/everything_sdk.md) 이관 완료.
-- **2026-07-17 (프로젝트 개요 트리 자동화 & C# 빌드 소음 차단)**: `overview.md`에 `<!-- START_TREE -->` 마커를 복원하고 `update_overview_tree.js`를 C# WPF 환경에 최적화함. `bin`, `obj`, `.vs`, `TestResults`, `TempRunner` 등 임시 빌드/테스트 캐시 폴더를 차단 필터에 삽입하여 핵심 파일 위주의 트리를 제공하고, `tests` 디렉토리 하위 스캔을 무력화하여 토큰 낭비 및 트리 비대화를 성공적으로 억제함. 또한 수동으로 남겨둔 설명 주석들이 스마트 캐싱(`extractComments`)을 통해 트리 자동 갱신 시에도 누락 없이 재매핑 및 정렬되도록 검증 완료.
-- **2026-07-17 (쿼리 파서 개편 및 제외경로 대칭 구현)**: 연산자 우선순위 충돌 방지를 위한 카테고리별 개별 부등호 래핑 및 중첩 `<path:<...>>`, `<path:!<...>>` 그룹화 규칙이 적용된 6단계 빌드 파이프라인 전면 도입. UI 및 모델/뷰모델 레이어에 "제외경로" TextBox와 프로퍼티 바인딩, DB 영속성 관리를 대칭 구현하고 8개 MSTest TDD 검증 및 zero-warning 컴파일/빌드 성공 확인.
-- **2026-07-17 (Alias 다중 그룹 동적 합집합 - Option B)**: `DatabaseService.BuildAliasGroupsCache()`를 무방향 그래프 연결 요소 알고리즘에서 **동적 다중 그룹 매칭(Precomputed Union)**으로 전면 교체. `originalKeywords` 블랙리스트 구성 → 단어별 소속 로우(Words)들의 합집합 계산 → 원본 키워드 제거(Option B) → 자기 자신 보존의 4단계 사전 계산 방식으로, `#back_to_freedom` 같은 가상 태그 키워드가 쿼리 치환 목록에 포함되지 않도록 하여 불필요한 인덱스 검색 차단. 동의어 입력 시 역방향 매핑 및 공통 원소를 통한 그룹 전이 합집합도 정상 작동 확인 (예: `c` → `a | b | c | d | f`). `QueryTransformer` 시그니처도 `Dictionary<string, HashSet<string>>`로 통일.
-- **2026-07-17 (검색 성능 병목 분석 및 최적화)**: 단계별 Stopwatch 프로파일링 코드를 `SearchViewModel.ExecuteSearchAsync`에 삽입하여 `%APPDATA%\EverythingFastAlias\perf.log`로 출력. 실측 결과: Stage 1(QueryTransformer) 191ms, Stage 2(FFI) 16,884ms (결과 10건). **핵심 발견**: Stage 1의 191ms는 32,316개 키를 순차 `foreach`로 탐색하는 O(n) 버그였음. `Dictionary.TryGetValue` O(1) 직접 조회로 교체하여 **<1ms로 개선**. Stage 2의 16,884ms는 17개 OR alias × 3개 대용량 드라이브 교차 스캔으로 인한 Everything 엔진 부하로, **TTL 3초 쿼리 결과 캐시를 `EverythingBridge`에 추가**하여 동일 쿼리 반복 호출 시 즉시 반환하도록 구현. `EverythingBridge.InvalidateQueryCache()` 메서드로 DB 업데이트/옵션 변경 시 강제 무효화 지원.
-- **2026-07-17 (크기 필터 및 자동 검색 버그 수정)**: 
-  1. 조건 초기화(`ExecuteReset`) 시 백킹 필드만 초기화되고 `Options.MinSize` 및 `MaxSize`가 `null`로 할당되지 않아 쿼리에 필터가 잔존하던 버그 수정.
-  2. "크기 초기화" 버튼 클릭 시 다른 옵션을 지정하기도 전에 자동으로 검색이 즉각 구동되던 `vm.ExecuteSearch()` 종속성을 `LeftSidebarView.xaml.cs`에서 제거하여 사용자 편의성 증대.
-- **2026-07-17 (경로 열 더블 클릭 시 폴더 열기 기능 추가)**: 
-  - [ResultGridView.xaml.cs](file:///d:/3_Code/3_Apps/43_Search-Edit/Everything검색기/src/EverythingFastAlias/Views/ResultGridView.xaml.cs)의 `ListViewItem_PreviewMouseLeftButtonDown` 더블 클릭 이벤트 분기 로직 고도화.
-  - `ViewMode.Details` 상태에서 마우스로 더블 클릭된 X 좌표가 '경로' 컬럼 영역(이름 너비 초과, 이름+경로 너비 이하)에 위치하면, 파일 대신 해당 파일의 상위 폴더 경로(`searchItem.Path`)를 윈도우 탐색기(`Process.Start`)로 열어주도록 구현 완료.
+- ✅
+  - 1. run_fastalias_csv_cleaner.py 스크립트를 구현하여 csv.reader/writer 스트리밍 처리 (2,950행, 32,587단어를 0.83초 만에 무결 처리).
+2. 규칙 1 (연도 표기): [-_](?:19|20)\d{2}|[【（\(].*?(?:19|20)\d{2}.*?[】）\)]|(?:19|20)\d{2}年 정규식으로 연도 표기만 정밀 타겟팅하여 계정명(rmrm1313) 보존.
+3. 규칙 2 (1글자 노이즈): len <= 1 and ' ' not in token으로 1글자 노이즈 필터링.
+4. 규칙 3 (10자 초과 일어): len > 10 and re.search(r'[\u3040-\u309F\u30A0-\u30FF]', token)으로 잘못 파싱된 긴 일어 문장 선별 제거.
+5. Dry-run 모드를 기본 지원하여 변경 전 샘플 및 통계 검증 후 Apply 실행.
+
+- ❌
+  - 1. 시도했던 접근: any(c.isdigit() for c in token)으로 숫자가 포함된 모든 단어를 일괄 제거하려고 시도.
+2. 실패 원인 분석: '박라희'의 유일한 Words인 인스타그램 계정명 rmrm1313 등 정상적인 계정/아이디형 단어까지 삭제되어 키워드가 완전히 비는 문제 발생.
+3. 차단 효과: 단순 숫자 배제 대신 연도 정규식([-_](?:19|20)\d{2} 등)을 통해 실제 파싱 오류인 연도 표기만 선택적으로 제거하고 유효 계정명을 안전하게 보존함.
+
+### 2026-08-22 (Windows/Excel CSV 내보내기 및 정제 시 UTF-8 BOM(utf-8-sig) 필수 적용 규칙)
+
+- 🎯
+  - Python 스크립트에서 CSV 생성 시 일반 UTF-8(BOM 없음)로 저장하면, Windows 엑셀 및 기본 뷰어에서 ANSI(CP949)로 오인식하여 한글/일어 문자가 모두 깨지는 현상 발생.
+
+- ✅
+  - 1. Python csv.writer 파일 열기 시 encoding='utf-8-sig'를 명시하여 3바이트 UTF-8 BOM(\xef\xbb\xbf)을 헤더에 삽입.
+2. C# .NET의 File.WriteAllText(..., Encoding.UTF8)와 100% 동일한 인코딩 호환성을 확보하여 엑셀, 윈도우 메모장, FastAlias 앱 모두에서 글자 깨짐 없이 완벽하게 인식되도록 수정.
+
+- ❌
+  - 1. 시도했던 접근: open(..., encoding='utf-8')로 저장.
+2. 실패 원인 분석: Windows 환경의 Excel/CSV 뷰어는 UTF-8 BOM이 없으면 시스템 로케일(CP949)로 간주하여 멀티바이트 한글/일어를 깨진 문자로 렌더링함.
+3. 차단 효과: 향후 모든 CSV 가공 및 내보내기 스크립트 작성 시 반드시 utf-8-sig를 사용하여 인코딩 깨짐을 원천 차단함.
+
+### 2026-08-22 (FastAlias Keyword/Words 내 괄호 및 중첩 괄호 표기 정규화 규칙)
+
+- 🎯
+  - 웹 스크랩 과정에서 'Hara Nozomi (原望美)'처럼 키워드 및 Words 토큰 내에 괄호식 본명/한자 표기가 잘못 삽입되어 Everything 별칭 매핑 시 중복 노이즈가 발생하는 문제.
+
+- ✅
+  - 1. clean_parens 함수를 구현하여 반복적 re.sub로 중첩 괄호([\(（\[【]...[\)）\]】]) 및 잔여 괄호 기호, 불필요한 연속 공백을 완전 제거.
+2. 'Hara Nozomi (原望美)' -> 'Hara Nozomi', '(原望美) Nozomi Hara' -> 'Nozomi Hara'로 깔끔히 정돈하면서도, 이미 개별 토큰으로 존재하는 '原望美'는 독립 동의어로 안전하게 유지.
+3. Keyword와 Words 전체에 적용 후 FastAlias_Cleaned_260822.csv에 반영 완료.
+
+- ❌
+  - 1. 시도했던 접근: 단순 1회성 regex(.*?괄호 매칭)로 치환 시도.
+2. 실패 원인 분석: 'Hinata (ひなた（葉月凛）)'와 같이 ASCII 괄호와 전각 괄호가 중첩된 경우 내부 괄호만 지워지고 닫는 괄호 ')'가 문자열 끝에 잔류하는 버그 발생.
+3. 차단 효과: while 루프로 괄호 쌍이 소진될 때까지 재귀 치환 후 잔여 단일 괄호까지 정리하여 중첩 괄호 버그를 완벽히 해결함.
+
+### 2026-08-22 (FastAlias 단일 영문(성/이름 누락) 키워드 행 필터링 및 해시태그/한글 보존 규칙)
+
+- 🎯
+  - 키워드(Keyword) 중 'Hinako', 'Mayu', 'Mei'처럼 성 또는 이름 없이 단일 단어로만 되어 있는 영문 키워드 행을 일괄 제외하고, #으로 시작하는 해시태그(#back_to_freedom) 및 한글 키워드(박라희), 영문 풀네임(Hara Nozomi)은 안전하게 보존하는 규칙 구현.
+
+- ✅
+  - 1. should_filter_keyword 함수를 구현하여 ^[A-Za-z_\.\-]+$ 패턴에 매칭되면서 공백(' ')이 없고 #이나 한글이 없는 단일 영문 키워드 116개 행을 정확히 선별 제거.
+2. #으로 시작하는 태그(#back_to_freedom 등) 및 한글 키워드(박라희 등), 성+이름으로 구성된 영문 키워드(2,834행)는 100% 보존.
+3. UTF-8 with BOM(utf-8-sig)으로 tests/FastAlias_Cleaned_260822.csv에 반영 완료.
+
+- ❌
+  - 1. 시도했던 접근: 단순 알파벳 길이 검사로 키워드를 필터링하려 시도.
+2. 실패 원인 분석: #back_to_freedom이나 박라희 등 특수 케이스가 오탐으로 제거될 위험이 있음.
+3. 차단 효과: # 시작 여부와 유니코드 한글 검사를 우선 통과(Early return)시킨 후 순수 영문 무공백 단어만 정밀 타겟팅하여 안전하게 처리함.
+
+### 2026-08-22 (FastAlias 영문 2단어 이름 도치(성 이름 -> 이름 성) 및 대문자화 자동 변환 파이프라인)
+
+- 🎯
+  - 동의어 사전에서 영문 이름이 동양식 순서(Last First: omori Shizuka)로 되어 있는 경우, Everything 검색 UI에서의 가독성을 위해 서양식(First Last: Shizuka Omori)으로 도치하고 Words의 1, 2순위 정렬을 표준화하는 요구사항.
+
+- ✅
+  - 1. run_fastalias_invert_names.py 스크립트를 구현하여 '영문(공백)영문' 형태 2,823개 행을 타겟팅.
+2. Keyword를 '이름 성'으로 도치하고 앞글자를 Title/Capitalize화 (omori Shizuka -> Shizuka Omori).
+3. Words 1번째 = '이름 성', 2번째 = '성 이름'으로 고정 배치하고, 3번째 이후 기존 다국어(한글/일어) 동의어 보존 및 중복 제거.
+4. #태그 및 한글 키워드(박라희 등 11개 행)는 100% 원형 보존.
+5. UTF-8 with BOM(utf-8-sig)으로 tests/FastAlias_Cleaned_Inverted_260822.csv에 저장 완료.
+
+- ❌
+  - 1. 시도했던 접근: 단순 .title() 메서드만 적용하여 split 변환.
+2. 실패 원인 분석: 하이픈이 포함된 복합 성/이름(Jean-Pierre 등)의 경우 하이픈 뒤의 첫 글자가 소문자로 남거나 단어 분리에서 3단어로 오인식될 수 있음.
+3. 차단 효과: format_part 함수에서 하이픈 단위 분할 대문자화를 적용하고 정규식 ^[A-Za-z\-]+$으로 2단어 영문을 정밀 검증하여 안전하게 처리함.
+
+### 2026-08-22 (타입3(공백 포함 성+이름) 키워드 대상 Words 내 무공백 한글/영문 1단어 필터링 규칙 (규칙 4))
+
+- 🎯
+  - 타입3 키워드(예: Ai Abe, Shizuka Omori)의 Words 목록 내에서 '아베아이', '사사노히마리'처럼 띄어쓰기 없이 붙여쓴 한글/영문 1단어 노이즈를 일괄 제거하되, 일본어/한자(あべあい, 瀬戸ひまり) 및 공백이 있는 정상 단어(아베 아이, 사사노 히마리)는 100% 보존하는 규칙.
+
+- ✅
+  - 1. should_filter_word에 규칙 4 추가: is_type3이고 공백이 없는 단어 중, 일본어/한자(RE_JAPANESE_OR_KANJI)가 포함되지 않은 순수 한글/영문 1단어만 정확히 판별하여 제외.
+2. 총 1,020개 키워드에서 1,235개 무공백 단어(아베아이, 히나히마리 등)를 제외 대상으로 선별.
+3. 전체 제외 단어 목록을 tests/dry_run_report.txt에 키워드별 및 알파벳순으로 100% 상세 기록.
+
+- ❌
+  - 1. 시도했던 접근: 단순 공백 없는 단어 일괄 제외.
+2. 실패 원인 분석: 일본어/한자 이름(瀬戸ひまり, 原望美)까지 모두 지워지는 치명적 결함 발생.
+3. 차단 효과: RE_JAPANESE_OR_KANJI를 적용하여 한자 및 가나가 포함된 토큰은 안전하게 제외(유지)시킴으로써 완벽한 필터링 달성.
+
+### 2026-08-22 (FastAlias CSV 최종 정제(규칙 1~4, 괄호/단일영문 제외, 이름 도치) 파일 생성 완료)
+
+- 🎯
+  - 대용량 FastAlias Export CSV(2,950행)로부터 4대 정제 규칙(연도/1글자/10자초과일어/타입3무공백단어 제거), 중첩 괄호 정규화, 단일 영문 키워드 제외, 영문 이름 도치(성 이름 -> 이름 성)를 일괄 적용하여 최종본 생성.
+
+- ✅
+  - 1. run_fastalias_csv_cleaner.py와 run_fastalias_invert_names.py의 파일 쓰기 로직에 temp_path 및 os.replace 원자적 교체를 적용하여 in-place 덮어쓰기 무결성 확보.
+2. 최종 2,834행, 30,212개 단어가 정제된 FastAlias_Cleaned_Inverted_260822.csv 및 FastAlias_Cleaned_260822.csv 생성 완료.
+3. UTF-8 with BOM(utf-8-sig) 인코딩으로 FastAlias 앱 및 엑셀에서 완벽 호환.
+
+- ❌
+  - 1. 시도했던 접근: input_path == output_path인 상태에서 open(output_path, 'w') 즉시 호출.
+2. 실패 원인 분석: 파이썬의 'w' 모드는 파일을 여는 순간 0바이트로 truncate하므로 읽기 시도 시 빈 파일이 되는 치명적 버그 유발.
+3. 차단 효과: 항상 .tmp 임시 파일에 전체 데이터를 쓴 뒤 파일 핸들을 닫고 os.replace로 교체하는 원자적 쓰기 패턴을 영구 표준화함.

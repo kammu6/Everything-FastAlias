@@ -1,95 +1,161 @@
 using System;
 using System.Drawing;
+using System.Threading;
 using System.Windows;
 using System.Windows.Forms;
 
 namespace EverythingFastAlias.Native
 {
-    public class TrayIconHelper : IDisposable
+    public static class TrayIconManager
     {
-        private readonly NotifyIcon _notifyIcon;
-        private readonly Window _ownerWindow;
+        private static NotifyIcon? _notifyIcon;
+        private static Mutex? _trayMutex;
+        private static readonly object _lock = new object();
+        private const string TrayMutexName = "Global\\EverythingFastAlias_TrayMutex";
 
-        public TrayIconHelper(Window ownerWindow)
+        /// <summary>
+        /// 내 프로세스 또는 다른 프로세스가 이미 시스템 트레이 아이콘을 가지고 있는지 확인합니다.
+        /// </summary>
+        public static bool IsSystemTrayAlreadyActive()
         {
-            _ownerWindow = ownerWindow;
-
-            // 1. NotifyIcon 개체 생성
-            _notifyIcon = new NotifyIcon();
-
-            try
+            lock (_lock)
             {
-                // 실행 프로그램 아이콘 추출 시도, 실패 시 기본 애플리케이션 아이콘 사용
-                string exePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
-                if (exePath.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+                if (_notifyIcon != null) return true;
+
+                try
                 {
-                    exePath = System.IO.Path.ChangeExtension(exePath, ".exe");
+                    using var existingMutex = Mutex.OpenExisting(TrayMutexName);
+                    return true;
                 }
-                
-                if (System.IO.File.Exists(exePath))
+                catch
                 {
-                    _notifyIcon.Icon = Icon.ExtractAssociatedIcon(exePath);
-                }
-                else
-                {
-                    _notifyIcon.Icon = SystemIcons.Application;
+                    return false;
                 }
             }
-            catch
-            {
-                _notifyIcon.Icon = SystemIcons.Application;
-            }
-
-            _notifyIcon.Text = "Everything FastAlias";
-            _notifyIcon.Visible = true;
-
-            // 2. 더블클릭 이벤트 등록
-            _notifyIcon.DoubleClick += (s, e) => RestoreOwnerWindow();
-
-            // 3. 컨텍스트 메뉴 설정
-            var contextMenu = new ContextMenuStrip();
-            
-            var openItem = new ToolStripMenuItem("열기 (&O)");
-            openItem.Click += (s, e) => RestoreOwnerWindow();
-            contextMenu.Items.Add(openItem);
-
-            contextMenu.Items.Add(new ToolStripSeparator());
-
-            var exitItem = new ToolStripMenuItem("종료 (&X)");
-            exitItem.Click += (s, e) =>
-            {
-                System.Windows.Application.Current.Shutdown();
-            };
-            contextMenu.Items.Add(exitItem);
-
-            _notifyIcon.ContextMenuStrip = contextMenu;
         }
 
-        public void ShowBalloonTip(int timeout, string tipTitle, string tipText, ToolTipIcon tipIcon)
+        /// <summary>
+        /// 트레이 아이콘 소유권을 시도하여 성공하면 트레이 아이콘을 생성하고 true를 반환, 이미 존재하면 false를 반환합니다.
+        /// </summary>
+        public static bool TryCreateTrayIcon()
         {
-            _notifyIcon.ShowBalloonTip(timeout, tipTitle, tipText, tipIcon);
-        }
-
-        private void RestoreOwnerWindow()
-        {
-            _ownerWindow.Dispatcher.Invoke(() =>
+            lock (_lock)
             {
-                _ownerWindow.Show();
-                _ownerWindow.WindowState = WindowState.Normal;
-                _ownerWindow.Activate();
+                if (_notifyIcon != null) return true;
 
-                // 창이 복원되었으므로 트레이 아이콘 제거
-                if (_ownerWindow is Views.MainWindow mainWin)
+                try
                 {
-                    mainWin.DestroyTrayIcon();
+                    bool createdNew;
+                    _trayMutex = new Mutex(true, TrayMutexName, out createdNew);
+
+                    if (!createdNew)
+                    {
+                        _trayMutex.Dispose();
+                        _trayMutex = null;
+                        return false;
+                    }
+
+                    _notifyIcon = new NotifyIcon();
+
+                    string exePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+                    if (exePath.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+                    {
+                        exePath = System.IO.Path.ChangeExtension(exePath, ".exe");
+                    }
+
+                    if (System.IO.File.Exists(exePath))
+                    {
+                        _notifyIcon.Icon = Icon.ExtractAssociatedIcon(exePath);
+                    }
+                    else
+                    {
+                        _notifyIcon.Icon = SystemIcons.Application;
+                    }
+
+                    _notifyIcon.Text = "Everything FastAlias";
+                    _notifyIcon.Visible = true;
+
+                    // 더블클릭 이벤트
+                    _notifyIcon.DoubleClick += (s, e) => RestoreAllWindows();
+
+                    // 컨텍스트 메뉴 설정
+                    var contextMenu = new ContextMenuStrip();
+
+                    var openItem = new ToolStripMenuItem("열기 (&O)");
+                    openItem.Click += (s, e) => RestoreAllWindows();
+                    contextMenu.Items.Add(openItem);
+
+                    contextMenu.Items.Add(new ToolStripSeparator());
+
+                    var exitItem = new ToolStripMenuItem("종료 (&X)");
+                    exitItem.Click += (s, e) =>
+                    {
+                        RemoveTrayIcon();
+                        System.Windows.Application.Current.Shutdown();
+                    };
+                    contextMenu.Items.Add(exitItem);
+
+                    _notifyIcon.ContextMenuStrip = contextMenu;
+
+                    return true;
                 }
+                catch
+                {
+                    return false;
+                }
+            }
+        }
+
+        public static void ShowBalloonTip(int timeout, string tipTitle, string tipText, ToolTipIcon tipIcon)
+        {
+            lock (_lock)
+            {
+                _notifyIcon?.ShowBalloonTip(timeout, tipTitle, tipText, tipIcon);
+            }
+        }
+
+        public static void RestoreAllWindows()
+        {
+            if (System.Windows.Application.Current == null) return;
+
+            System.Windows.Application.Current.Dispatcher.Invoke(() =>
+            {
+                foreach (Window win in System.Windows.Application.Current.Windows)
+                {
+                    if (win is Views.MainWindow)
+                    {
+                        win.Show();
+                        win.WindowState = WindowState.Normal;
+                        win.Activate();
+                    }
+                }
+
+                RemoveTrayIcon();
             });
         }
 
-        public void Dispose()
+        public static void RemoveTrayIcon()
         {
-            _notifyIcon.Visible = false;
-            _notifyIcon.Dispose();
+            lock (_lock)
+            {
+                if (_notifyIcon != null)
+                {
+                    _notifyIcon.Visible = false;
+                    _notifyIcon.Dispose();
+                    _notifyIcon = null;
+                }
+
+                if (_trayMutex != null)
+                {
+                    try
+                    {
+                        _trayMutex.ReleaseMutex();
+                    }
+                    catch { }
+                    _trayMutex.Dispose();
+                    _trayMutex = null;
+                }
+            }
         }
     }
 }

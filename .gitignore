@@ -74,3 +74,7 @@ fastalias.db-shm
 /zip-tree/
 /tests/
 *.lnk
+
+# yik-deepwiki CLI outputs
+/docs/deepwiki/*
+!/docs/deepwiki/.gitkeep
