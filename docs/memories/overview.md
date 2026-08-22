@@ -119,6 +119,7 @@
 │   │   └── 📄 EverythingFastAlias.csproj         # NuGet 패키지 및 Native DLL 복사 빌드 규칙 지정
 │   ├── 📁 EverythingFastAlias.Tests/
 │   │   ├── 📄 EverythingFastAlias.Tests.csproj   # MSTest 단위 테스트 프로젝트
+│   │   ├── 📄 MediaFilterTests.cs
 │   │   ├── 📄 MSTestSettings.cs
 │   │   ├── 📄 QueryTransformerTest.cs            # 쿼리 변환 및 확장자 생성 회귀 테스트 스위트
 │   │   └── 📄 ShortcutServiceTests.cs

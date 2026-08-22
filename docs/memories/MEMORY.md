@@ -115,3 +115,19 @@
 - ❌
   - 1. [시도했던 접근]: 파일 객체 클립보드 복사(Ctrl+C)와 텍스트 파일명/경로 복사가 혼재될 우려.
 2. [해결/차단 효과]: Ctrl+C는 윈도우 네이티브 FileDrop 객체(탐색기 파일 붙여넣기용), Ctrl+Shift+C는 순수 파일명 텍스트, Ctrl+Shift+Alt+C는 절대경로 텍스트로 명확히 역할 분리.
+
+### 2026-08-22 (미디어 필터 전체(All)와 폴더(Folder) 상호 배타적 토글 로직 개선)
+
+- 🎯
+  - 미디어 필터에서 '전체'와 '폴더'가 동시에 켜지는 비정상 동작을 수정하고, 상호 배타적이면서도 일반 미디어(영상, 음악, 문서 등)의 다중 선택은 온전히 보존하도록 개선.
+
+- ✅
+  - 1. SearchViewModel.MediaAll getter/setter: MediaPresets에 '폴더'가 포함되지 않은 상태에서만 MediaAll=true로 판정하고, MediaAll=true 설정 시 Options.MediaPresets.Clear() 후 '전체'만 등록.
+2. SearchViewModel.MediaFolder getter/setter: MediaFolder=true 설정 시 Options.MediaPresets.Clear() 후 '폴더'만 등록하여 '전체' 및 타 미디어 해제. MediaFolder=false 해제 시 프리셋이 비면 '전체' 자동 복귀.
+3. UpdateMediaPreset: 일반 미디어 토글 시 '전체'/'폴더'를 제거하고 다중 선택 허용.
+4. MediaFilterTests 6개 시나리오 단위 테스트 추가 및 전체 22개 테스트 통과.
+
+- ❌
+  - 1. [시도했던 접근]: MediaAll 및 MediaFolder 세터에서 기존 folderWasActive / allWasActive 플래그를 유지하여 동시 선택을 허용했던 로직.
+2. [실패 원인]: '폴더' 필터링은 확장자 필터와 달리 folder: 수식어가 적용되므로 '전체'와 공존하면 쿼리 의도가 모호해짐.
+3. [차단 효과]: MediaAll과 MediaFolder를 완전 상호배타로 격리하여 원클릭으로 정확한 대상 전환 보장.

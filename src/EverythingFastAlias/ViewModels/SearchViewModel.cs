@@ -294,22 +294,20 @@ namespace EverythingFastAlias.ViewModels
         // 4. 미디어 프리셋 토글 래퍼 (영상, 음악, 사진, 문서, 코드, 실행, 압축, 폴더)
         public bool MediaAll
         {
-            get => Options.MediaPresets.Count == 0 || Options.MediaPresets.Contains("전체");
+            get => (Options.MediaPresets.Count == 0 || Options.MediaPresets.Contains("전체")) && !Options.MediaPresets.Contains("폴더");
             set
             {
                 if (value)
                 {
-                    bool folderWasActive = Options.MediaPresets.Contains("폴더");
                     Options.MediaPresets.Clear();
                     Options.MediaPresets.Add("전체");
-                    if (folderWasActive) Options.MediaPresets.Add("폴더");
                     RefreshExtensionFilterFromPresets();
                     NotifyMediaProperties();
                 }
             }
         }
 
-        // 폴더 토글: 전체와 동시 선택 가능, 확장자 필터와는 상호배타
+        // 폴더 토글: 전체 및 다른 확장자 필터와 상호배타 (폴더 단독 선택)
         public bool MediaFolder
         {
             get => Options.MediaPresets.Contains("폴더");
@@ -317,14 +315,16 @@ namespace EverythingFastAlias.ViewModels
             {
                 if (value)
                 {
-                    bool allWasActive = Options.MediaPresets.Contains("전체") || Options.MediaPresets.Count == 0;
                     Options.MediaPresets.Clear();
-                    if (allWasActive) Options.MediaPresets.Add("전체");
                     Options.MediaPresets.Add("폴더");
                 }
                 else
                 {
                     Options.MediaPresets.Remove("폴더");
+                    if (Options.MediaPresets.Count == 0)
+                    {
+                        Options.MediaPresets.Add("전체");
+                    }
                 }
                 RefreshExtensionFilterFromPresets();
                 NotifyMediaProperties();
@@ -384,6 +384,10 @@ namespace EverythingFastAlias.ViewModels
             else
             {
                 Options.MediaPresets.Remove(preset);
+                if (Options.MediaPresets.Count == 0)
+                {
+                    Options.MediaPresets.Add("전체");
+                }
             }
             RefreshExtensionFilterFromPresets();
             NotifyMediaProperties();
