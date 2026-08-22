@@ -2,7 +2,9 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using EverythingFastAlias.Models;
 using EverythingFastAlias.Native;
+using EverythingFastAlias.Services;
 using EverythingFastAlias.ViewModels;
 using EverythingFastAlias.Views.Modals;
 
@@ -16,6 +18,51 @@ namespace EverythingFastAlias.Views
         public MainWindow()
         {
             InitializeComponent();
+        }
+
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (ShortcutService.Instance.TryGetAction(e, ShortcutScope.Global, out var action))
+            {
+                e.Handled = true;
+                ExecuteGlobalAction(action);
+            }
+        }
+
+        private void ExecuteGlobalAction(ShortcutAction action)
+        {
+            if (VM == null) return;
+
+            switch (action)
+            {
+                case ShortcutAction.ShowHelp:
+                    OpenHelp();
+                    break;
+                case ShortcutAction.Refresh:
+                    if (VM.SearchVM.RefreshCommand.CanExecute(null))
+                        VM.SearchVM.RefreshCommand.Execute(null);
+                    break;
+                case ShortcutAction.FocusSearch:
+                    SearchKeywordTextBox.Focus();
+                    SearchKeywordTextBox.SelectAll();
+                    break;
+                case ShortcutAction.NewWindow:
+                    OpenNewWindow();
+                    break;
+                case ShortcutAction.ExportResults:
+                    if (VM.ExportResultsCommand.CanExecute(null))
+                        VM.ExportResultsCommand.Execute(null);
+                    break;
+                case ShortcutAction.ToggleSidebar:
+                    SidebarToggleSwitch.IsOn = !SidebarToggleSwitch.IsOn;
+                    break;
+                case ShortcutAction.OpenAliasManager:
+                    OpenAliasManager();
+                    break;
+                case ShortcutAction.OpenExtensionManager:
+                    OpenExtensionManager();
+                    break;
+            }
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)

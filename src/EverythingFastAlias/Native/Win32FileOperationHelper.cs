@@ -69,5 +69,31 @@ namespace EverythingFastAlias.Native
                 return false;
             }
         }
+
+        private const uint SHOP_FILEPATH = 0x00000002;
+
+        [DllImport("shell32.dll", CharSet = CharSet.Auto)]
+        private static extern bool SHObjectProperties(IntPtr hwnd, uint shopObjectType, string pszObjectName, string? pszPropertyPage);
+
+        /// <summary>
+        /// 파일 또는 폴더의 Windows 네이티브 속성(Properties) 창을 엽니다.
+        /// </summary>
+        /// <param name="path">파일 또는 디렉터리 전체 경로</param>
+        /// <param name="hwnd">부모 윈도우 핸들</param>
+        /// <returns>호출 성공 여부</returns>
+        public static bool ShowProperties(string path, IntPtr hwnd = default)
+        {
+            if (string.IsNullOrEmpty(path) || (!System.IO.File.Exists(path) && !System.IO.Directory.Exists(path)))
+                return false;
+
+            try
+            {
+                return SHObjectProperties(hwnd, SHOP_FILEPATH, path, null);
+            }
+            catch
+            {
+                return false;
+            }
+        }
     }
 }

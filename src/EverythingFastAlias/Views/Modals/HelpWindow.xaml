@@ -3,94 +3,320 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:modern="http://schemas.modernwpf.com/2019"
         Title="Everything FastAlias 도움말 &amp; 문법 가이드" 
-        Height="550" Width="650"
+        Height="640" Width="760"
+        MinWidth="700" MinHeight="500"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource SystemControlPageBackgroundChromeLowBrush}"
         modern:ThemeManager.RequestedTheme="Light">
     
-    <Grid Margin="15">
+    <Grid Margin="18">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/> <!-- 1. 헤더 -->
+            <RowDefinition Height="*"/>    <!-- 2. 탭 컨트롤 -->
+            <RowDefinition Height="Auto"/> <!-- 3. 하단 닫기 버튼 -->
         </Grid.RowDefinitions>
 
-        <TextBlock Text="Everything FastAlias 도움말" 
-                   FontSize="20" FontWeight="Bold" Margin="0,0,0,15"
-                   Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+        <!-- 1. 헤더 -->
+        <Border Grid.Row="0" Margin="0,0,0,12">
+            <StackPanel>
+                <TextBlock Text="Everything FastAlias 사용 가이드" 
+                           FontSize="18" FontWeight="Bold"
+                           Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+                <TextBlock Text="스마트 동의어 검색(FastAlias), 단축키 및 Everything 공식 검색 문법 안내" 
+                           FontSize="11" Foreground="Gray" Margin="0,3,0,0"/>
+            </StackPanel>
+        </Border>
 
+        <!-- 2. 탭 컨트롤 -->
         <TabControl Grid.Row="1" VerticalAlignment="Stretch">
-            <!-- 탭 1: 기본 검색 문법 -->
-            <TabItem Header="기본 검색 문법">
-                <ScrollViewer Margin="10" VerticalScrollBarVisibility="Auto">
-                    <modern:SimpleStackPanel Spacing="10">
-                        <TextBlock Text="기본 연산자" FontSize="16" FontWeight="Bold"/>
-                        <TextBlock Text="• AND (공백) : 단어 사이의 공백은 두 단어를 모두 포함함을 의미합니다. (예: apple banana)" TextWrapping="Wrap"/>
-                        <TextBlock Text="• OR (|) : 두 단어 중 하나 이상 포함함을 의미합니다. (예: apple | banana)" TextWrapping="Wrap"/>
-                        <TextBlock Text="• NOT (!) : 특정 단어가 포함된 대상을 제외합니다. (예: !tmp)" TextWrapping="Wrap"/>
-                        <TextBlock Text="• 그룹화 (&lt; &gt;) : 부등호로 감싸 단어 검색 우선순위를 그룹화합니다. (예: &lt;apple | banana&gt; orange)" TextWrapping="Wrap"/>
-                        
-                        <Separator Margin="0,10,0,10"/>
-                        
-                        <TextBlock Text="주요 와일드카드" FontSize="16" FontWeight="Bold"/>
-                        <TextBlock Text="• * : 0개 이상의 모든 문자 매칭 (예: *.txt)" TextWrapping="Wrap"/>
-                        <TextBlock Text="• ? : 정확히 1개의 임의의 문자 매칭 (예: memo??.docx)" TextWrapping="Wrap"/>
-                    </modern:SimpleStackPanel>
-                </ScrollViewer>
-            </TabItem>
-
-            <!-- 탭 2: 정규식 상용구 -->
-            <TabItem Header="정규식 상용구">
-                <ScrollViewer Margin="10" VerticalScrollBarVisibility="Auto">
-                    <modern:SimpleStackPanel Spacing="10">
-                        <TextBlock Text="정규식(Regex) 기본 기호" FontSize="16" FontWeight="Bold"/>
-                        <TextBlock Text="• ^ : 문장의 시작 부분 매칭 (예: ^apple)" TextWrapping="Wrap"/>
-                        <TextBlock Text="• $ : 문장의 끝 부분 매칭 (예: banana$)" TextWrapping="Wrap"/>
-                        <TextBlock Text="• . : 임의의 한 문자 매칭 (예: a.b)" TextWrapping="Wrap"/>
-                        <TextBlock Text="• * : 직전 패턴의 0회 이상 반복 (예: ab*c)" TextWrapping="Wrap"/>
-                        <TextBlock Text="• + : 직전 패턴의 1회 이상 반복 (예: ab+c)" TextWrapping="Wrap"/>
-                        <TextBlock Text="• [ ] : 문자 집합 중 하나 매칭 (예: [a-z]는 영문 소문자)" TextWrapping="Wrap"/>
-                        <TextBlock Text="• \d : 숫자 매칭 (예: \d{4}는 4자리 숫자)" TextWrapping="Wrap"/>
-                        
-                        <Separator Margin="0,10,0,10"/>
-                        <TextBlock Text="※ 주의: 정규식 검색 옵션을 활성화하거나 검색어 앞에 regex: 접두어를 붙이면 정규식 문법이 적용됩니다." 
-                                   Foreground="Gray" TextWrapping="Wrap"/>
-                    </modern:SimpleStackPanel>
-                </ScrollViewer>
-            </TabItem>
-
-            <!-- 탭 3: FastAlias 사용 팁 -->
+            
+            <!-- ═════════════════════════════════════════════════════════════════════ -->
+            <!-- 탭 1: FastAlias 팁 (FastAlias Tips & Resolution Rules)               -->
+            <!-- ═════════════════════════════════════════════════════════════════════ -->
             <TabItem Header="FastAlias 팁">
-                <ScrollViewer Margin="10" VerticalScrollBarVisibility="Auto">
-                    <modern:SimpleStackPanel Spacing="10">
-                        <TextBlock Text="스마트 동의어 검색" FontSize="16" FontWeight="Bold"/>
-                        <TextBlock Text="1. [도구] -> [매핑 테이블 관리자]에서 원본 단어와 매핑할 단어들을 지정하세요." TextWrapping="Wrap"/>
-                        <TextBlock Text="2. FastAlias 스위치를 켜면 검색어 입력 시 관련어가 자동으로 치환되어 쿼리됩니다." TextWrapping="Wrap"/>
-                        <TextBlock Text="   (예: '사과' 입력 시 &lt;사과|apple|🍎&gt; 문법으로 자동 쿼리)" TextWrapping="Wrap"/>
+                <ScrollViewer Margin="8" VerticalScrollBarVisibility="Auto">
+                    <modern:SimpleStackPanel Spacing="12">
                         
-                        <TextBlock Text="FastAlias 다중 키워드 논리 검색 체계" FontSize="16" FontWeight="Bold"/>
-                        <TextBlock Text="FastAlias는 기본 검색 연산자(OR, NOT, 그룹화)와 완벽하게 호환됩니다. 다음과 같이 다중 키워드를 조합할 수 있습니다:" TextWrapping="Wrap"/>
-                        <TextBlock Text="• 다중 OR 검색: 키워드 사이에 | (파이프)를 입력하세요. (예: 사과 | 바나나)" TextWrapping="Wrap" Margin="10,0,0,0"/>
-                        <TextBlock Text="  (미디어 필터를 적용해도 전체 쿼리에 일관되게 필터가 작동합니다.)" TextWrapping="Wrap" Foreground="Gray" Margin="10,0,0,0"/>
-                        <TextBlock Text="• 수동 그룹화 결합: &lt;사과 | 바나나&gt; 와 같이 그룹 기호(&lt; &gt;) 안에서도 동의어 치환이 정상 동작합니다." TextWrapping="Wrap" Margin="10,0,0,0"/>
-                        <TextBlock Text="• 제외 조건 결합: !사과 와 같이 느낌표(!)를 붙이면 해당 키워드와 모든 동의어가 검색에서 일괄 제외됩니다." TextWrapping="Wrap" Margin="10,0,0,0"/>
-                        
-                        <TextBlock Text="제외단어(Exclusion) 다중 입력 가이드" FontSize="16" FontWeight="Bold"/>
-                        <TextBlock Text="• 제외하고 싶은 여러 단어들을 입력할 때는 꺾쇠 괄호(&lt; &gt;)나 파이프(|)를 직접 입력하지 마시고, 단순히 세미콜론(;) 또는 공백으로 나열해 주세요. (예: tmp;temp)" TextWrapping="Wrap"/>
-                        <TextBlock Text="  - 프로그램 내부에서 개별 단어들을 각각 ! 연산자로 변환 및 조립하여 안전하게 다중 제외 처리를 수행합니다." TextWrapping="Wrap" Foreground="Gray"/>
-                        
-                        <Separator Margin="0,10,0,10"/>
-                        
-                        <TextBlock Text="단축키 팁" FontSize="16" FontWeight="Bold"/>
-                        <TextBlock Text="• Ctrl + C : 선택한 파일들을 네이티브 파일 객체로 복사 (외부에 붙여넣기 가능)" TextWrapping="Wrap"/>
-                        <TextBlock Text="• Ctrl + X : 선택한 파일들을 네이티브 파일 객체로 잘라내기" TextWrapping="Wrap"/>
-                        <TextBlock Text="• F1 : 본 도움말 창 호출" TextWrapping="Wrap"/>
+                        <!-- 섹션 1: 동의어 검색 기본 원리 -->
+                        <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}" 
+                                BorderBrush="{DynamicResource SystemControlElevationBorderBrush}" 
+                                BorderThickness="1" CornerRadius="4" Padding="12">
+                            <modern:SimpleStackPanel Spacing="6">
+                                <TextBlock Text="💡 스마트 동의어(FastAlias) 검색 원리" FontSize="13" FontWeight="Bold"
+                                           Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+                                <TextBlock Text="• [도구(T)] → [매핑 테이블 관리자]에 등록된 단어 사전 데이터를 기반으로, 검색어 입력 시 관련 동의어를 Everything 공식 논리 쿼리(&lt;단어1 | 단어2 | ...&gt;)로 실시간 자동 치환(O(1))합니다." 
+                                           TextWrapping="Wrap" FontSize="11.5"/>
+                                <TextBlock Text="• 엑셀(.xlsx) 파일로 수만 개의 동의어 그룹을 일괄 임포트하여 나만의 검색 사전을 구축할 수 있습니다." 
+                                           TextWrapping="Wrap" FontSize="11.5" Foreground="DimGray"/>
+                            </modern:SimpleStackPanel>
+                        </Border>
+
+                        <!-- 섹션 2: 3대 핵심 쿼리 해석 원칙 (Query Resolution Guide) -->
+                        <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}" 
+                                BorderBrush="{DynamicResource SystemControlElevationBorderBrush}" 
+                                BorderThickness="1" CornerRadius="4" Padding="12">
+                            <modern:SimpleStackPanel Spacing="8">
+                                <TextBlock Text="📐 3대 핵심 쿼리 치환 원칙" FontSize="13" FontWeight="Bold"
+                                           Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+                                
+                                <StackPanel Margin="4,0,0,0">
+                                    <TextBlock Text="1. 원본 키워드 배제 원칙 (Keyword Exclusion)" FontWeight="SemiBold" FontSize="12"/>
+                                    <TextBlock Text="• '#태그'와 같은 그룹 식별자 검색 시, 파일명에 존재하지 않는 원본 키워드명 자체는 치환 결과에서 제외되고 실제 검색 대상인 별칭 목록만 반영되어 검색 오탐과 쿼리 길이 낭비를 방지합니다." 
+                                               TextWrapping="Wrap" FontSize="11" Foreground="#444444" Margin="0,2,0,6"/>
+
+                                    <TextBlock Text="2. 동적 전이 합집합 (Transitive Dynamic Union)" FontWeight="SemiBold" FontSize="12"/>
+                                    <TextBlock Text="• 특정 단어가 여러 그룹에 걸쳐 있을 때(예: '사과'가 과일 그룹과 IT브랜드 그룹에 모두 포함), 해당 단어가 속한 모든 그룹의 동의어를 합집합(OR)으로 한 번에 결합하여 누락 없이 검색합니다." 
+                                               TextWrapping="Wrap" FontSize="11" Foreground="#444444" Margin="0,2,0,6"/>
+
+                                    <TextBlock Text="3. 키워드 일치 우선 모드 (Keyword Priority 스위치)" FontWeight="SemiBold" FontSize="12"/>
+                                    <TextBlock Text="• 검색어가 특정 행의 [키워드(A열)]이자 다른 행의 [동의어(B열)]로 중복 등록된 경우의 조회 옵션:" 
+                                               TextWrapping="Wrap" FontSize="11" Foreground="#444444" Margin="0,2,0,2"/>
+                                    <TextBlock Text="   - [체크 ON] : 입력한 키워드의 고유 정의 1개만 1:1 정밀 조회" 
+                                               FontSize="11" Foreground="DarkGreen" Margin="8,0,0,0"/>
+                                    <TextBlock Text="   - [체크 OFF]: 해당 단어가 속한 모든 그룹을 합집합으로 확장 조회" 
+                                               FontSize="11" Foreground="DarkBlue" Margin="8,1,0,0"/>
+                                </StackPanel>
+                            </modern:SimpleStackPanel>
+                        </Border>
+
+                        <!-- 섹션 3: 다중 키워드 및 연산자 결합 -->
+                        <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}" 
+                                BorderBrush="{DynamicResource SystemControlElevationBorderBrush}" 
+                                BorderThickness="1" CornerRadius="4" Padding="12">
+                            <modern:SimpleStackPanel Spacing="6">
+                                <TextBlock Text="⚡ 다중 키워드 &amp; 연산자 결합" FontSize="13" FontWeight="Bold"
+                                           Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+                                <TextBlock Text="• 다중 OR 검색: 키워드 사이에 | (파이프)를 입력하면 각 키워드가 독립적으로 동의어 치환되어 결합됩니다. (예: 사과 | 바나나)" 
+                                           TextWrapping="Wrap" FontSize="11.5"/>
+                                <TextBlock Text="• 제외 조건 결합: !사과 와 같이 느낌표(!)를 붙이면 해당 키워드와 모든 동의어가 일괄 제외됩니다." 
+                                           TextWrapping="Wrap" FontSize="11.5"/>
+                                <TextBlock Text="• 제외단어 / 경로 입력: 좌측 패널의 제외단어, 지정/제외 경로는 세미콜론(;), 콤마(,), 파이프(|), 공백으로 나열하면 프로그램이 알아서 안전하게 변환합니다." 
+                                           TextWrapping="Wrap" FontSize="11.5" Foreground="DimGray"/>
+                            </modern:SimpleStackPanel>
+                        </Border>
+
+                        <!-- 섹션 4: 미디어 확장자 관리 -->
+                        <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}" 
+                                BorderBrush="{DynamicResource SystemControlElevationBorderBrush}" 
+                                BorderThickness="1" CornerRadius="4" Padding="12">
+                            <modern:SimpleStackPanel Spacing="6">
+                                <TextBlock Text="🎬 미디어 확장자 관리 및 필터" FontSize="13" FontWeight="Bold"
+                                           Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+                                <TextBlock Text="• [도구(T)] → [미디어 확장자 관리자]에서 7대 카테고리(영상, 음악, 사진, 문서, 코드, 실행, 압축)의 확장자를 자유롭게 편집하거나 기본값으로 복원할 수 있습니다." 
+                                           TextWrapping="Wrap" FontSize="11.5"/>
+                                <TextBlock Text="• 좌측 패널의 [확장자 필터] 입력란에 마우스를 올리면 40개 동영상 확장자를 포함한 전체 적용 목록이 툴팁으로 표시됩니다." 
+                                           TextWrapping="Wrap" FontSize="11.5"/>
+                            </modern:SimpleStackPanel>
+                        </Border>
+
                     </modern:SimpleStackPanel>
                 </ScrollViewer>
             </TabItem>
+
+            <!-- ═════════════════════════════════════════════════════════════════════ -->
+            <!-- 탭 2: 단축키 안내 (Shortcuts & Gestures)                              -->
+            <!-- ═════════════════════════════════════════════════════════════════════ -->
+            <TabItem Header="단축키">
+                <ScrollViewer Margin="8" VerticalScrollBarVisibility="Auto">
+                    <modern:SimpleStackPanel Spacing="12">
+                        
+                        <!-- 섹션 1: 전역 및 창 / 검색 단축키 -->
+                        <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}" 
+                                BorderBrush="{DynamicResource SystemControlElevationBorderBrush}" 
+                                BorderThickness="1" CornerRadius="4" Padding="12">
+                            <modern:SimpleStackPanel Spacing="8">
+                                <TextBlock Text="🌐 전역 및 창 / 검색 단축키" FontSize="13" FontWeight="Bold"
+                                           Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+                                
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="150"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="F1" FontWeight="Bold" FontFamily="Consolas" Margin="0,3,0,3"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="본 도움말 및 문법 가이드 창 호출" FontSize="11.5" Margin="0,3,0,3"/>
+
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="F5" FontWeight="Bold" FontFamily="Consolas" Margin="0,3,0,3"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="검색 새로고침 (Everything 엔진 즉시 재조회)" FontSize="11.5" Margin="0,3,0,3"/>
+
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Ctrl + F" FontWeight="Bold" FontFamily="Consolas" Margin="0,3,0,3"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="상단 검색어 입력창으로 커서 이동 및 텍스트 전체 선택" FontSize="11.5" Margin="0,3,0,3"/>
+
+                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Ctrl + B" FontWeight="Bold" FontFamily="Consolas" Margin="0,3,0,3"/>
+                                    <TextBlock Grid.Row="3" Grid.Column="1" Text="좌측 옵션/필터 패널 표시 및 숨김 토글" FontSize="11.5" Margin="0,3,0,3"/>
+
+                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Ctrl + N" FontWeight="Bold" FontFamily="Consolas" Margin="0,3,0,3"/>
+                                    <TextBlock Grid.Row="4" Grid.Column="1" Text="새로운 Everything FastAlias 창 열기 (멀티 윈도우)" FontSize="11.5" Margin="0,3,0,3"/>
+
+                                    <TextBlock Grid.Row="5" Grid.Column="0" Text="Ctrl + E" FontWeight="Bold" FontFamily="Consolas" Margin="0,3,0,3"/>
+                                    <TextBlock Grid.Row="5" Grid.Column="1" Text="현재 검색 결과를 텍스트 파일(.txt)로 내보내기" FontSize="11.5" Margin="0,3,0,3"/>
+
+                                    <TextBlock Grid.Row="6" Grid.Column="0" Text="Ctrl + M" FontWeight="Bold" FontFamily="Consolas" Margin="0,3,0,3"/>
+                                    <TextBlock Grid.Row="6" Grid.Column="1" Text="매핑 테이블 관리자 (Alias Manager) 열기" FontSize="11.5" Margin="0,3,0,3"/>
+
+                                    <TextBlock Grid.Row="7" Grid.Column="0" Text="Ctrl + Shift + E" FontWeight="Bold" FontFamily="Consolas" Margin="0,3,0,3"/>
+                                    <TextBlock Grid.Row="7" Grid.Column="1" Text="미디어 확장자 관리자 (Extension Manager) 열기" FontSize="11.5" Margin="0,3,0,3"/>
+                                </Grid>
+                            </modern:SimpleStackPanel>
+                        </Border>
+
+                        <!-- 섹션 2: 검색 결과 목록 및 파일 작업 단축키 -->
+                        <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}" 
+                                BorderBrush="{DynamicResource SystemControlElevationBorderBrush}" 
+                                BorderThickness="1" CornerRadius="4" Padding="12">
+                            <modern:SimpleStackPanel Spacing="8">
+                                <TextBlock Text="📂 검색 결과 목록 &amp; 파일 작업 단축키" FontSize="13" FontWeight="Bold"
+                                           Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="150"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Enter" FontWeight="Bold" FontFamily="Consolas" Margin="0,3,0,3"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="선택한 파일 실행 또는 기본 연결 프로그램으로 열기" FontSize="11.5" Margin="0,3,0,3"/>
+
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Shift + Enter" FontWeight="Bold" FontFamily="Consolas" Margin="0,3,0,3"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="선택한 파일의 상위 폴더를 열고 해당 파일 선택(위치 열기)" FontSize="11.5" Margin="0,3,0,3"/>
+
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Alt + Enter" FontWeight="Bold" FontFamily="Consolas" Margin="0,3,0,3"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="선택한 파일/폴더의 Windows 네이티브 속성(Properties) 창 열기" FontSize="11.5" Margin="0,3,0,3"/>
+
+                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="F2" FontWeight="Bold" FontFamily="Consolas" Margin="0,3,0,3"/>
+                                    <TextBlock Grid.Row="3" Grid.Column="1" Text="선택한 파일/폴더 이름 변경 (인라인 인스턴트 편집)" FontSize="11.5" Margin="0,3,0,3"/>
+
+                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Ctrl + C" FontWeight="Bold" FontFamily="Consolas" Margin="0,3,0,3"/>
+                                    <TextBlock Grid.Row="4" Grid.Column="1" Text="선택한 파일들을 윈도우 네이티브 파일 객체로 복사 (외부 붙여넣기 지원)" FontSize="11.5" Margin="0,3,0,3"/>
+
+                                    <TextBlock Grid.Row="5" Grid.Column="0" Text="Ctrl + X" FontWeight="Bold" FontFamily="Consolas" Margin="0,3,0,3"/>
+                                    <TextBlock Grid.Row="5" Grid.Column="1" Text="선택한 파일들을 윈도우 네이티브 파일 객체로 잘라내기" FontSize="11.5" Margin="0,3,0,3"/>
+
+                                    <TextBlock Grid.Row="6" Grid.Column="0" Text="Ctrl + Shift + C" FontWeight="Bold" FontFamily="Consolas" Margin="0,3,0,3"/>
+                                    <TextBlock Grid.Row="6" Grid.Column="1" Text="선택한 파일명(확장자 포함)을 텍스트로 클립보드 복사 (다중 선택 시 줄바꿈)" FontSize="11.5" Margin="0,3,0,3"/>
+
+                                    <TextBlock Grid.Row="7" Grid.Column="0" Text="Ctrl+Shift+Alt+C" FontWeight="Bold" FontFamily="Consolas" Margin="0,3,0,3"/>
+                                    <TextBlock Grid.Row="7" Grid.Column="1" Text="선택한 파일들의 전체 절대경로를 텍스트로 클립보드 복사 (다중 선택 시 줄바꿈)" FontSize="11.5" Margin="0,3,0,3"/>
+
+                                    <TextBlock Grid.Row="8" Grid.Column="0" Text="Delete" FontWeight="Bold" FontFamily="Consolas" Margin="0,3,0,3"/>
+                                    <TextBlock Grid.Row="8" Grid.Column="1" Text="선택한 파일을 휴지통으로 안전하게 삭제 (경고창 없이 고속 처리)" FontSize="11.5" Margin="0,3,0,3"/>
+
+                                    <TextBlock Grid.Row="9" Grid.Column="0" Text="Shift + Delete" FontWeight="Bold" FontFamily="Consolas" Margin="0,3,0,3"/>
+                                    <TextBlock Grid.Row="9" Grid.Column="1" Text="선택한 파일을 영구 삭제 (시스템 확인 대화상자 노출)" FontSize="11.5" Margin="0,3,0,3"/>
+                                </Grid>
+                            </modern:SimpleStackPanel>
+                        </Border>
+
+                        <!-- 섹션 3: 마우스 및 제스처 -->
+                        <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}" 
+                                BorderBrush="{DynamicResource SystemControlElevationBorderBrush}" 
+                                BorderThickness="1" CornerRadius="4" Padding="12">
+                            <modern:SimpleStackPanel Spacing="8">
+                                <TextBlock Text="🖱️ 마우스 제스처 &amp; 쉘 연동" FontSize="13" FontWeight="Bold"
+                                           Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="150"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="우클릭 (Right Click)" FontWeight="Bold" Margin="0,3,0,3"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="윈도우 표준 우클릭 쉘 메뉴(IContextMenu) 호출 (7-Zip, 터미널 열기, 연결 프로그램 등)" FontSize="11.5" Margin="0,3,0,3"/>
+
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="드래그 앤 드롭" FontWeight="Bold" Margin="0,3,0,3"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="검색 결과 항목을 외부 탐색기(Directory Opus, 파일 탐색기 등)나 메신저 창으로 드래그하여 파일 복사/이동" FontSize="11.5" Margin="0,3,0,3"/>
+
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="더블 클릭" FontWeight="Bold" Margin="0,3,0,3"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="파일 즉시 실행 또는 폴더 내부로 이동" FontSize="11.5" Margin="0,3,0,3"/>
+                                </Grid>
+                            </modern:SimpleStackPanel>
+                        </Border>
+
+                    </modern:SimpleStackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ═════════════════════════════════════════════════════════════════════ -->
+            <!-- 탭 3: 검색 문법 & 정규식 (Search & Regex Syntax)                      -->
+            <!-- ═════════════════════════════════════════════════════════════════════ -->
+            <TabItem Header="기본 검색 &amp; 정규식">
+                <ScrollViewer Margin="8" VerticalScrollBarVisibility="Auto">
+                    <modern:SimpleStackPanel Spacing="12">
+                        
+                        <!-- 섹션 1: Everything 기본 연산자 -->
+                        <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}" 
+                                BorderBrush="{DynamicResource SystemControlElevationBorderBrush}" 
+                                BorderThickness="1" CornerRadius="4" Padding="12">
+                            <modern:SimpleStackPanel Spacing="6">
+                                <TextBlock Text="🔍 Everything 기본 연산자" FontSize="13" FontWeight="Bold"
+                                           Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+                                <TextBlock Text="• AND (공백) : 단어 사이의 공백은 두 단어를 모두 포함함을 의미 (예: apple banana)" FontSize="11.5"/>
+                                <TextBlock Text="• OR (|) : 두 단어 중 하나 이상 포함 (예: apple | banana)" FontSize="11.5"/>
+                                <TextBlock Text="• NOT (!) : 특정 단어가 포함된 대상을 제외 (예: !tmp)" FontSize="11.5"/>
+                                <TextBlock Text="• 그룹화 (&lt; &gt;) : 부등호로 감싸 우선순위 그룹화 (예: &lt;apple | banana&gt; orange)" FontSize="11.5"/>
+                                <TextBlock Text="• 따옴표 (&quot; &quot;) : 공백이 포함된 정확한 구문 일치 (예: &quot;Lana Rhoades&quot;)" FontSize="11.5"/>
+                                <TextBlock Text="• 와일드카드 (*) : 0개 이상의 모든 문자 매칭 (예: *.mp4)" FontSize="11.5"/>
+                                <TextBlock Text="• 와일드카드 (?) : 정확히 1개의 임의 문자 매칭 (예: report??.docx)" FontSize="11.5"/>
+                            </modern:SimpleStackPanel>
+                        </Border>
+
+                        <!-- 섹션 2: 정규식 상용구 -->
+                        <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}" 
+                                BorderBrush="{DynamicResource SystemControlElevationBorderBrush}" 
+                                BorderThickness="1" CornerRadius="4" Padding="12">
+                            <modern:SimpleStackPanel Spacing="6">
+                                <TextBlock Text="🔤 정규식(Regex) 핵심 기호" FontSize="13" FontWeight="Bold"
+                                           Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+                                <TextBlock Text="• ^ : 문장의 시작 부분 매칭 (예: ^apple)" FontSize="11.5"/>
+                                <TextBlock Text="• $ : 문장의 끝 부분 매칭 (예: banana$)" FontSize="11.5"/>
+                                <TextBlock Text="• . : 임의의 한 문자 매칭 (예: a.b)" FontSize="11.5"/>
+                                <TextBlock Text="• \d : 숫자 매칭 (예: \d{4}는 4자리 숫자)" FontSize="11.5"/>
+                                <TextBlock Text="• [a-z] : 문자 집합 중 하나 매칭 (영문 소문자)" FontSize="11.5"/>
+                                <TextBlock Text="• + / * : 1회 이상(+) 또는 0회 이상(*) 반복" FontSize="11.5"/>
+                                <TextBlock Text="※ 상단 '정규식 검색' 옵션을 켜거나 검색어에 regex: 를 붙이면 정규식으로 처리됩니다." 
+                                           FontSize="10.5" Foreground="Gray" Margin="0,4,0,0"/>
+                            </modern:SimpleStackPanel>
+                        </Border>
+
+                    </modern:SimpleStackPanel>
+                </ScrollViewer>
+            </TabItem>
+
         </TabControl>
 
-        <Button Grid.Row="2" Content="닫기" HorizontalAlignment="Right" Width="80" Margin="0,15,0,0"
-                Click="CloseButton_Click" Style="{StaticResource AccentButtonStyle}"/>
+        <!-- 3. 하단 닫기 버튼 -->
+        <Border Grid.Row="2" Margin="0,12,0,0">
+            <Button Content="닫기" HorizontalAlignment="Right" Width="90" Height="30"
+                    Click="CloseButton_Click" Style="{StaticResource AccentButtonStyle}"/>
+        </Border>
     </Grid>
 </Window>

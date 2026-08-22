@@ -9,6 +9,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using EverythingFastAlias.Models;
 using EverythingFastAlias.Native;
+using EverythingFastAlias.Services;
 using EverythingFastAlias.ViewModels;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -429,41 +430,91 @@ namespace EverythingFastAlias.Views
 
             var paths = selectedItems.Select(item => item.FullPath).ToList();
 
-            // 1. 복사 (Ctrl + C)
-            if (e.Key == Key.C && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+            if (ShortcutService.Instance.TryGetAction(e, ShortcutScope.ResultGrid, out var action))
             {
                 e.Handled = true;
-                try { Win32ClipboardHelper.CopyFilesToClipboard(paths, isCut: false); }
-                catch (Exception ex) { MessageBox.Show(ex.Message, "오류", MessageBoxButton.OK, MessageBoxImage.Error); }
+                ExecuteResultGridAction(action, selectedItems, paths);
             }
-            // 2. 잘라내기 (Ctrl + X)
-            else if (e.Key == Key.X && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+        }
+
+        private void ExecuteResultGridAction(ShortcutAction action, List<SearchResultItem> selectedItems, List<string> paths)
+        {
+            switch (action)
             {
-                e.Handled = true;
-                try { Win32ClipboardHelper.CopyFilesToClipboard(paths, isCut: true); }
-                catch (Exception ex) { MessageBox.Show(ex.Message, "오류", MessageBoxButton.OK, MessageBoxImage.Error); }
-            }
-            // 3. F2 이름변경 (단일 선택 시에만, Idle 상태에서만)
-            else if (e.Key == Key.F2 && _viewState == ViewState.Idle)
-            {
-                e.Handled = true;
-                if (selectedItems.Count == 1)
-                {
-                    StartRename(selectedItems[0]);
-                }
-            }
-            // 4. 실행 (Enter) — 편집 중이 아닐 때만
-            else if (e.Key == Key.Enter && _viewState != ViewState.Editing)
-            {
-                e.Handled = true;
-                foreach (var path in paths)
-                    OpenFile(path);
-            }
-            // 5. 휴지통 삭제 (Delete)
-            else if (e.Key == Key.Delete)
-            {
-                e.Handled = true;
-                DeleteSelectedItems();
+                case ShortcutAction.CopyItem:
+                    try { Win32ClipboardHelper.CopyFilesToClipboard(paths, isCut: false); }
+                    catch (Exception ex) { MessageBox.Show(ex.Message, "오류", MessageBoxButton.OK, MessageBoxImage.Error); }
+                    break;
+
+                case ShortcutAction.CutItem:
+                    try { Win32ClipboardHelper.CopyFilesToClipboard(paths, isCut: true); }
+                    catch (Exception ex) { MessageBox.Show(ex.Message, "오류", MessageBoxButton.OK, MessageBoxImage.Error); }
+                    break;
+
+                case ShortcutAction.CopyFileNames:
+                    try
+                    {
+                        var names = selectedItems.Select(x => x.Name);
+                        string text = string.Join(Environment.NewLine, names);
+                        Clipboard.SetText(text);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"파일명 클립보드 복사 실패: {ex.Message}");
+                    }
+                    break;
+
+                case ShortcutAction.CopyFullPaths:
+                    try
+                    {
+                        string text = string.Join(Environment.NewLine, paths);
+                        Clipboard.SetText(text);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"전체 경로 클립보드 복사 실패: {ex.Message}");
+                    }
+                    break;
+
+                case ShortcutAction.RenameItem:
+                    if (_viewState == ViewState.Idle && selectedItems.Count == 1)
+                    {
+                        StartRename(selectedItems[0]);
+                    }
+                    break;
+
+                case ShortcutAction.ShowProperties:
+                    var parentWindow = Window.GetWindow(this);
+                    IntPtr hwnd = parentWindow != null ? new System.Windows.Interop.WindowInteropHelper(parentWindow).Handle : IntPtr.Zero;
+                    foreach (var path in paths)
+                    {
+                        Win32FileOperationHelper.ShowProperties(path, hwnd);
+                    }
+                    break;
+
+                case ShortcutAction.ExplorePath:
+                    if (_viewState != ViewState.Editing)
+                    {
+                        foreach (var path in paths)
+                            ExploreFile(path);
+                    }
+                    break;
+
+                case ShortcutAction.ExecuteItem:
+                    if (_viewState != ViewState.Editing)
+                    {
+                        foreach (var path in paths)
+                            OpenFile(path);
+                    }
+                    break;
+
+                case ShortcutAction.PermanentDelete:
+                    DeleteSelectedItems(permanently: true);
+                    break;
+
+                case ShortcutAction.DeleteToRecycleBin:
+                    DeleteSelectedItems(permanently: false);
+                    break;
             }
         }
 
@@ -606,12 +657,19 @@ namespace EverythingFastAlias.Views
             menu.IsOpen = true;
         }
 
-        private void DeleteSelectedItems()
+        private void DeleteSelectedItems(bool permanently = false)
         {
             var selectedItems = ResultsListView.SelectedItems.Cast<SearchResultItem>().ToList();
             if (selectedItems.Count == 0) return;
 
             if (DataContext is not SearchViewModel vm) return;
+
+            IntPtr parentHwnd = IntPtr.Zero;
+            var parentWindow = Window.GetWindow(this);
+            if (parentWindow != null)
+            {
+                parentHwnd = new System.Windows.Interop.WindowInteropHelper(parentWindow).Handle;
+            }
 
             // 1. 삭제 후 포커스를 가질 대상 미리 선정
             SearchResultItem? nextSelectedItem = null;
@@ -656,14 +714,35 @@ namespace EverythingFastAlias.Views
                 }
             }
 
-            // 2. 휴지통으로 실제 삭제 및 리스트 뷰에서 제거
+            // 2. 실제 삭제 (휴지통 이동 or 영구 삭제) 및 리스트 뷰에서 제거
+            var paths = selectedItems.Select(item => item.FullPath).ToList();
             var removedItems = new List<SearchResultItem>();
-            foreach (var item in selectedItems)
+
+            if (permanently)
             {
-                if (Win32RecycleBinHelper.SendToRecycleBin(new[] { item.FullPath }))
+                // 영구 삭제: 시스템 확인 대화상자 팝업
+                if (Win32RecycleBinHelper.DeletePermanently(paths, parentHwnd))
                 {
-                    vm.Results.Remove(item);
-                    removedItems.Add(item);
+                    foreach (var item in selectedItems)
+                    {
+                        if (!File.Exists(item.FullPath) && !Directory.Exists(item.FullPath))
+                        {
+                            vm.Results.Remove(item);
+                            removedItems.Add(item);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // 휴지통 이동: 경고창 없이 무확인 고속 삭제
+                foreach (var item in selectedItems)
+                {
+                    if (Win32RecycleBinHelper.SendToRecycleBin(new[] { item.FullPath }))
+                    {
+                        vm.Results.Remove(item);
+                        removedItems.Add(item);
+                    }
                 }
             }
 
@@ -690,6 +769,36 @@ namespace EverythingFastAlias.Views
             else
             {
                 ResultsListView.SelectedIndex = -1;
+            }
+        }
+
+        /// <summary>파일의 상위 폴더를 열고 해당 파일을 선택(포커스)합니다.</summary>
+        private static void ExploreFile(string path)
+        {
+            if (!File.Exists(path) && !Directory.Exists(path)) return;
+            try
+            {
+                if (File.Exists(path))
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = "explorer.exe",
+                        Arguments = $"/select,\"{path}\"",
+                        UseShellExecute = true
+                    });
+                }
+                else if (Directory.Exists(path))
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = path,
+                        UseShellExecute = true
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"폴더 열기 실패: {ex.Message}", "에러", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

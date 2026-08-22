@@ -66,3 +66,52 @@
   - 1. [시도했던 접근]: TextBlock 내부의 <Run Text="{Binding ReadOnlyProp}"/>에 바인딩 모드를 생략하고 기본값으로 둔 채 모달을 띄움.
 2. [실패 원인]: TextBlock.Text와 달리 Run.Text는 기본 바인딩 모드가 TwoWay이므로 읽기 전용 프로퍼티와 결합 시 런타임 XamlParseException 크래시 발생.
 3. [차단 효과]: Run 요소에 바인딩할 때는 반드시 Mode=OneWay를 명시하거나 TextBlock.Text의 StringFormat/Inlines를 단방향으로 구성.
+
+### 2026-08-22 (Shift+Delete(영구삭제) 및 Shift+Enter(상위폴더 열기), Alt+Enter(속성창) 네이티브 단축키 구현)
+
+- 🎯
+  - ResultGridView에서 Shift+Delete(영구 삭제), Shift+Enter(탐색기 상위 폴더 열기 및 파일 포커스), Alt+Enter(Windows 네이티브 속성 대화상자) 단축키 이벤트 핸들러 및 Win32 연동 구현.
+
+- ✅
+  - 1. Win32RecycleBinHelper.DeletePermanently() 구현: SHFileOperation(wFunc=FO_DELETE, fFlags=0)을 호출하여 시스템 확인창을 띄우고 영구 삭제 처리.
+2. Win32FileOperationHelper.ShowProperties() 구현: SHObjectProperties API를 연동하여 네이티브 파일 속성 창 팝업.
+3. ResultGridView.xaml.cs의 ResultsListView_KeyDown에 Shift+Delete, Shift+Enter(explorer.exe /select,path), Alt+Enter 분기 처리 추가 및 Results 뷰 동기화.
+4. HelpWindow.xaml 단축키 탭에 Shift+Enter 항목 명시.
+
+- ❌
+  - 1. [시도했던 접근]: 단축키 문서에만 기재하고 ResultGridView_KeyDown 이벤트에 키 조합 핸들러가 누락되었던 상태.
+2. [실패 원인]: Key.Enter 및 Key.Delete에 ModifierKeys.Shift/Alt 분기 처리가 없어 Shift 조합 키가 무시됨.
+3. [차단 효과]: KeyDown 핸들러 최상단에서 ModifierKeys 플래그를 정밀 분석하여 모든 표준 단축키 정상 작동 보장.
+
+### 2026-08-22 (중앙 집중식 단축키 관리 아키텍처(ShortcutService) 및 F1 도움말 키 바인딩 일원화)
+
+- 🎯
+  - 단축키 로직의 파편화(MainWindow, ResultGridView, 메뉴 등 분산)를 해결하고, 향후 UI 단축키 커스텀 지정 지원 및 F1 도움말 미작동 버그를 근본적으로 해결하기 위해 중앙 집중식 관리 프레임워크 구축.
+
+- ✅
+  - 1. ShortcutAction(액션 ID), ShortcutScope(Global/ResultGrid), ShortcutItem(ObservableObject 모델) 설계: DisplayGesture, IsCustomized, Matches(), ResetToDefault() 제공.
+2. ShortcutService 싱글톤 구축: 16개 핵심 단축키 기본 등록, SQLite AppSettings 영속성(Shortcut_{ActionId}), O(1) 룩업 맵 기반 TryGetAction/TryHandle 제공.
+3. MainWindow.PreviewKeyDown에서 Global 스코프 단축키(F1, F5, Ctrl+F/N/E/B/M/Shift+E) 일괄 가로채기 디스패치 -> 검색창 포커스 중에도 F1 도움말 팝업 완벽 보장.
+4. ResultGridView.KeyDown을 ShortcutScope.ResultGrid 디스패치로 단순화(Enter, Shift+Enter, Alt+Enter, F2, Ctrl+C/X, Delete, Shift+Delete).
+5. WPF Key.Enter가 Key.Return으로 반환되는 문제를 FormatKeyName() 매핑으로 'Enter'로 직관적 서식화.
+6. ShortcutServiceTests 단위 테스트 3개 작성 및 전체 21개 테스트 100% 통과.
+
+- ❌
+  - 1. [시도했던 접근]: MenuItem Header에 '도움말 보기 (F1)'만 적어두고 Window.InputBindings나 PreviewKeyDown을 등록하지 않음.
+2. [실패 원인]: WPF에서 MenuItem 텍스트는 키 이벤트를 생성하지 않으며, TextBox 포커스 시 WPF 내장 Help 커맨드가 이벤트를 삼킴.
+3. [차단 효과]: Window.PreviewKeyDown 최상단에서 ShortcutService.TryGetAction(Global)을 통해 F1 등 전역 키를 우선 가로채어 텍스트 입력과 무관하게 100% 동작 보장.
+
+### 2026-08-22 (파일명 복사(Ctrl+Shift+C) 및 전체 절대경로 복사(Ctrl+Shift+Alt+C) 텍스트 클립보드 단축키 구현)
+
+- 🎯
+  - 검색 결과 항목에서 파일명(확장자 포함) 또는 전체 절대경로를 개행(줄바꿈) 구분 텍스트로 즉시 클립보드에 복사할 수 있는 기능 요구.
+
+- ✅
+  - 1. ShortcutAction에 CopyFileNames, CopyFullPaths 추가.
+2. ShortcutService에 Key.C + Ctrl+Shift(파일명 복사) 및 Key.C + Ctrl+Shift+Alt(전체 경로 복사) 기본값 등록.
+3. ResultGridView.ExecuteResultGridAction에서 selectedItems.Select(x => x.Name) 및 paths를 string.Join(Environment.NewLine, ...)하여 Clipboard.SetText() 수행.
+4. HelpWindow.xaml 단축키 탭에 추가 및 ShortcutServiceTests 단위 테스트 통과.
+
+- ❌
+  - 1. [시도했던 접근]: 파일 객체 클립보드 복사(Ctrl+C)와 텍스트 파일명/경로 복사가 혼재될 우려.
+2. [해결/차단 효과]: Ctrl+C는 윈도우 네이티브 FileDrop 객체(탐색기 파일 붙여넣기용), Ctrl+Shift+C는 순수 파일명 텍스트, Ctrl+Shift+Alt+C는 절대경로 텍스트로 명확히 역할 분리.

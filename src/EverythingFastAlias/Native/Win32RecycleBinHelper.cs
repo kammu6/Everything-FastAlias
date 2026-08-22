@@ -62,5 +62,39 @@ namespace EverythingFastAlias.Native
                 return false;
             }
         }
+
+        /// <summary>
+        /// 지정한 파일/폴더 경로 목록을 휴지통을 거치지 않고 완전히 영구 삭제합니다. (시스템 확인 대화상자 노출)
+        /// </summary>
+        /// <param name="paths">삭제할 경로 목록</param>
+        /// <param name="hwnd">부모 윈도우 핸들</param>
+        /// <returns>삭제 작업 성공 여부 (사용자가 확인 창에서 '아니오'를 누르면 false)</returns>
+        public static bool DeletePermanently(IEnumerable<string> paths, IntPtr hwnd = default)
+        {
+            try
+            {
+                var sb = new StringBuilder();
+                foreach (var path in paths)
+                {
+                    sb.Append(path).Append('\0');
+                }
+                sb.Append('\0'); // Double-null termination
+
+                var fileop = new SHFILEOPSTRUCT
+                {
+                    hwnd = hwnd,
+                    wFunc = FO_DELETE,
+                    pFrom = sb.ToString(),
+                    fFlags = 0 // FOF_ALLOWUNDO 없음 -> 영구 삭제 (시스템 확인창 팝업)
+                };
+
+                int result = SHFileOperation(ref fileop);
+                return result == 0 && !fileop.fAnyOperationsAborted;
+            }
+            catch
+            {
+                return false;
+            }
+        }
     }
 }

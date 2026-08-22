@@ -68,6 +68,9 @@
 │   │   │   ├── 📄 ExtensionCategoryItem.cs       # 확장자 관리자 모달 바인딩용 카테고리 행 모델
 │   │   │   ├── 📄 SearchOptions.cs               # 9가지 검색 조건 옵션 모델
 │   │   │   ├── 📄 SearchResultItem.cs            # 검색 행 데이터 모델 ( display size 및 날짜 자동 가공 )
+│   │   │   ├── 📄 ShortcutAction.cs              # 단축키 액션 식별자 열거형 (ShowHelp, Refresh, Rename 등)
+│   │   │   ├── 📄 ShortcutItem.cs                # 단축키 정의 및 커스텀 UI 바인딩 지원 모델
+│   │   │   ├── 📄 ShortcutScope.cs               # 단축키 실행 스코프 (Global, ResultGrid) 열거형
 │   │   │   └── 📄 ViewMode.cs                    # 보기 모드(자세히/섬네일S/M/L) 설정을 위한 열거형
 │   │   ├── 📁 Native/
 │   │   │   ├── 📄 EverythingBridge.cs            # Everything 엔진 상태 점검 및 검색 질의 래핑
@@ -86,7 +89,8 @@
 │   │   │   ├── 📄 DatabaseService.cs             # SQLite 연결 싱글톤 및 Bulk Save 트랜잭션 구문
 │   │   │   ├── 📄 ExcelService.cs                # ExcelDataReader 기반 고속 파싱
 │   │   │   ├── 📄 ExtensionSettingsService.cs    # 카테고리별 확장자 SQLite AppSettings 로드/저장/복원 서비스
-│   │   │   └── 📄 QueryTransformer.cs            # 동의어 치환 및 Everything 공식 문법 최종 변환 서비스
+│   │   │   ├── 📄 QueryTransformer.cs            # 동의어 치환 및 Everything 공식 문법 최종 변환 서비스
+│   │   │   └── 📄 ShortcutService.cs             # 단축키 중앙 레지스트리, DB 영속성 및 키보드 이벤트 디스패치 서비스
 │   │   ├── 📁 ViewModels/
 │   │   │   ├── 📄 AliasManagerViewModel.cs       # 매핑 데이터 CRUD 및 엑셀 파싱 조율
 │   │   │   ├── 📄 ExtensionManagerViewModel.cs   # 확장자 관리자 모달 뷰모델 (기본값 복원/저장)
@@ -116,7 +120,8 @@
 │   ├── 📁 EverythingFastAlias.Tests/
 │   │   ├── 📄 EverythingFastAlias.Tests.csproj   # MSTest 단위 테스트 프로젝트
 │   │   ├── 📄 MSTestSettings.cs
-│   │   └── 📄 QueryTransformerTest.cs            # 쿼리 변환 및 확장자 생성 회귀 테스트 스위트
+│   │   ├── 📄 QueryTransformerTest.cs            # 쿼리 변환 및 확장자 생성 회귀 테스트 스위트
+│   │   └── 📄 ShortcutServiceTests.cs
 │   ├── 📁 TempRunner/
 │   │   ├── 📄 Program.cs
 │   │   └── 📄 TempRunner.csproj
