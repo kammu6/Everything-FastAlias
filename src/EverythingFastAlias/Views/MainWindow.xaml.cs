@@ -55,7 +55,6 @@ namespace EverythingFastAlias.Views
                     return true;
                 }
             }
-
             return false;
         }
 
