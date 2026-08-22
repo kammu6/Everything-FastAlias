@@ -43,6 +43,7 @@
 │       ├── 📄 app_audit_report.md
 │       ├── 📄 deepwiki_repos.md
 │       ├── 📄 everything_sdk.md
+│       ├── 📄 fastalias_query_resolution_guide.md
 │       ├── 📄 MEMORY.md                          # 지식 자산화 로그
 │       ├── 📄 overview.md                        # 본 개요 문서
 │       ├── 📄 scripts_guide.md                   # 스크립트 가이드 및 색인 문서

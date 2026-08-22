@@ -156,6 +156,7 @@ namespace EverythingFastAlias.ViewModels
                 var optionsCopy = new SearchOptions
                 {
                     UseFastAlias = Options.UseFastAlias,
+                    PrioritizeKeywordMatch = Options.PrioritizeKeywordMatch,
                     MatchCase = Options.MatchCase,
                     MatchWholeWord = Options.MatchWholeWord,
                     UseRegex = Options.UseRegex,
@@ -180,9 +181,11 @@ namespace EverythingFastAlias.ViewModels
 
                 // Stage 0: alias cache snapshot 취득
                 var sw0 = Stopwatch.StartNew();
-                var mappings = DatabaseService.Instance.GetAliasGroupsCache().Groups;
+                var aliasCache = DatabaseService.Instance.GetAliasGroupsCache();
+                var directMappings = aliasCache.DirectGroups;
+                var aliasMappings = aliasCache.AliasGroups;
                 sw0.Stop();
-                perfLog.AppendLine($"[PERF] Stage 0 - GetAliasGroupsCache: {sw0.ElapsedMilliseconds} ms  (규칙 수: {mappings.Count})");
+                perfLog.AppendLine($"[PERF] Stage 0 - GetAliasGroupsCache: {sw0.ElapsedMilliseconds} ms  (직접 규칙: {directMappings.Count}, 합집합 규칙: {aliasMappings.Count})");
 
                 string transformedQuery = string.Empty;
                 List<SearchResultItem> searchItems;
@@ -192,7 +195,7 @@ namespace EverythingFastAlias.ViewModels
                 {
                     // Stage 1: QueryTransformer
                     var sw1 = Stopwatch.StartNew();
-                    string transformed = QueryTransformer.Transform(query, optionsCopy, mappings);
+                    string transformed = QueryTransformer.Transform(query, optionsCopy, directMappings, aliasMappings);
                     sw1.Stop();
                     perfLog.AppendLine($"[PERF] Stage 1 - QueryTransformer.Transform: {sw1.ElapsedMilliseconds} ms");
                     perfLog.AppendLine($"[PERF]           transformed query: {transformed}");
@@ -238,7 +241,7 @@ namespace EverythingFastAlias.ViewModels
                 catch { /* 로그 실패 시 무시 */ }
                 // ──────────────────────────────────────────────────────────────
 
-                var ruleCount = mappings.Count;
+                var ruleCount = directMappings.Count;
                 StatusMessage = $"[Everything 쿼리]: {transformedQuery} | 매핑 규칙: {ruleCount}개";
                 UpdateResultCountMessage();
             }

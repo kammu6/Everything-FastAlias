@@ -160,13 +160,24 @@ namespace EverythingFastAlias.Views
 
         private void FastAliasSwitch_Toggled(object sender, RoutedEventArgs e)
         {
-            // 설정 저장
-            if (VM != null)
+            if (sender is ModernWpf.Controls.ToggleSwitch ts && VM != null)
             {
-                EverythingFastAlias.Services.DatabaseService.Instance.SaveSetting("UseFastAlias", VM.SearchVM.Options.UseFastAlias ? "true" : "false");
+                VM.SearchVM.Options.UseFastAlias = ts.IsOn;
+                EverythingFastAlias.Services.DatabaseService.Instance.SaveSetting("UseFastAlias", ts.IsOn ? "true" : "false");
+                VM.SearchVM.ExecuteSearch();
             }
-            // 스위치가 토글될 때 실시간 재조회 트리거
-            VM?.SearchVM.ExecuteSearch();
+        }
+
+        private void KeywordPriorityCheckBox_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is CheckBox cb && VM != null)
+            {
+                bool isChecked = cb.IsChecked == true;
+                VM.SearchVM.Options.PrioritizeKeywordMatch = isChecked;
+                VM.SearchVM.PrioritizeKeywordMatch = isChecked;
+                EverythingFastAlias.Services.DatabaseService.Instance.SaveSetting("PrioritizeKeywordMatch", isChecked ? "true" : "false");
+                VM.SearchVM.ExecuteSearch();
+            }
         }
 
         private void SidebarToggleSwitch_Toggled(object sender, RoutedEventArgs e)

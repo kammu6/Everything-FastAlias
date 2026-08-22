@@ -156,6 +156,19 @@ namespace EverythingFastAlias.ViewModels
 
         #region UI 전용 양방향 바인딩 래퍼 속성들
 
+        public bool PrioritizeKeywordMatch
+        {
+            get => Options.PrioritizeKeywordMatch;
+            set
+            {
+                if (Options.PrioritizeKeywordMatch != value)
+                {
+                    Options.PrioritizeKeywordMatch = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         // 1. 탐색 범위 (Scope) 래퍼
         public bool ScopeAll
         {

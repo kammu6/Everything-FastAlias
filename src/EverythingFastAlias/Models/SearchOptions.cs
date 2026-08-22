@@ -21,6 +21,9 @@ namespace EverythingFastAlias.Models
         // FastAlias 기능 On/Off
         public bool UseFastAlias { get; set; } = true;
 
+        // 키워드 일치 우선 (Keyword Priority: ON=A열 키워드 고유 정의 우선, OFF=B열 동의어 소속 그룹 합집합)
+        public bool PrioritizeKeywordMatch { get; set; } = true;
+
         // 대소문자 구분
         public bool MatchCase { get; set; } = false;
 

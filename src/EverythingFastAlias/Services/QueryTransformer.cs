@@ -32,8 +32,17 @@ namespace EverythingFastAlias.Services
 
         public static string Transform(string rawQuery, SearchOptions options, Dictionary<string, HashSet<string>> mappings)
         {
+            return Transform(rawQuery, options, mappings, mappings);
+        }
+
+        public static string Transform(
+            string rawQuery, 
+            SearchOptions options, 
+            Dictionary<string, HashSet<string>>? directMappings, 
+            Dictionary<string, HashSet<string>>? aliasMappings)
+        {
             // 1단계: 검색어 및 별칭(Alias) 결합 (우선순위 1)
-            string firstStageQuery = BuildFirstStageQuery(rawQuery, options, mappings);
+            string firstStageQuery = BuildFirstStageQuery(rawQuery, options, directMappings, aliasMappings);
 
             var sb = new StringBuilder();
             if (!string.IsNullOrEmpty(firstStageQuery))
@@ -280,7 +289,11 @@ namespace EverythingFastAlias.Services
             return result;
         }
 
-        private static string BuildFirstStageQuery(string rawQuery, SearchOptions options, Dictionary<string, HashSet<string>> mappings)
+        private static string BuildFirstStageQuery(
+            string rawQuery, 
+            SearchOptions options, 
+            Dictionary<string, HashSet<string>>? directMappings, 
+            Dictionary<string, HashSet<string>>? aliasMappings)
         {
             if (string.IsNullOrWhiteSpace(rawQuery)) return "";
 
@@ -317,17 +330,42 @@ namespace EverythingFastAlias.Services
                     continue;
                 }
 
-                // Alias 검출: Dictionary TryGetValue O(1) 직접 조회 (foreach O(n) 순회 제거)
+                // Alias 검출: Dictionary TryGetValue O(1) 직접 조회 (PrioritizeKeywordMatch 분기)
                 string aliasKey = term;
                 bool isAlias = false;
                 HashSet<string>? synonyms = null;
 
-                if (options.UseFastAlias && mappings != null)
+                if (options.UseFastAlias)
                 {
-                    if (mappings.TryGetValue(aliasKey, out var found))
+                    if (options.PrioritizeKeywordMatch)
                     {
-                        isAlias = true;
-                        synonyms = found;
+                        // [ON] 키워드 일치 우선: A열 Keyword 고유 정의(directMappings) 우선 조회
+                        if (directMappings != null && directMappings.TryGetValue(aliasKey, out var directWords))
+                        {
+                            isAlias = true;
+                            synonyms = directWords;
+                        }
+                        // A열에 없으면 B열 동의어 소속 그룹 합집합(aliasMappings) 조회
+                        else if (aliasMappings != null && aliasMappings.TryGetValue(aliasKey, out var groupWords))
+                        {
+                            isAlias = true;
+                            synonyms = groupWords;
+                        }
+                    }
+                    else
+                    {
+                        // [OFF] 동의어 합집합 모드: B열 동의어 소속 그룹 합집합(aliasMappings) 우선 조회
+                        if (aliasMappings != null && aliasMappings.TryGetValue(aliasKey, out var groupWords))
+                        {
+                            isAlias = true;
+                            synonyms = groupWords;
+                        }
+                        // B열에 없으면 A열 키워드 정의(directMappings) fallback 조회 (예: #a 같은 가상 태그)
+                        else if (directMappings != null && directMappings.TryGetValue(aliasKey, out var directWords))
+                        {
+                            isAlias = true;
+                            synonyms = directWords;
+                        }
                     }
                 }
 

@@ -15,6 +15,7 @@ namespace EverythingFastAlias.Services
         private readonly Dictionary<string, List<string>> _cache = new(StringComparer.OrdinalIgnoreCase);
         private readonly object _cacheLock = new();
 
+        private Dictionary<string, HashSet<string>> _directGroups = new(StringComparer.OrdinalIgnoreCase);
         private Dictionary<string, HashSet<string>> _aliasGroups = new(StringComparer.OrdinalIgnoreCase);
         private List<string> _sortedAliasKeys = new();
         private readonly object _aliasLock = new();
@@ -83,11 +84,11 @@ namespace EverythingFastAlias.Services
             BuildAliasGroupsCache();
         }
 
-        public (Dictionary<string, HashSet<string>> Groups, List<string> SortedKeys) GetAliasGroupsCache()
+        public (Dictionary<string, HashSet<string>> DirectGroups, Dictionary<string, HashSet<string>> AliasGroups, List<string> SortedKeys) GetAliasGroupsCache()
         {
             lock (_aliasLock)
             {
-                return (_aliasGroups, _sortedAliasKeys);
+                return (_directGroups, _aliasGroups, _sortedAliasKeys);
             }
         }
 
@@ -95,7 +96,8 @@ namespace EverythingFastAlias.Services
         {
             lock (_aliasLock)
             {
-                var newGroups = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+                var newDirectGroups = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+                var newAliasGroups = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
 
                 // _cache 복사본 획득
                 Dictionary<string, List<string>> tempCache;
@@ -115,9 +117,8 @@ namespace EverythingFastAlias.Services
                     var keyword = kvp.Key.Trim();
                     if (string.IsNullOrEmpty(keyword)) continue;
 
-                    // 로우 전체 멤버 수집 (Keyword + Words)
-                    var rowElements = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { keyword };
                     var wordsList = new List<string>();
+                    var directSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                     if (kvp.Value != null)
                     {
@@ -126,25 +127,31 @@ namespace EverythingFastAlias.Services
                             var trimmedSyn = syn.Trim().TrimEnd(';');
                             if (!string.IsNullOrEmpty(trimmedSyn))
                             {
-                                rowElements.Add(trimmedSyn);
                                 wordsList.Add(trimmedSyn);
+                                directSet.Add(trimmedSyn);
                             }
                         }
                     }
 
-                    // 모든 멤버에 대해 이 로우의 Words(동의어 풀) 목록을 등록
-                    foreach (var member in rowElements)
+                    // A열 키워드의 1:1 고유 정의 저장 (Words 목록 전체가 고유 정의)
+                    if (directSet.Count > 0)
                     {
-                        if (!wordToWordsLists.TryGetValue(member, out var lists))
+                        newDirectGroups[keyword] = directSet;
+                    }
+
+                    // B열 Words에 등장하는 각 단어(동의어)에 대해 이 로우의 Words 목록을 등록
+                    foreach (var word in wordsList)
+                    {
+                        if (!wordToWordsLists.TryGetValue(word, out var lists))
                         {
                             lists = new List<List<string>>();
-                            wordToWordsLists[member] = lists;
+                            wordToWordsLists[word] = lists;
                         }
                         lists.Add(wordsList);
                     }
                 }
 
-                // 3. 단어별 최종 동적 합집합 계산 및 캐싱
+                // 3. 단어별 최종 동적 합집합 계산 및 캐싱 (_aliasGroups)
                 foreach (var kvp in wordToWordsLists)
                 {
                     var word = kvp.Key;
@@ -159,25 +166,21 @@ namespace EverythingFastAlias.Services
                         }
                     }
 
-                    // 원본 키워드(A, B 등)는 치환 목록에서 원천 배제 (Option B 핵심)
-                    unionSet.RemoveWhere(w => originalKeywords.Contains(w));
-
-                    // 입력 단어 자체가 일반 동의어라면 자기 자신은 치환 결과에 보존
-                    if (!originalKeywords.Contains(word))
-                    {
-                        unionSet.Add(word);
-                    }
-
                     if (unionSet.Count > 0)
                     {
-                        newGroups[word] = unionSet;
+                        newAliasGroups[word] = unionSet;
                     }
                 }
 
-                _aliasGroups = newGroups;
+                _directGroups = newDirectGroups;
+                _aliasGroups = newAliasGroups;
 
-                // 고유 키들을 글자 수 역순으로 정렬
-                var keys = new List<string>(_aliasGroups.Keys);
+                // 고유 키들을 글자 수 역순으로 정렬 (direct와 alias의 모든 키를 합침)
+                var allKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var k in _directGroups.Keys) allKeys.Add(k);
+                foreach (var k in _aliasGroups.Keys) allKeys.Add(k);
+
+                var keys = new List<string>(allKeys);
                 keys.Sort((a, b) => b.Length.CompareTo(a.Length));
                 _sortedAliasKeys = keys;
             }

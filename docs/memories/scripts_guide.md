@@ -15,7 +15,8 @@
 - [scripts_log.py](file:///D:/3_Code/3_Apps/43_Search-Edit/Everything검색기/scripts/dev_tools/scripts_log.py): Universal script governance CLI: audit, in-place annotations, 3-tier promotion, and scripts_guide.md synchronization
 
 ### tests/alias/
-- [run_fastalias_csv_cleaner.py](file:///D:/3_Code/3_Apps/43_Search-Edit/Everything검색기/scripts/tests/alias/run_fastalias_csv_cleaner.py): `🟡 [Mutating]` Cleans Words column in FastAlias CSV export by filtering year-pattern words, 1-char noise, >10 char Japanese text, removing parentheses, and excluding single English keywords.
+- [chk_keyword_priority_model.py](file:///D:/3_Code/3_Apps/43_Search-Edit/Everything검색기/scripts/tests/alias/chk_keyword_priority_model.py): `🟢 [Read-Only]` FastAlias 키워드 일치 우선(Keyword Priority) 모델의 케이스별 쿼리 변환 알고리즘 시뮬레이션 및 단위 검증
+- [run_fastalias_csv_cleaner.py](file:///D:/3_Code/3_Apps/43_Search-Edit/Everything검색기/scripts/tests/alias/run_fastalias_csv_cleaner.py): `🟡 [Mutating]` Cleans Words column in FastAlias CSV export by filtering year-pattern words, 1-char noise, >10 char Japanese text, removing parentheses, and excluding single-word Korean/English in Type 3 keywords.
 - [run_fastalias_invert_names.py](file:///D:/3_Code/3_Apps/43_Search-Edit/Everything검색기/scripts/tests/alias/run_fastalias_invert_names.py): `🟡 [Mutating]` Transforms 2-word English keywords and words from Last-First to First-Last with capitalized casing (e.g. omori Shizuka -> Shizuka Omori).
 <!-- END_LIST -->
 

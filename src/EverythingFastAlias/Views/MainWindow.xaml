@@ -98,35 +98,51 @@
                         <RowDefinition Height="6"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-                    <!-- Row 0: FastAlias 토글 -->
-                    <Grid Grid.Row="0" MinWidth="175">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="FastAlias 별칭" VerticalAlignment="Center"
-                                   FontWeight="SemiBold" FontSize="12" Margin="0,0,6,0"/>
-                        <modern:ToggleSwitch Grid.Column="1" IsOn="{Binding SearchVM.Options.UseFastAlias}"
+                    <!-- Row 0: FastAlias 토글 + 키워드 우선 체크박스 -->
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="FastAlias 별칭" VerticalAlignment="Center"
+                               FontWeight="SemiBold" FontSize="12" Margin="0,0,8,0"/>
+                    <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <modern:ToggleSwitch IsOn="{Binding SearchVM.Options.UseFastAlias}"
+                                             Width="75"
+                                             MinWidth="0"
+                                             HorizontalAlignment="Left"
                                              OnContent="ON" OffContent="OFF"
                                              Toggled="FastAliasSwitch_Toggled"/>
-                    </Grid>
+                        <CheckBox IsChecked="{Binding SearchVM.PrioritizeKeywordMatch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                  IsEnabled="{Binding SearchVM.Options.UseFastAlias}"
+                                  Click="KeywordPriorityCheckBox_Click"
+                                  VerticalAlignment="Center"
+                                  Margin="6,0,0,0"
+                                  Cursor="Hand">
+                            <CheckBox.ToolTip>
+                                <ToolTip MaxWidth="320">
+                                    <StackPanel Margin="4">
+                                        <TextBlock Text="키워드 일치 우선 (Keyword Priority)" FontWeight="Bold" FontSize="13" Margin="0,0,0,5"/>
+                                        <TextBlock Text="• 체크 시 (ON): 검색어가 키워드(A열)와 일치하면, 다른 그룹의 동의어는 제외하고 해당 키워드의 고유 정의만 1:1로 우선 조회합니다. (예: e ➡️ f | g)" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                                        <TextBlock Text="• 해제 시 (OFF): 검색어가 동의어(B열)로 포함된 다른 그룹들의 동의어를 합집합으로 결합하여 조회합니다. (예: e ➡️ e | c | i)" TextWrapping="Wrap" Foreground="#888888"/>
+                                    </StackPanel>
+                                </ToolTip>
+                            </CheckBox.ToolTip>
+                        </CheckBox>
+                    </StackPanel>
 
                     <!-- Row 2: 옵션패널 토글 -->
-                    <Grid Grid.Row="2" MinWidth="175">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="옵션패널 표시" VerticalAlignment="Center"
-                                   FontWeight="SemiBold" FontSize="12" Margin="0,0,6,0"/>
-                        <modern:ToggleSwitch Grid.Column="1" x:Name="SidebarToggleSwitch" IsOn="True"
-                                             OnContent="ON" OffContent="OFF"
-                                             Toggled="SidebarToggleSwitch_Toggled"/>
-                    </Grid>
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="옵션패널 표시" VerticalAlignment="Center"
+                               FontWeight="SemiBold" FontSize="12" Margin="0,0,8,0"/>
+                    <modern:ToggleSwitch Grid.Row="2" Grid.Column="1" x:Name="SidebarToggleSwitch" IsOn="True"
+                                         Width="75"
+                                         MinWidth="0"
+                                         OnContent="ON" OffContent="OFF"
+                                         Toggled="SidebarToggleSwitch_Toggled"
+                                         HorizontalAlignment="Left"/>
 
                     <!-- Row 4: 새로고침 버튼 -->
-                    <Button Grid.Row="4"
+                    <Button Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2"
                             Content="🔄  새로고침"
                             Command="{Binding SearchVM.RefreshCommand}"
                             HorizontalAlignment="Stretch"

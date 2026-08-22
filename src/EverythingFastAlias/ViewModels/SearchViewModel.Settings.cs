@@ -26,6 +26,7 @@ namespace EverythingFastAlias.ViewModels
             _sortDirection = System.ComponentModel.ListSortDirection.Ascending;
 
             Options.UseFastAlias = true;
+            Options.PrioritizeKeywordMatch = true;
             Options.MatchCase = false;
             Options.MatchWholeWord = false;
             Options.UseRegex = false;
@@ -150,6 +151,7 @@ namespace EverythingFastAlias.ViewModels
                 var db = DatabaseService.Instance;
 
                 Options.UseFastAlias = db.GetSetting("UseFastAlias", "true") == "true";
+                Options.PrioritizeKeywordMatch = db.GetSetting("PrioritizeKeywordMatch", "true") == "true";
                 Options.MatchCase = db.GetSetting("MatchCase", "false") == "true";
                 Options.MatchWholeWord = db.GetSetting("MatchWholeWord", "false") == "true";
                 Options.UseRegex = db.GetSetting("UseRegex", "false") == "true";
@@ -256,6 +258,7 @@ namespace EverythingFastAlias.ViewModels
                 var settings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                 {
                     { "UseFastAlias", Options.UseFastAlias ? "true" : "false" },
+                    { "PrioritizeKeywordMatch", Options.PrioritizeKeywordMatch ? "true" : "false" },
                     { "MatchCase", Options.MatchCase ? "true" : "false" },
                     { "MatchWholeWord", Options.MatchWholeWord ? "true" : "false" },
                     { "UseRegex", Options.UseRegex ? "true" : "false" },
