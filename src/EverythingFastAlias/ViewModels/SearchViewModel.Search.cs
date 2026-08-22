@@ -258,5 +258,49 @@ namespace EverythingFastAlias.ViewModels
                 }
             }
         }
+
+        /// <summary>
+        /// [검증] 버튼: 실제 Everything 엔진을 실행하지 않고, 현재 입력값과 옵션을 조합한 예상 쿼리를 하단 상태바에 즉시 표시합니다.
+        /// </summary>
+        public void ExecuteVerifyQuery()
+        {
+            try
+            {
+                var query = SearchQuery ?? string.Empty;
+                var optionsCopy = new SearchOptions
+                {
+                    UseFastAlias = Options.UseFastAlias,
+                    PrioritizeKeywordMatch = Options.PrioritizeKeywordMatch,
+                    MatchCase = Options.MatchCase,
+                    MatchWholeWord = Options.MatchWholeWord,
+                    UseRegex = Options.UseRegex,
+                    IncludeRecycleBin = Options.IncludeRecycleBin,
+                    Scope = Options.Scope,
+                    FolderPaths = Options.FolderPaths,
+                    ExcludedPaths = Options.ExcludedPaths,
+                    ExcludedWords = Options.ExcludedWords,
+                    CustomExtensions = Options.CustomExtensions,
+                    MinSize = Options.MinSize,
+                    MaxSize = Options.MaxSize,
+                    MinSizeUnit = Options.MinSizeUnit,
+                    MaxSizeUnit = Options.MaxSizeUnit,
+                    RecursiveSearch = Options.RecursiveSearch
+                };
+                optionsCopy.MediaPresets.UnionWith(Options.MediaPresets);
+                optionsCopy.TargetDrives.UnionWith(Options.TargetDrives);
+
+                var aliasCache = DatabaseService.Instance.GetAliasGroupsCache();
+                var directMappings = aliasCache.DirectGroups;
+                var aliasMappings = aliasCache.AliasGroups;
+
+                string transformedQuery = QueryTransformer.Transform(query, optionsCopy, directMappings, aliasMappings);
+                var ruleCount = directMappings.Count;
+                StatusMessage = $"[Everything 쿼리 (검증)]: {transformedQuery} | 매핑 규칙: {ruleCount}개";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"검증 중 오류 발생: {ex.Message}";
+            }
+        }
     }
 }

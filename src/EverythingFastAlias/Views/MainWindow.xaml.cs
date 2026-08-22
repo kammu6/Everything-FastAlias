@@ -309,13 +309,13 @@ namespace EverythingFastAlias.Views
             if (sender is TextBlock tb && !string.IsNullOrEmpty(tb.Text))
             {
                 string text = tb.Text;
-                string prefix = "[Everything 쿼리]: ";
                 string suffixMarker = " | 매핑 규칙:";
 
                 string queryToCopy = text;
-                if (text.StartsWith(prefix))
+                int colonIndex = text.IndexOf("]: ");
+                if (colonIndex >= 0)
                 {
-                    queryToCopy = text.Substring(prefix.Length);
+                    queryToCopy = text.Substring(colonIndex + 3);
                     int suffixIndex = queryToCopy.LastIndexOf(suffixMarker);
                     if (suffixIndex >= 0)
                     {

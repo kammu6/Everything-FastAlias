@@ -99,16 +99,19 @@
                          ToolTipService.ShowDuration="60000"
                          ToolTipService.BetweenShowDelay="0">
                     <TextBox.ToolTip>
-                        <ToolTip MaxWidth="420">
+                        <ToolTip MinWidth="340" MaxWidth="480">
                             <StackPanel Margin="4">
                                 <TextBlock Text="현재 적용된 확장자 필터" FontWeight="Bold" FontSize="12" Margin="0,0,0,6"
                                            Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
-                                <Border Background="#F1F3F5" BorderBrush="#E9ECEF" BorderThickness="1" CornerRadius="4" Padding="8,6,8,6">
+                                <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}" 
+                                        BorderBrush="{DynamicResource SystemControlElevationBorderBrush}" 
+                                        BorderThickness="1" CornerRadius="4" Padding="8,6,8,6">
                                     <TextBlock Text="{Binding CustomExtensions}" TextWrapping="Wrap" FontSize="11" 
-                                               Foreground="#212529" FontFamily="Consolas, Segoe UI, Malgun Gothic"/>
+                                               Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" 
+                                               FontFamily="Consolas, Segoe UI, Malgun Gothic"/>
                                 </Border>
                                 <TextBlock Text="※ 상단 미디어 프리셋을 토글하거나 직접 입력하여 미세조정할 수 있습니다." 
-                                           FontSize="10" Foreground="Gray" Margin="0,6,0,0"/>
+                                           TextWrapping="Wrap" FontSize="10.5" Foreground="Gray" Margin="0,6,0,0"/>
                             </StackPanel>
                         </ToolTip>
                     </TextBox.ToolTip>

@@ -119,7 +119,7 @@
                                   Margin="6,0,0,0"
                                   Cursor="Hand">
                             <CheckBox.ToolTip>
-                                <ToolTip MaxWidth="320">
+                                <ToolTip MinWidth="300" MaxWidth="360">
                                     <StackPanel Margin="4">
                                         <TextBlock Text="키워드 일치 우선 (Keyword Priority)" FontWeight="Bold" FontSize="13" Margin="0,0,0,5"/>
                                         <TextBlock Text="• 체크 시 (ON): 검색어가 키워드(A열)와 일치하면, 다른 그룹의 동의어는 제외하고 해당 키워드의 고유 정의만 1:1로 우선 조회합니다. (예: e ➡️ f | g)" TextWrapping="Wrap" Margin="0,0,0,4"/>
@@ -140,13 +140,28 @@
                                          Toggled="SidebarToggleSwitch_Toggled"
                                          HorizontalAlignment="Left"/>
 
-                    <!-- Row 4: 새로고침 버튼 -->
-                    <Button Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2"
-                            Content="🔄  새로고침"
-                            Command="{Binding SearchVM.RefreshCommand}"
-                            HorizontalAlignment="Stretch"
-                            Height="30"
-                            FontSize="12"/>
+                    <!-- Row 4: 검증 및 검색 버튼 -->
+                    <Grid Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="6"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0"
+                                Content="검증"
+                                Command="{Binding SearchVM.VerifyQueryCommand}"
+                                HorizontalAlignment="Stretch"
+                                Height="30"
+                                FontSize="12"
+                                ToolTip="실제 Everything 검색을 수행하지 않고, 하단바에 예상 변환 쿼리를 미리 확인합니다."/>
+                        <Button Grid.Column="2"
+                                Content="검색"
+                                Command="{Binding SearchVM.SearchCommand}"
+                                HorizontalAlignment="Stretch"
+                                Height="30"
+                                FontSize="12"
+                                ToolTip="Everything 엔진으로 실제 검색을 실행하고 결과를 표시합니다. (F5)"/>
+                    </Grid>
                 </Grid>
 
                 <!-- Column 1: 세로 구분선 -->
@@ -268,8 +283,29 @@
 
             <StatusBarItem Grid.Column="0" HorizontalAlignment="Left">
                 <TextBlock Text="{Binding SearchVM.StatusMessage}" FontSize="11" Foreground="DimGray"
-                           Cursor="Hand" ToolTip="클릭 시 Everything 쿼리를 클립보드에 복사합니다."
-                           MouseLeftButtonDown="QueryText_MouseLeftButtonDown"/>
+                           Cursor="Hand"
+                           ToolTipService.InitialShowDelay="100"
+                           ToolTipService.ShowDuration="60000"
+                           ToolTipService.BetweenShowDelay="0"
+                           MouseLeftButtonDown="QueryText_MouseLeftButtonDown">
+                    <TextBlock.ToolTip>
+                        <ToolTip MinWidth="420" MaxWidth="700">
+                            <StackPanel Margin="4">
+                                <TextBlock Text="🔍 Everything 쿼리 상세 (클릭 시 복사)" FontWeight="Bold" FontSize="12" Margin="0,0,0,6"
+                                           Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+                                <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}" 
+                                        BorderBrush="{DynamicResource SystemControlElevationBorderBrush}" 
+                                        BorderThickness="1" CornerRadius="4" Padding="8,6,8,6">
+                                    <TextBlock Text="{Binding SearchVM.StatusMessage}" TextWrapping="Wrap" FontSize="11.5" 
+                                               Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" 
+                                               FontFamily="Consolas, Segoe UI, Malgun Gothic"/>
+                                </Border>
+                                <TextBlock Text="※ 상태바를 클릭하면 변환된 Everything 쿼리 텍스트가 클립보드에 복사됩니다." 
+                                           TextWrapping="Wrap" FontSize="10.5" Foreground="Gray" Margin="0,6,0,0"/>
+                            </StackPanel>
+                        </ToolTip>
+                    </TextBlock.ToolTip>
+                </TextBlock>
             </StatusBarItem>
 
             <StatusBarItem Grid.Column="1" HorizontalAlignment="Right" Margin="0,0,15,0">

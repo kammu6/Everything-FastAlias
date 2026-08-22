@@ -122,7 +122,8 @@
 │   │   ├── 📄 MediaFilterTests.cs
 │   │   ├── 📄 MSTestSettings.cs
 │   │   ├── 📄 QueryTransformerTest.cs            # 쿼리 변환 및 확장자 생성 회귀 테스트 스위트
-│   │   └── 📄 ShortcutServiceTests.cs
+│   │   ├── 📄 ShortcutServiceTests.cs
+│   │   └── 📄 VerifyQueryTests.cs
 │   ├── 📁 TempRunner/
 │   │   ├── 📄 Program.cs
 │   │   └── 📄 TempRunner.csproj
@@ -213,14 +214,7 @@ graph TD
 
 - **MEMORY.md 기록 작성**:
   ```powershell
-  @'
-  {
-    "title": "Title here...",
-    "context": "Context & Goal here...",
-    "solution": "Verified Solution here...",
-    "anti_patterns": "Anti-Patterns & Root Cause here..."
-  }
-  '@ | python scripts/dev_tools/memory_log.py --stdin
+  python -c "from memory_log import append_log; append_log(r'''<Title>''', r'''<Context & Goal>''', r'''<Verified Solution>''', r'''<Anti-Patterns & Root Cause>''')"
   ```
 
 - **빌드 및 실행**:
