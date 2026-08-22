@@ -303,6 +303,7 @@ namespace EverythingFastAlias.ViewModels
                     Options.MediaPresets.Clear();
                     Options.MediaPresets.Add("전체");
                     if (folderWasActive) Options.MediaPresets.Add("폴더");
+                    RefreshExtensionFilterFromPresets();
                     NotifyMediaProperties();
                 }
             }
@@ -325,6 +326,7 @@ namespace EverythingFastAlias.ViewModels
                 {
                     Options.MediaPresets.Remove("폴더");
                 }
+                RefreshExtensionFilterFromPresets();
                 NotifyMediaProperties();
             }
         }
@@ -383,7 +385,45 @@ namespace EverythingFastAlias.ViewModels
             {
                 Options.MediaPresets.Remove(preset);
             }
+            RefreshExtensionFilterFromPresets();
             NotifyMediaProperties();
+        }
+
+        public void RefreshExtensionFilterFromPresets()
+        {
+            var activePresets = Options.MediaPresets
+                .Where(p => p != "전체" && p != "폴더")
+                .ToList();
+
+            if (activePresets.Count == 0)
+            {
+                CustomExtensions = string.Empty;
+            }
+            else
+            {
+                var service = ExtensionSettingsService.Instance;
+                var extsList = new List<string>();
+                var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var preset in activePresets)
+                {
+                    var categoryExts = service.GetExtensions(preset);
+                    if (!string.IsNullOrWhiteSpace(categoryExts))
+                    {
+                        var parts = categoryExts.Split(new[] { ';', ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                        foreach (var part in parts)
+                        {
+                            var trimmed = part.Trim().TrimStart('.');
+                            if (!string.IsNullOrEmpty(trimmed) && seen.Add(trimmed))
+                            {
+                                extsList.Add(trimmed);
+                            }
+                        }
+                    }
+                }
+
+                CustomExtensions = string.Join(";", extsList);
+            }
         }
 
         private void NotifyMediaProperties()
@@ -484,6 +524,12 @@ namespace EverythingFastAlias.ViewModels
             _debounceTimer = new System.Windows.Threading.DispatcherTimer();
             _debounceTimer.Interval = TimeSpan.FromMilliseconds(150);
             _debounceTimer.Tick += DebounceTimer_Tick;
+
+            // 확장자 설정 변경 시 현재 활성 프리셋의 확장자 목록 실시간 갱신
+            ExtensionSettingsService.Instance.ExtensionsChanged += () =>
+            {
+                Application.Current?.Dispatcher?.Invoke(RefreshExtensionFilterFromPresets);
+            };
 
             LoadSettings();
             CheckEngineStatus();

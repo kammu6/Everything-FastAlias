@@ -47,11 +47,13 @@ namespace EverythingFastAlias.ViewModels
         }
 
         public ICommand OpenAliasManagerCommand { get; }
+        public ICommand OpenExtensionManagerCommand { get; }
         public ICommand OpenHelpCommand { get; }
         public ICommand ExportResultsCommand { get; }
         public ICommand NewWindowCommand { get; }
 
         public event Action? RequestOpenAliasManager;
+        public event Action? RequestOpenExtensionManager;
         public event Action? RequestOpenHelp;
         public event Action? RequestNewWindow;
 
@@ -60,6 +62,7 @@ namespace EverythingFastAlias.ViewModels
             SearchVM = new SearchViewModel();
 
             OpenAliasManagerCommand = new RelayCommand(() => RequestOpenAliasManager?.Invoke());
+            OpenExtensionManagerCommand = new RelayCommand(() => RequestOpenExtensionManager?.Invoke());
             OpenHelpCommand = new RelayCommand(() => RequestOpenHelp?.Invoke());
             NewWindowCommand = new RelayCommand(() => RequestNewWindow?.Invoke());
             ExportResultsCommand = new RelayCommand(ExportResults);

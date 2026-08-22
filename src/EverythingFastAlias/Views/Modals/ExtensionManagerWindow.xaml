@@ -1,0 +1,129 @@
+<Window x:Class="EverythingFastAlias.Views.Modals.ExtensionManagerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:modern="http://schemas.modernwpf.com/2019"
+        xmlns:vm="clr-namespace:EverythingFastAlias.ViewModels"
+        xmlns:conv="clr-namespace:EverythingFastAlias.Converters"
+        Title="미디어 확장자 관리자 (Extension Manager)" 
+        Height="700" Width="960"
+        MinWidth="850" MinHeight="500"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource SystemControlPageBackgroundChromeLowBrush}"
+        modern:ThemeManager.RequestedTheme="Light">
+
+    <Window.Resources>
+        <conv:BoolToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <conv:BoolToVisibilityConverter x:Key="BoolToVisConverter"/>
+    </Window.Resources>
+
+    <Window.DataContext>
+        <vm:ExtensionManagerViewModel/>
+    </Window.DataContext>
+
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- 1. 상단 안내 헤더 -->
+            <RowDefinition Height="*"/>    <!-- 2. 7개 카테고리 편집 리스트 -->
+            <RowDefinition Height="Auto"/> <!-- 3. 하단 액션 버튼바 -->
+            <RowDefinition Height="Auto"/> <!-- 4. 상태 표시줄 -->
+        </Grid.RowDefinitions>
+
+        <!-- 1. 상단 안내 헤더 -->
+        <Border Grid.Row="0" Background="{DynamicResource SystemControlBackgroundAltHighBrush}" 
+                Padding="14,12,14,12" CornerRadius="4" Margin="0,0,0,12"
+                BorderBrush="{DynamicResource SystemControlElevationBorderBrush}" BorderThickness="1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="미디어 카테고리별 확장자 관리" FontWeight="Bold" FontSize="14"
+                               Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+                    <TextBlock Text="좌측 패널에서 영상, 음악 등의 프리셋을 클릭했을 때 자동 필터링되는 확장자 목록을 직접 설정합니다. (세미콜론 ';' 또는 공백으로 구분)" 
+                               Foreground="DimGray" FontSize="11" Margin="0,4,0,0"/>
+                </StackPanel>
+                <Button Grid.Column="1" Content="전체 기본값 복원 (↺)" 
+                        Command="{Binding ResetAllCommand}"
+                        VerticalAlignment="Center" Padding="12,6,12,6" FontSize="11"/>
+            </Grid>
+        </Border>
+
+        <!-- 2. 7개 카테고리 편집 리스트 -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding Categories}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}" 
+                                BorderBrush="{DynamicResource SystemControlElevationBorderBrush}" BorderThickness="1"
+                                CornerRadius="4" Margin="0,0,0,10" Padding="12">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- Row 0: 카테고리 명칭 및 행별 복원 버튼 -->
+                                <Grid Grid.Row="0" Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="12"
+                                                   Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+                                        <Border Background="#E1DFDD" CornerRadius="3" Margin="8,0,0,0" Padding="4,1,4,1"
+                                                Visibility="{Binding IsModified, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <TextBlock Text="사용자 변경됨" FontSize="10" Foreground="#323130" FontWeight="SemiBold"/>
+                                        </Border>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Content="기본값 복원" 
+                                            Command="{Binding ResetCommand}"
+                                            Height="24" Padding="6,1,6,1" FontSize="11"/>
+                                </Grid>
+
+                                <!-- Row 1: 확장자 텍스트 에디터 -->
+                                <TextBox Grid.Row="1" Text="{Binding Extensions, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         Padding="6,4,6,4" FontSize="12"
+                                         TextWrapping="Wrap" AcceptsReturn="False"
+                                         FontFamily="Consolas, Segoe UI"/>
+
+                                <!-- Row 2: 기본 확장자 가이드 텍스트 -->
+                                <TextBlock Grid.Row="2" Margin="2,4,0,0" FontSize="10" Foreground="Gray" TextTrimming="CharacterEllipsis">
+                                    <Run Text="기본값: " FontWeight="SemiBold"/>
+                                    <Run Text="{Binding DefaultExtensions, Mode=OneWay}"/>
+                                </TextBlock>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <!-- 3. 하단 액션 버튼바 -->
+        <Border Grid.Row="2" Margin="0,10,0,10">
+            <Grid>
+                <TextBlock Text="※ 수정 후 [수정사항 저장] 버튼을 누르면 검색 및 좌측 패널에 즉시 반영됩니다." 
+                           VerticalAlignment="Center" Foreground="Gray" FontSize="11" HorizontalAlignment="Left"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="수정사항 저장 (적용)" Command="{Binding SaveCommand}" 
+                            Style="{StaticResource AccentButtonStyle}"
+                            Width="150" Height="32" Margin="0,0,8,0" FontWeight="SemiBold"/>
+                    <Button Content="닫기" Click="CloseButton_Click" Width="80" Height="32"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- 4. 상태 표시줄 -->
+        <StatusBar Grid.Row="3" Background="{DynamicResource SystemControlPageBackgroundChromeLowBrush}"
+                   BorderBrush="{DynamicResource SystemControlElevationBorderBrush}" BorderThickness="0,1,0,0" Padding="5,5,5,0">
+            <StatusBarItem>
+                <StackPanel Orientation="Horizontal">
+                    <Ellipse Width="8" Height="8" Fill="{Binding StatusForeground}" Margin="5,0,8,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding StatusMessage}" FontSize="11" Foreground="{Binding StatusForeground}"/>
+                </StackPanel>
+            </StatusBarItem>
+        </StatusBar>
+    </Grid>
+</Window>

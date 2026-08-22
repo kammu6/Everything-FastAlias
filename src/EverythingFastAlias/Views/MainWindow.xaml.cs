@@ -24,6 +24,7 @@ namespace EverythingFastAlias.Views
             {
                 // 1. 모달창 오픈 요청 이벤트 구독
                 VM.RequestOpenAliasManager += OpenAliasManager;
+                VM.RequestOpenExtensionManager += OpenExtensionManager;
                 VM.RequestOpenHelp += OpenHelp;
                 VM.RequestNewWindow += OpenNewWindow;
 
@@ -97,6 +98,18 @@ namespace EverythingFastAlias.Views
             
             // 매핑 관리 창을 닫은 뒤, 변경 사항이 검색 엔진 캐시에 즉시 반영되도록 실시간 재질의 트리거
             VM?.SearchVM.ExecuteSearch();
+        }
+
+        private void OpenExtensionManager()
+        {
+            var extensionWindow = new ExtensionManagerWindow
+            {
+                Owner = this
+            };
+            extensionWindow.ShowDialog();
+
+            // 확장자 설정 창을 닫은 뒤, 현재 선택된 프리셋의 확장자 필터와 검색 상태를 즉시 동기화
+            VM?.SearchVM.RefreshExtensionFilterFromPresets();
         }
 
         private void OpenHelp()

@@ -19,6 +19,7 @@
 
             <!-- Bool → Visibility 전역 컨버터 -->
             <conv:BoolToVisibilityConverter x:Key="BoolToVisConverter"/>
+            <conv:BoolToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -153,82 +153,22 @@ namespace EverythingFastAlias.Services
                 }
             }
 
-            // 5단계: 미디어 및 파일 크기 필터 결합 (물리적 필터링)
-            var filterParts = new List<string>();
-
-            // 미디어 프리셋 필터
-            if (options.MediaPresets != null && options.MediaPresets.Count > 0 && !options.MediaPresets.Contains("전체"))
-            {
-                foreach (var preset in options.MediaPresets)
-                {
-                    string? extPattern = null;
-                    switch (preset)
-                    {
-                        case "영상":
-                            extPattern = "mp4;mkv;avi;wmv;flv;mov;webm;m3u8;ts";
-                            break;
-                        case "음악":
-                            extPattern = "mp3;wav;flac;ogg;wma;m4a;aac";
-                            break;
-                        case "사진":
-                            extPattern = "jpg;jpeg;jfif;png;gif;bmp;webp;tiff;psd;ai;svg";
-                            break;
-                        case "문서":
-                            extPattern = "pdf;txt;hwp;hwpx;doc;docx;xls;xlsx;ppt;pptx;rtf";
-                            break;
-                        case "실행":
-                            extPattern = "exe;bat;cmd;msi;lnk;scr;sh;pyw";
-                            break;
-                        case "압축":
-                            extPattern = "zip;7z;rar;tar;gz;bz2;iso;alz;egg";
-                            break;
-                        case "코드":
-                            extPattern = "ts;tsx;js;jsx;json;java;py;pyw;cpp;c;h;cs;html;css;go;rs;sh;md;yml;yaml";
-                            break;
-                    }
-
-                    if (extPattern != null)
-                    {
-                        if (!isFolderPreset)
-                        {
-                            filterParts.Add($"<file:<ext:{extPattern}>>");
-                        }
-                        else
-                        {
-                            filterParts.Add($"<ext:{extPattern}>");
-                        }
-                    }
-                }
-            }
-
-            // 커스텀 확장자 필터
+            // 5단계: 확장자 및 파일 크기 필터 결합 (물리적 필터링)
+            // 확장자 필터 (Extension Filter)
             if (!string.IsNullOrWhiteSpace(options.CustomExtensions))
             {
-                var exts = Regex.Replace(options.CustomExtensions, @"\s*[,;]\s*", ";").Trim(';');
+                var exts = Regex.Replace(options.CustomExtensions, @"[\s,;|]+", ";").Trim(';');
                 if (!string.IsNullOrEmpty(exts))
                 {
+                    AppendSeparator(sb);
                     if (!isFolderPreset)
                     {
-                        filterParts.Add($"<file:<ext:{exts}>>");
+                        sb.Append($"<file:<ext:{exts}>>");
                     }
                     else
                     {
-                        filterParts.Add($"<ext:{exts}>");
+                        sb.Append($"<ext:{exts}>");
                     }
-                }
-            }
-
-            // 확장자 필터 결합
-            if (filterParts.Count > 0)
-            {
-                AppendSeparator(sb);
-                if (filterParts.Count == 1)
-                {
-                    sb.Append(filterParts[0]);
-                }
-                else
-                {
-                    sb.Append($"<{string.Join(" | ", filterParts)}>");
                 }
             }
 

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using EverythingFastAlias.Config;
 using EverythingFastAlias.Models;
 using EverythingFastAlias.Services;
 
@@ -69,7 +70,7 @@ namespace EverythingFastAlias.Tests
                 UseFastAlias = true,
                 TargetDrives = new HashSet<string> { "K:", "N:", "P:" },
                 Scope = SearchScope.All, // 전체
-                MediaPresets = new HashSet<string> { "영상" },
+                CustomExtensions = FileExtensionConstants.VideoExtensions,
                 MinSize = 10,
                 MinSizeUnit = SizeUnit.MB,
                 IncludeRecycleBin = true
@@ -78,8 +79,7 @@ namespace EverythingFastAlias.Tests
             var result = QueryTransformer.Transform("#back_to_freedom | Lana Rhoades", options, _testMappings);
             
             // To-Be (B안 반영): #back_to_freedom 원본은 소거되고 순수 동의어만 치환 결합됨
-            // Expected: <<path:"Adriana Chechik"> | <path:"Megan Rain"> | <path:"Ava Addams"> | <path:<Lana Rhoades>>> ...
-            Assert.AreEqual(@"<<<path:<Adriana Chechik>> | <path:<Megan Rain>> | <path:<Ava Addams>>> | <path:<Lana Rhoades>>> <path:K:\ | path:N:\ | path:P:\> <file:<ext:mp4;mkv;avi;wmv;flv;mov;webm;m3u8;ts>> <size:>=10mb>", result);
+            Assert.AreEqual($@"<<<path:<Adriana Chechik>> | <path:<Megan Rain>> | <path:<Ava Addams>>> | <path:<Lana Rhoades>>> <path:K:\ | path:N:\ | path:P:\> <file:<ext:{FileExtensionConstants.VideoExtensions}>> <size:>=10mb>", result);
         }
 
         [TestMethod]
@@ -90,7 +90,7 @@ namespace EverythingFastAlias.Tests
                 UseFastAlias = true,
                 TargetDrives = new HashSet<string> { "K:", "N:", "P:" },
                 Scope = SearchScope.All,
-                MediaPresets = new HashSet<string> { "영상" },
+                CustomExtensions = FileExtensionConstants.VideoExtensions,
                 MinSize = 10,
                 MinSizeUnit = SizeUnit.MB,
                 IncludeRecycleBin = true
@@ -98,7 +98,7 @@ namespace EverythingFastAlias.Tests
 
             var result = QueryTransformer.Transform("Adriana *", options, _testMappings);
             
-            Assert.AreEqual(@"<path:<Adriana *>> <path:K:\ | path:N:\ | path:P:\> <file:<ext:mp4;mkv;avi;wmv;flv;mov;webm;m3u8;ts>> <size:>=10mb>", result);
+            Assert.AreEqual($@"<path:<Adriana *>> <path:K:\ | path:N:\ | path:P:\> <file:<ext:{FileExtensionConstants.VideoExtensions}>> <size:>=10mb>", result);
         }
 
         [TestMethod]
@@ -109,7 +109,7 @@ namespace EverythingFastAlias.Tests
                 UseFastAlias = true,
                 TargetDrives = new HashSet<string> { "K:", "N:", "P:" },
                 Scope = SearchScope.All,
-                MediaPresets = new HashSet<string> { "영상" },
+                CustomExtensions = FileExtensionConstants.VideoExtensions,
                 MinSize = 10,
                 MinSizeUnit = SizeUnit.MB,
                 IncludeRecycleBin = true
@@ -117,7 +117,7 @@ namespace EverythingFastAlias.Tests
 
             var result = QueryTransformer.Transform("Lana Rhoades", options, _testMappings);
             
-            Assert.AreEqual(@"<path:<Lana Rhoades>> <path:K:\ | path:N:\ | path:P:\> <file:<ext:mp4;mkv;avi;wmv;flv;mov;webm;m3u8;ts>> <size:>=10mb>", result);
+            Assert.AreEqual($@"<path:<Lana Rhoades>> <path:K:\ | path:N:\ | path:P:\> <file:<ext:{FileExtensionConstants.VideoExtensions}>> <size:>=10mb>", result);
         }
 
         [TestMethod]
@@ -128,7 +128,7 @@ namespace EverythingFastAlias.Tests
                 UseFastAlias = true,
                 TargetDrives = new HashSet<string> { "K:", "N:", "P:" },
                 Scope = SearchScope.All,
-                MediaPresets = new HashSet<string> { "영상" },
+                CustomExtensions = FileExtensionConstants.VideoExtensions,
                 MinSize = 10,
                 MinSizeUnit = SizeUnit.MB,
                 IncludeRecycleBin = true
@@ -136,7 +136,7 @@ namespace EverythingFastAlias.Tests
 
             var result = QueryTransformer.Transform("Lana Rhoades | India Summer", options, _testMappings);
             
-            Assert.AreEqual(@"<<path:<Lana Rhoades>> | <path:<India Summer>>> <path:K:\ | path:N:\ | path:P:\> <file:<ext:mp4;mkv;avi;wmv;flv;mov;webm;m3u8;ts>> <size:>=10mb>", result);
+            Assert.AreEqual($@"<<path:<Lana Rhoades>> | <path:<India Summer>>> <path:K:\ | path:N:\ | path:P:\> <file:<ext:{FileExtensionConstants.VideoExtensions}>> <size:>=10mb>", result);
         }
 
         [TestMethod]
@@ -147,7 +147,7 @@ namespace EverythingFastAlias.Tests
                 UseFastAlias = true,
                 TargetDrives = new HashSet<string> { "K:", "N:", "P:" },
                 Scope = SearchScope.All,
-                MediaPresets = new HashSet<string> { "영상" },
+                CustomExtensions = FileExtensionConstants.VideoExtensions,
                 MinSize = 10,
                 MinSizeUnit = SizeUnit.MB,
                 IncludeRecycleBin = true
@@ -155,7 +155,7 @@ namespace EverythingFastAlias.Tests
 
             var result = QueryTransformer.Transform("!\"LIFE SELECTOR\"", options, _testMappings);
             
-            Assert.AreEqual(@"<path:!<""LIFE SELECTOR"">> <path:K:\ | path:N:\ | path:P:\> <file:<ext:mp4;mkv;avi;wmv;flv;mov;webm;m3u8;ts>> <size:>=10mb>", result);
+            Assert.AreEqual($@"<path:!<""LIFE SELECTOR"">> <path:K:\ | path:N:\ | path:P:\> <file:<ext:{FileExtensionConstants.VideoExtensions}>> <size:>=10mb>", result);
         }
 
         [TestMethod]
@@ -166,7 +166,7 @@ namespace EverythingFastAlias.Tests
                 UseFastAlias = true,
                 TargetDrives = new HashSet<string> { "K:", "N:", "P:" },
                 Scope = SearchScope.All,
-                MediaPresets = new HashSet<string> { "영상" },
+                CustomExtensions = FileExtensionConstants.VideoExtensions,
                 MinSize = 10,
                 MinSizeUnit = SizeUnit.MB,
                 IncludeRecycleBin = true
@@ -174,7 +174,7 @@ namespace EverythingFastAlias.Tests
 
             var result = QueryTransformer.Transform("!LIFE SELECTOR", options, _testMappings);
             
-            Assert.AreEqual(@"<path:!<LIFE> | path: <SELECTOR>> <path:K:\ | path:N:\ | path:P:\> <file:<ext:mp4;mkv;avi;wmv;flv;mov;webm;m3u8;ts>> <size:>=10mb>", result);
+            Assert.AreEqual($@"<path:!<LIFE> | path: <SELECTOR>> <path:K:\ | path:N:\ | path:P:\> <file:<ext:{FileExtensionConstants.VideoExtensions}>> <size:>=10mb>", result);
         }
 
         [TestMethod]
@@ -192,9 +192,9 @@ namespace EverythingFastAlias.Tests
             var result = QueryTransformer.Transform("test", options, _testMappings);
             
             // 지정경로: <<path:<c:\test>> | <path:<d:\test>>>
-            StringAssert.Contains(result, "<<path:<c:\\test>> | <path:<d:\\test>>>");
+            StringAssert.Contains(result, @"<<path:<c:\test>> | <path:<d:\test>>>");
             // 제외경로: <<path:!<k:\test>> | <path:!<n:\test>>>
-            StringAssert.Contains(result, "<<path:!<k:\\test>> | <path:!<n:\\test>>>");
+            StringAssert.Contains(result, @"<<path:!<k:\test>> | <path:!<n:\test>>>");
         }
 
         [TestMethod]
@@ -221,7 +221,6 @@ namespace EverythingFastAlias.Tests
                 UseFastAlias = false,
                 TargetDrives = new HashSet<string> { "K:", "N:", "P:" },
                 Scope = SearchScope.File,
-                MediaPresets = new HashSet<string> { "영상", "음악" },
                 CustomExtensions = "test1;test2",
                 MinSize = 10,
                 MinSizeUnit = SizeUnit.MB,
@@ -236,8 +235,7 @@ namespace EverythingFastAlias.Tests
             var result = QueryTransformer.Transform("test", options, _testMappings);
 
             // 예상 To-Be:
-            // <regex:<test>> <<path:<c:\test>> | <path:<d:\test>> | <path:<k:\test>> | <path:<n:\test>>> <path:!<p:\test>> <!<a> | !<b> | !<c> | !<d>> <path:K:\ | path:N:\ | path:P:\> <<file:<ext:mp4;mkv;avi;wmv;flv;mov;webm;m3u8;ts>> | <file:<ext:mp3;wav;flac;ogg;wma;m4a;aac>> | <file:<ext:test1;test2>>> <size:>=10mb>
-            string expected = @"<regex:<test>> <<path:<c:\test>> | <path:<d:\test>> | <path:<k:\test>> | <path:<n:\test>>> <path:!<p:\test>> <!<a> | !<b> | !<c> | !<d>> <path:K:\ | path:N:\ | path:P:\> <<file:<ext:mp4;mkv;avi;wmv;flv;mov;webm;m3u8;ts>> | <file:<ext:mp3;wav;flac;ogg;wma;m4a;aac>> | <file:<ext:test1;test2>>> <size:>=10mb>";
+            string expected = @"<regex:<test>> <<path:<c:\test>> | <path:<d:\test>> | <path:<k:\test>> | <path:<n:\test>>> <path:!<p:\test>> <!<a> | !<b> | !<c> | !<d>> <path:K:\ | path:N:\ | path:P:\> <file:<ext:test1;test2>> <size:>=10mb>";
             
             Assert.AreEqual(expected, result);
         }
@@ -349,6 +347,32 @@ namespace EverythingFastAlias.Tests
             var resultOff = QueryTransformer.Transform("Sumire Mizukawa", optionsOff, direct, alias);
             Assert.IsTrue(resultOff.Contains("<<Mizukawa Sumire>>") && resultOff.Contains("<<Sumire Mizukawa>>") && resultOff.Contains("<<水川スミレ>>"));
             Assert.IsTrue(resultOff.Contains("<<Mizuno Asahi>>"));
+        }
+
+        [TestMethod]
+        public void Test_FileExtensionConstants_Integrity()
+        {
+            Assert.AreEqual(7, FileExtensionConstants.AllCategories.Count);
+            Assert.IsTrue(FileExtensionConstants.VideoExtensions.Contains("mp4"));
+            Assert.IsTrue(FileExtensionConstants.VideoExtensions.Contains("ts"));
+            Assert.IsTrue(FileExtensionConstants.VideoExtensions.Contains("mkv"));
+            Assert.IsTrue(FileExtensionConstants.VideoExtensions.Contains("hevc"));
+
+            Assert.AreEqual(FileExtensionConstants.VideoExtensions, FileExtensionConstants.GetDefaultExtensions("영상"));
+            Assert.AreEqual(FileExtensionConstants.AudioExtensions, FileExtensionConstants.GetDefaultExtensions("음악"));
+            Assert.AreEqual(FileExtensionConstants.PictureExtensions, FileExtensionConstants.GetDefaultExtensions("사진"));
+            Assert.AreEqual(FileExtensionConstants.DocumentExtensions, FileExtensionConstants.GetDefaultExtensions("문서"));
+            Assert.AreEqual(FileExtensionConstants.CodeExtensions, FileExtensionConstants.GetDefaultExtensions("코드"));
+            Assert.AreEqual(FileExtensionConstants.ExecutableExtensions, FileExtensionConstants.GetDefaultExtensions("실행"));
+            Assert.AreEqual(FileExtensionConstants.ArchiveExtensions, FileExtensionConstants.GetDefaultExtensions("압축"));
+        }
+
+        [TestMethod]
+        public void Test_ExtensionSettingsService_Normalization()
+        {
+            string raw = " .mp4, .mkv; avi   wmv|flv ; ; .mp4 ";
+            string normalized = ExtensionSettingsService.NormalizeExtensions(raw);
+            Assert.AreEqual("mp4;mkv;avi;wmv;flv", normalized);
         }
     }
 }

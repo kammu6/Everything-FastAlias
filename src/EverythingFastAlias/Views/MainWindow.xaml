@@ -26,6 +26,7 @@
         <Style TargetType="MenuItem">
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontFamily" Value="Segoe UI, Malgun Gothic"/>
+            <Setter Property="Padding" Value="14,6,18,6"/>
         </Style>
         <Style TargetType="StatusBar">
             <Setter Property="FontSize" Value="11"/>
@@ -60,21 +61,22 @@
         </Grid.RowDefinitions>
 
         <!-- 1. 인라인 Slim 메뉴바 -->
-        <Menu Grid.Row="0" Background="{DynamicResource SystemControlBackgroundAltHighBrush}" Padding="5,2,5,2"
+        <Menu Grid.Row="0" Background="{DynamicResource SystemControlBackgroundAltHighBrush}" Padding="8,3,8,3"
               BorderBrush="{DynamicResource SystemControlElevationBorderBrush}" BorderThickness="0,0,0,1">
-            <MenuItem Header="파일(F)">
+            <MenuItem Header="파일(F)" Padding="10,4,10,4">
                 <MenuItem Header="새창 띄우기(N)" Command="{Binding NewWindowCommand}"/>
                 <MenuItem Header="결과 내보내기(E)..." Command="{Binding ExportResultsCommand}"/>
-                <Separator/>
+                <Separator Margin="6,2,6,2"/>
                 <MenuItem Header="시작프로그램 등록" IsCheckable="True" IsChecked="{Binding IsAutoStartEnabled, Mode=TwoWay}"/>
                 <MenuItem Header="시스템 트레이 최소화 사용" IsCheckable="True" IsChecked="{Binding IsMinimizeToTrayEnabled, Mode=TwoWay}"/>
-                <Separator/>
+                <Separator Margin="6,2,6,2"/>
                 <MenuItem Header="종료(X)" Click="MenuExit_Click"/>
             </MenuItem>
-            <MenuItem Header="도구(T)">
-                <MenuItem Header="매핑 테이블 관리자 (Alias Manager)" Command="{Binding OpenAliasManagerCommand}"/>
+            <MenuItem Header="도구(T)" Padding="10,4,10,4">
+                <MenuItem Header="매핑 테이블 관리자 (Alias Manager)..." Command="{Binding OpenAliasManagerCommand}"/>
+                <MenuItem Header="미디어 확장자 관리자 (Extension Manager)..." Command="{Binding OpenExtensionManagerCommand}"/>
             </MenuItem>
-            <MenuItem Header="도움말(H)">
+            <MenuItem Header="도움말(H)" Padding="10,4,10,4">
                 <MenuItem Header="도움말 보기 (F1)" Command="{Binding OpenHelpCommand}"/>
             </MenuItem>
         </Menu>
